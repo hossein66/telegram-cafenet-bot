@@ -2,8 +2,9 @@
 import json
 import logging
 import sys
+import traceback
 from typing import List, Dict, Optional
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, MenuButtonCommands, BotCommand, MenuButtonDefault
 from telegram.ext import (
     Application,
     CommandHandler,
@@ -14,24 +15,23 @@ from telegram.ext import (
     ConversationHandler,
 )
 from telegram.constants import ParseMode
-
-from config import Config
+from telegram.error import TelegramError, NetworkError
 
 # Import config
-# try:
-#     from config import BOT_TOKEN
-# except ImportError:
-    # BOT_TOKEN = ""
+try:
+    from config import BOT_TOKEN
+except ImportError:
+    BOT_TOKEN = "8824483780:AAH7CES3hG69Kf0q_wA6D0oe1-tE0Lxz7pI"
 
-# Enable logging
+# Enable logging with more detail
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", 
     level=logging.INFO
 )
 logger = logging.getLogger(__name__)
 
-# Conversation states
-COLLECTING_DOCS, AWAITING_PAYMENT = range(2)
+# Suppress httpx logging
+logging.getLogger("httpx").setLevel(logging.WARNING)
 
 # Load data
 def load_data():
@@ -67,46 +67,120 @@ def format_price(price_str) -> str:
 
 def get_top_services(services: List[Dict]) -> List[Dict]:
     """Get services with Sequence < 10"""
-    return [s for s in services if s.get("Sequence", 0) < 10 and s.get("Is Active", False)]
+    try:
+        return [s for s in services if s.get("Sequence", 0) < 10 and s.get("Is Active", False)]
+    except:
+        return []
 
 def get_category_services(category: str, services: List[Dict]) -> List[Dict]:
     """Get services for a specific category"""
-    result = []
-    for service in services:
-        if not service.get("Is Active", False):
-            continue
-        if category in service.get("Categories", "").split(", "):
-            result.append(service)
-    result.sort(key=lambda x: x.get("Sequence", 999))
-    return result
+    try:
+        result = []
+        for service in services:
+            if not service.get("Is Active", False):
+                continue
+            if category in service.get("Categories", "").split(", "):
+                result.append(service)
+        result.sort(key=lambda x: x.get("Sequence", 999))
+        return result
+    except:
+        return []
 
 def paginate_items(items: List[Dict], page: int = 0, page_size: int = 10) -> List[Dict]:
     """Paginate items"""
-    start = page * page_size
-    end = start + page_size
-    return items[start:end]
+    try:
+        start = page * page_size
+        end = start + page_size
+        return items[start:end]
+    except:
+        return []
 
 def get_documents_list(service: Dict) -> List[str]:
     """Parse documents from service"""
-    docs = service.get("Documents", "N/A")
-    if docs == "N/A" or not docs:
+    try:
+        docs = service.get("Documents", "N/A")
+        if docs == "N/A" or not docs:
+            return ["نیازی به مدارک نیست"]
+        return [d.strip() for d in docs.split("|") if d.strip()]
+    except:
         return ["نیازی به مدارک نیست"]
-    return [d.strip() for d in docs.split("|") if d.strip()]
+
+# Error handler decorator
+def handle_errors(func):
+    """Decorator to handle errors in async functions"""
+    async def wrapper(*args, **kwargs):
+        try:
+            return await func(*args, **kwargs)
+        except TelegramError as e:
+            logger.error(f"Telegram error in {func.__name__}: {e}")
+            logger.error(traceback.format_exc())
+            try:
+                for arg in args:
+                    if hasattr(arg, 'message') and hasattr(arg.message, 'reply_text'):
+                        await arg.message.reply_text("❌ خطا در ارتباط با تلگرام. لطفا مجددا تلاش کنید.")
+                        break
+                    elif hasattr(arg, 'edit_message_text'):
+                        await arg.edit_message_text("❌ خطا در ارتباط با تلگرام. لطفا مجددا تلاش کنید.")
+                        break
+            except:
+                pass
+        except NetworkError as e:
+            logger.error(f"Network error in {func.__name__}: {e}")
+            logger.error(traceback.format_exc())
+            try:
+                for arg in args:
+                    if hasattr(arg, 'message') and hasattr(arg.message, 'reply_text'):
+                        await arg.message.reply_text("❌ خطا در شبکه. لطفا مجددا تلاش کنید.")
+                        break
+                    elif hasattr(arg, 'edit_message_text'):
+                        await arg.edit_message_text("❌ خطا در شبکه. لطفا مجددا تلاش کنید.")
+                        break
+            except:
+                pass
+        except Exception as e:
+            logger.error(f"Error in {func.__name__}: {e}")
+            logger.error(traceback.format_exc())
+            try:
+                for arg in args:
+                    if hasattr(arg, 'message') and hasattr(arg.message, 'reply_text'):
+                        await arg.message.reply_text("❌ خطای غیرمنتظره. لطفا مجددا تلاش کنید.")
+                        break
+                    elif hasattr(arg, 'edit_message_text'):
+                        await arg.edit_message_text("❌ خطای غیرمنتظره. لطفا مجددا تلاش کنید.")
+                        break
+            except:
+                pass
+    return wrapper
+
+async def set_menu_button(application: Application) -> None:
+    """Set the menu button for the bot"""
+    try:
+        # Set commands for the menu button
+        commands = [
+            BotCommand("start", "🏠 صفحه اصلی"),
+            BotCommand("top", "⭐ خدمات پر کاربرد"),
+            BotCommand("cancel", "❌ لغو عملیات"),
+        ]
+        await application.bot.set_my_commands(commands)
+        logger.info("Menu button commands set successfully")
+    except Exception as e:
+        logger.error(f"Error setting menu button: {e}")
 
 # Start command
+@handle_errors
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send welcome message with main menu"""
     try:
-        user = update.effective_user
-        
         # Clear any previous data
         context.user_data.clear()
         
+        user = update.effective_user
         welcome_text = (
             f"به ربات کافی نت خوش آمدید {user.first_name}! 👋\n"
             "چه کمکی می توان به شما بکنم؟\n\n"
             "🔹 با کلیک روی هر دکمه می‌توانید خدمات مربوطه را مشاهده کنید.\n"
-            "🔹 همچنین می‌توانید عبارت مورد نظر را تایپ کرده و جستجو کنید."
+            "🔹 همچنین می‌توانید عبارت مورد نظر را تایپ کرده و جستجو کنید.\n"
+            "🔹 از منوی زیر نیز می‌توانید استفاده کنید."
         )
         
         # Get categories with CategourySequence < 10
@@ -163,9 +237,114 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         )
     except Exception as e:
         logger.error(f"Error in start: {e}")
+        logger.error(traceback.format_exc())
         await update.message.reply_text("❌ خطا در ارتباط با سرور. لطفا مجددا تلاش کنید.")
 
+# Menu command
+@handle_errors
+async def menu_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Show main menu"""
+    await start(update, context)
+
+# Top services command
+@handle_errors
+async def top_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Show top services directly"""
+    try:
+        # Create a mock query object
+        class MockQuery:
+            def __init__(self, message, from_user):
+                self.message = message
+                self.from_user = from_user
+                self.data = None
+            
+            async def edit_message_text(self, text, reply_markup=None, parse_mode=None, disable_web_page_preview=None):
+                await self.message.reply_text(
+                    text,
+                    reply_markup=reply_markup,
+                    parse_mode=parse_mode,
+                    disable_web_page_preview=disable_web_page_preview
+                )
+            
+            async def answer(self):
+                pass
+        
+        mock_query = MockQuery(update.message, update.effective_user)
+        await show_top_services(mock_query)
+    except Exception as e:
+        logger.error(f"Error in top_command: {e}")
+        await update.message.reply_text("❌ خطا در نمایش خدمات پر کاربرد.")
+
+# Main menu keyboard for input box
+async def get_main_menu_keyboard() -> InlineKeyboardMarkup:
+    """Get the main menu keyboard"""
+    keyboard = [
+        [InlineKeyboardButton("⭐ خدمات پر کاربرد", callback_data="top_services")],
+        [InlineKeyboardButton("📂 همه دسته‌بندی‌ها", callback_data="show_categories")],
+        [InlineKeyboardButton("📊 همه خدمات", callback_data="all_services")],
+    ]
+    return InlineKeyboardMarkup(keyboard)
+
+# Show categories command
+@handle_errors
+async def show_categories(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Show all categories"""
+    try:
+        # Get categories with CategourySequence < 10
+        categories = {}
+        for service in SERVICES:
+            if not service.get("Is Active", False):
+                continue
+            seq = service.get("CategourySequence", 999)
+            if seq < 10:
+                for cat in service.get("Categories", "").split(", "):
+                    if cat not in categories:
+                        categories[cat] = []
+                    categories[cat].append(service)
+        
+        sorted_cats = sorted(
+            categories.items(),
+            key=lambda x: min(s.get("CategourySequence", 999) for s in x[1])
+        )
+        
+        text = "📂 *دسته‌بندی‌های خدمات*\n\n"
+        text += "لطفا یکی از دسته‌بندی‌های زیر را انتخاب کنید:\n\n"
+        
+        keyboard = []
+        row = []
+        for idx, (cat_name, cat_services) in enumerate(sorted_cats[:10]):
+            row.append(InlineKeyboardButton(
+                f"📂 {cat_name}", 
+                callback_data=f"cat_{cat_name[:50]}"
+            ))
+            if len(row) == 2:
+                keyboard.append(row)
+                row = []
+        
+        if row:
+            keyboard.append(row)
+        
+        keyboard.append([InlineKeyboardButton("🔙 بازگشت به منو", callback_data="back_to_menu")])
+        
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        if hasattr(update, 'callback_query'):
+            await update.callback_query.edit_message_text(
+                text,
+                reply_markup=reply_markup,
+                parse_mode=ParseMode.MARKDOWN
+            )
+        else:
+            await update.message.reply_text(
+                text,
+                reply_markup=reply_markup,
+                parse_mode=ParseMode.MARKDOWN
+            )
+    except Exception as e:
+        logger.error(f"Error in show_categories: {e}")
+
 # Callback query handler
+@handle_errors
 async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle button callbacks"""
     try:
@@ -179,6 +358,8 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             await show_top_services(query)
         elif data == "all_services":
             await show_all_services(query)
+        elif data == "show_categories":
+            await show_categories(update, context)
         elif data.startswith("cat_"):
             category = data[4:]
             await show_category_services(query, category)
@@ -205,24 +386,26 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             await handle_payment(query, context)
         elif data == "payment_done":
             await handle_payment_done(query, context)
-        elif data.startswith("skip_doc_"):
-            doc_index = int(data[9:])
-            await skip_document(query, doc_index, context)
         elif data.startswith("prev_doc_"):
             doc_index = int(data[9:])
             await go_to_previous_document(query, doc_index, context)
-        elif data == "dummy":
-            # Do nothing for dummy buttons
-            pass
         elif data == "start_over":
             await start_over(query, context)
+        elif data == "dummy":
+            # Do nothing for dummy buttons
+            logger.info("Dummy callback received")
+        else:
+            logger.info(f"Unhandled callback data: {data}")
+
     except Exception as e:
         logger.error(f"Error in button_callback: {e}")
+        logger.error(traceback.format_exc())
         try:
             await update.callback_query.edit_message_text("❌ خطا در پردازش درخواست. لطفا مجددا تلاش کنید.")
         except:
             pass
 
+@handle_errors
 async def show_top_services(query, page: int = 0):
     """Show top 10 services with pagination"""
     try:
@@ -280,8 +463,10 @@ async def show_top_services(query, page: int = 0):
         )
     except Exception as e:
         logger.error(f"Error in show_top_services: {e}")
+        logger.error(traceback.format_exc())
         await query.edit_message_text("❌ خطا در نمایش خدمات پر کاربرد.")
 
+@handle_errors
 async def show_all_services(query, page: int = 0):
     """Show all active services with pagination"""
     try:
@@ -340,8 +525,10 @@ async def show_all_services(query, page: int = 0):
         )
     except Exception as e:
         logger.error(f"Error in show_all_services: {e}")
+        logger.error(traceback.format_exc())
         await query.edit_message_text("❌ خطا در نمایش همه خدمات.")
 
+@handle_errors
 async def show_category_services(query, category: str, page: int = 0):
     """Show services for a specific category with pagination"""
     try:
@@ -397,8 +584,10 @@ async def show_category_services(query, category: str, page: int = 0):
         )
     except Exception as e:
         logger.error(f"Error in show_category_services: {e}")
+        logger.error(traceback.format_exc())
         await query.edit_message_text("❌ خطا در نمایش خدمات دسته.")
 
+@handle_errors
 async def handle_search(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle search input from user"""
     try:
@@ -464,8 +653,10 @@ async def handle_search(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         )
     except Exception as e:
         logger.error(f"Error in handle_search: {e}")
+        logger.error(traceback.format_exc())
         await update.message.reply_text("❌ خطا در جستجو. لطفا مجددا تلاش کنید.")
 
+@handle_errors
 async def show_search_more(query, context: ContextTypes.DEFAULT_TYPE):
     """Show more search results"""
     try:
@@ -508,8 +699,10 @@ async def show_search_more(query, context: ContextTypes.DEFAULT_TYPE):
         )
     except Exception as e:
         logger.error(f"Error in show_search_more: {e}")
+        logger.error(traceback.format_exc())
         await query.edit_message_text("❌ خطا در نمایش نتایج بیشتر.")
 
+@handle_errors
 async def show_service_detail(query, service_id: int, context: ContextTypes.DEFAULT_TYPE):
     """Show detailed information about a service"""
     try:
@@ -550,8 +743,10 @@ async def show_service_detail(query, service_id: int, context: ContextTypes.DEFA
         )
     except Exception as e:
         logger.error(f"Error in show_service_detail: {e}")
+        logger.error(traceback.format_exc())
         await query.edit_message_text("❌ خطا در نمایش جزئیات سرویس. لطفا مجددا تلاش کنید.")
 
+@handle_errors
 async def back_to_menu(query, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Return to main menu"""
     try:
@@ -564,7 +759,8 @@ async def back_to_menu(query, context: ContextTypes.DEFAULT_TYPE) -> None:
             f"به ربات کافی نت خوش آمدید {user.first_name}! 👋\n"
             "چه کمکی می توان به شما بکنم؟\n\n"
             "🔹 با کلیک روی هر دکمه می‌توانید خدمات مربوطه را مشاهده کنید.\n"
-            "🔹 همچنین می‌توانید عبارت مورد نظر را تایپ کرده و جستجو کنید."
+            "🔹 همچنین می‌توانید عبارت مورد نظر را تایپ کرده و جستجو کنید.\n"
+            "🔹 از منوی زیر نیز می‌توانید استفاده کنید."
         )
         
         # Get categories with CategourySequence < 10
@@ -609,8 +805,10 @@ async def back_to_menu(query, context: ContextTypes.DEFAULT_TYPE) -> None:
         )
     except Exception as e:
         logger.error(f"Error in back_to_menu: {e}")
+        logger.error(traceback.format_exc())
         await query.edit_message_text("❌ خطا در بازگشت به منو. لطفا /start را بزنید.")
 
+@handle_errors
 async def handle_request(query, service_id: int, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle service request initiation"""
     try:
@@ -643,8 +841,10 @@ async def handle_request(query, service_id: int, context: ContextTypes.DEFAULT_T
         await collect_next_document(query, 0, context)
     except Exception as e:
         logger.error(f"Error in handle_request: {e}")
+        logger.error(traceback.format_exc())
         await query.edit_message_text("❌ خطا در ثبت درخواست. لطفا مجددا تلاش کنید.")
 
+@handle_errors
 async def collect_next_document(query, doc_index: int, context: ContextTypes.DEFAULT_TYPE):
     """Collect documents one by one"""
     try:
@@ -675,7 +875,6 @@ async def collect_next_document(query, doc_index: int, context: ContextTypes.DEF
         
         keyboard = [
             [InlineKeyboardButton("🔙 مرحله قبل", callback_data=f"prev_doc_{doc_index}")],
-            [InlineKeyboardButton("📋 مشاهده خلاصه مدارک", callback_data=f"summary_docs")],
             [InlineKeyboardButton("❌ لغو و بازگشت به منو", callback_data="back_to_menu")]
         ]
         
@@ -691,7 +890,9 @@ async def collect_next_document(query, doc_index: int, context: ContextTypes.DEF
         context.user_data['collecting_docs'] = True
     except Exception as e:
         logger.error(f"Error in collect_next_document: {e}")
+        logger.error(traceback.format_exc())
 
+@handle_errors
 async def go_to_previous_document(query, doc_index: int, context: ContextTypes.DEFAULT_TYPE):
     """Go to previous document to edit"""
     try:
@@ -722,14 +923,10 @@ async def go_to_previous_document(query, doc_index: int, context: ContextTypes.D
         await collect_next_document(query, prev_index, context)
     except Exception as e:
         logger.error(f"Error in go_to_previous_document: {e}")
+        logger.error(traceback.format_exc())
         await query.edit_message_text("❌ خطا در بازگشت به مرحله قبل.")
 
-async def skip_document(query, doc_index: int, context: ContextTypes.DEFAULT_TYPE):
-    """Skip a document (kept for compatibility but no longer used)"""
-    # This function is kept but not used anymore
-    await query.answer()
-    await query.edit_message_text("❌ این گزینه دیگر فعال نیست. لطفا از دکمه‌های دیگر استفاده کنید.")
-
+@handle_errors
 async def show_document_summary_and_payment(query, context: ContextTypes.DEFAULT_TYPE):
     """Show document summary and proceed to payment"""
     try:
@@ -767,7 +964,9 @@ async def show_document_summary_and_payment(query, context: ContextTypes.DEFAULT
         context.user_data['awaiting_payment'] = True
     except Exception as e:
         logger.error(f"Error in show_document_summary_and_payment: {e}")
+        logger.error(traceback.format_exc())
 
+@handle_errors
 async def start_over(query, context: ContextTypes.DEFAULT_TYPE):
     """Start over the document collection process"""
     try:
@@ -786,17 +985,23 @@ async def start_over(query, context: ContextTypes.DEFAULT_TYPE):
         await collect_next_document(query, 0, context)
     except Exception as e:
         logger.error(f"Error in start_over: {e}")
+        logger.error(traceback.format_exc())
 
+@handle_errors
 async def handle_document_input(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle document input from user"""
+    logger.info("handle_document_input")
+
     try:
         if not context.user_data.get('collecting_docs', False):
-            return
+           await handle_search(update, context)  # If not collecting docs, treat as search input
+           return
         
         doc_value = update.message.text
         doc_label = context.user_data.get('doc_label', '')
         doc_index = context.user_data.get('doc_index', 0)
-        
+        logger.info("handle_document_input" + f" - doc_label: {doc_label}, doc_value: {doc_value}, doc_index: {doc_index}")
+
         # Store the document value
         if 'documents_collected' not in context.user_data:
             context.user_data['documents_collected'] = {}
@@ -809,7 +1014,6 @@ async def handle_document_input(update: Update, context: ContextTypes.DEFAULT_TY
         next_index = doc_index + 1
         
         # Create a new query object to use the same functions
-        # We'll simulate a callback query
         class MockQuery:
             def __init__(self, message, from_user):
                 self.message = message
@@ -817,7 +1021,6 @@ async def handle_document_input(update: Update, context: ContextTypes.DEFAULT_TY
                 self.data = None
             
             async def edit_message_text(self, text, reply_markup=None, parse_mode=None, disable_web_page_preview=None):
-                # Send a new message instead of editing
                 await self.message.reply_text(
                     text,
                     reply_markup=reply_markup,
@@ -838,8 +1041,10 @@ async def handle_document_input(update: Update, context: ContextTypes.DEFAULT_TY
             await collect_next_document(mock_query, next_index, context)
     except Exception as e:
         logger.error(f"Error in handle_document_input: {e}")
+        logger.error(traceback.format_exc())
         await update.message.reply_text("❌ خطا در دریافت اطلاعات. لطفا مجددا تلاش کنید.")
 
+@handle_errors
 async def handle_payment(query, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle payment processing"""
     try:
@@ -861,7 +1066,7 @@ async def handle_payment(query, context: ContextTypes.DEFAULT_TYPE) -> None:
         
         keyboard = [
             [InlineKeyboardButton("✅ پرداخت انجام شد", callback_data="payment_done")],
-            [InlineKeyboardButton("🔙 بازگشت به خلاصه مدارک", callback_data="summary_docs")],
+            [InlineKeyboardButton("🔙 بازگشت به خلاصه مدارک", callback_data=f"prev_doc_{len(get_documents_list(service))-1}")],
             [InlineKeyboardButton("❌ لغو و بازگشت به منو", callback_data="back_to_menu")]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
@@ -873,8 +1078,10 @@ async def handle_payment(query, context: ContextTypes.DEFAULT_TYPE) -> None:
         )
     except Exception as e:
         logger.error(f"Error in handle_payment: {e}")
+        logger.error(traceback.format_exc())
         await query.edit_message_text("❌ خطا در پردازش پرداخت. لطفا مجددا تلاش کنید.")
 
+@handle_errors
 async def handle_payment_done(query, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle payment confirmation"""
     try:
@@ -888,8 +1095,10 @@ async def handle_payment_done(query, context: ContextTypes.DEFAULT_TYPE) -> None
         context.user_data['collecting_docs'] = False
     except Exception as e:
         logger.error(f"Error in handle_payment_done: {e}")
+        logger.error(traceback.format_exc())
         await query.edit_message_text("❌ خطا در تایید پرداخت. لطفا مجددا تلاش کنید.")
 
+@handle_errors
 async def handle_payment_receipt(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle payment receipt image"""
     try:
@@ -918,13 +1127,20 @@ async def handle_payment_receipt(update: Update, context: ContextTypes.DEFAULT_T
         context.user_data.clear()
     except Exception as e:
         logger.error(f"Error in handle_payment_receipt: {e}")
+        logger.error(traceback.format_exc())
         await update.message.reply_text("❌ خطا در دریافت رسید. لطفا مجددا تلاش کنید.")
 
+@handle_errors
 async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle photo upload"""
-    if context.user_data.get('awaiting_payment_receipt', False):
-        await handle_payment_receipt(update, context)
+    try:
+        if context.user_data.get('awaiting_payment_receipt', False):
+            await handle_payment_receipt(update, context)
+    except Exception as e:
+        logger.error(f"Error in handle_photo: {e}")
+        logger.error(traceback.format_exc())
 
+@handle_errors
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Cancel current operation"""
     context.user_data.clear()
@@ -933,39 +1149,80 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         "برای شروع مجدد /start را بزنید."
     )
 
-def main() -> None:
-    """Start the bot"""
+@handle_errors
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle incoming messages"""
+        user = update.effective_user
+        message_text = update.message.text
+        logger.info(f"Received message from {user.id} ({user.first_name}): {message_text}")
+        await handle_search(update, context)    
+
+
+# Global error handler
+async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Log and handle errors"""
+    logger.error(f"Unhandled error: {context.error}")
+    logger.error(traceback.format_exc())
+    
     try:
-        # Create the application with default settings
-        BOT_TOKEN = Config.BOT_TOKEN;
-        application = Application.builder().token(BOT_TOKEN).build()
-        
-        # Add handlers
-        application.add_handler(CommandHandler("start", start))
-        application.add_handler(CommandHandler("cancel", cancel))
-        
-        # Callback query handler - handle all callbacks
-        application.add_handler(CallbackQueryHandler(button_callback))
-        
-        # Message handlers - ORDER MATTERS!
-        # First check if it's a photo
-        application.add_handler(MessageHandler(filters.PHOTO, handle_photo))
-        
-        # Then handle document input (text messages when collecting docs)
-        application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_document_input))
-        
-        # Finally handle search (all other text messages)
-        application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_search))
-        
-        # Start the bot
-        logger.info("Bot is starting...")
-        application.run_polling(
-            allowed_updates=Update.ALL_TYPES,
-            drop_pending_updates=True
-        )
-    except Exception as e:
-        logger.error(f"Error in main: {e}")
-        logger.error("Please check your internet connection and try again.")
+        if update and update.effective_message:
+            await update.effective_message.reply_text(
+                "❌ خطایی رخ داده است. لطفا مجددا تلاش کنید یا /start را بزنید."
+            )
+    except:
+        pass
+
+def main() -> None:
+    """Start the bot with retry logic"""
+    while True:
+        try:
+            # Create the application
+            application = Application.builder().token(BOT_TOKEN).build()
+            
+            # Set menu button commands
+            import asyncio
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            loop.run_until_complete(set_menu_button(application))
+            
+            # Add global error handler
+            application.add_error_handler(error_handler)
+            
+            # Add command handlers
+            application.add_handler(CommandHandler("start", start))
+            application.add_handler(CommandHandler("menu", menu_command))
+            application.add_handler(CommandHandler("top", top_command))
+            application.add_handler(CommandHandler("cancel", cancel))
+            
+            # Callback query handler
+            application.add_handler(CallbackQueryHandler(button_callback))
+            
+            # Message handlers - ORDER MATTERS!
+            # application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+            application.add_handler(MessageHandler(filters.PHOTO, handle_photo))
+            application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_document_input))
+            application.add_handler(MessageHandler(filters.TEXT, handle_search))
+ 
+            # Start the bot
+            logger.info("Bot is starting...")
+            application.run_polling(
+                allowed_updates=Update.ALL_TYPES,
+                drop_pending_updates=True
+            )
+            
+            # If we get here, the bot stopped normally
+            break
+            
+        except KeyboardInterrupt:
+            logger.info("Bot stopped by user.")
+            break
+        except Exception as e:
+            logger.error(f"Error in main: {e}")
+            logger.error(traceback.format_exc())
+            logger.info("Restarting bot in 5 seconds...")
+            import time
+            time.sleep(5)
+            continue
 
 if __name__ == "__main__":
     main()
