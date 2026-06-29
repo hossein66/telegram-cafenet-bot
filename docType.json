@@ -1,0 +1,10 @@
+[
+  { "Id": 1, "title": "Text", "REx": ".*" },
+  { "Id": 2, "title": "Number", "REx": "^[0-9]+$" },
+  { "Id": 3, "title": "Image", "REx": ".*\\.(jpg|jpeg|png|gif|svg)$" },
+  { "Id": 4, "title": "Sheba", "REx": "^IR[0-9]{24}$" },
+  { "Id": 5, "title": "Mobile", "REx": "^09[0-9]{9}$" },
+  { "Id": 6, "title": "NationalCode", "REx": "^[0-9]{10}$" },
+  { "Id": 7, "title": "PostalCode", "REx": "^[0-9]{10}$" },
+  { "Id": 8, "title": "Date", "REx": "^\\d{4}-(0?[1-9]|1[0-2])-(0?[1-9]|[12]\\d|3[01])$" }
+]

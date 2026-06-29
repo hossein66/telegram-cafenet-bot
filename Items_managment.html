@@ -1,0 +1,1025 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>کافی‌نتی • مدیریت آیتم‌ها با ID (آرایه‌ای)</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+      background: #f4f7fc;
+      direction: rtl;
+      padding: 20px;
+      color: #1e293b;
+    }
+    .container { max-width: 1600px; margin: 0 auto; }
+    .header {
+      display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center;
+      background: white; padding: 16px 24px; border-radius: 20px;
+      box-shadow: 0 6px 14px rgba(0,0,0,0.02); margin-bottom: 28px;
+      border: 1px solid #e9edf2;
+    }
+    .header h1 { font-size: 1.6rem; font-weight: 600; color: #0b2b4a; }
+    .header h1 i { color: #2a7de1; margin-left: 8px; }
+    .header-actions { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+    .btn {
+      background: white; border: 1px solid #d0d8e0; padding: 8px 18px;
+      border-radius: 40px; font-size: 0.9rem; font-weight: 500;
+      display: inline-flex; align-items: center; gap: 8px; cursor: pointer;
+      transition: 0.2s; color: #1e293b; background: #f8fafc;
+    }
+    .btn-primary { background: #1a5bbf; border-color: #1a5bbf; color: white; }
+    .btn-primary i { color: white; }
+    .btn-success { background: #0f7b3a; border-color: #0f7b3a; color: white; }
+    .btn-outline { background: transparent; border: 1px solid #cdd6e2; }
+    .btn-outline i { color: #475569; }
+    .btn-danger { background: #b91c1c; border-color: #b91c1c; color: white; }
+    .btn:hover { transform: scale(0.97); opacity: 0.85; }
+    .search-bar {
+      display: flex; gap: 12px; flex-wrap: wrap; align-items: center;
+      background: white; padding: 12px 20px; border-radius: 40px;
+      border: 1px solid #e9edf2; margin-bottom: 20px;
+    }
+    .search-bar input, .search-bar select {
+      padding: 8px 16px; border-radius: 30px; border: 1px solid #d0d8e0;
+      font-size: 0.9rem; background: #fafcff;
+    }
+    .search-bar input { flex: 1; min-width: 180px; }
+    .search-bar select { min-width: 140px; }
+    .stats {
+      display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 24px;
+    }
+    .stat-card {
+      background: white; padding: 12px 22px; border-radius: 40px;
+      border: 1px solid #e2e8f0; box-shadow: 0 2px 6px rgba(0,0,0,0.01);
+      font-size: 0.9rem; display: flex; align-items: center; gap: 6px;
+    }
+    .stat-card i { color: #2a7de1; width: 20px; }
+    .stat-card span { font-weight: 600; margin-left: 4px; }
+    .table-wrapper {
+      background: white; border-radius: 24px; border: 1px solid #e9edf2;
+      overflow-x: auto; box-shadow: 0 10px 25px -8px rgba(0,0,0,0.04);
+    }
+    table { width: 100%; border-collapse: collapse; min-width: 1400px; font-size: 0.85rem; }
+    th {
+      background: #f8fafc; color: #1e3a5f; font-weight: 600;
+      padding: 14px 10px; text-align: right; border-bottom: 2px solid #dde3ea;
+      white-space: nowrap;
+    }
+    td { padding: 10px 8px; border-bottom: 1px solid #ecf1f7; vertical-align: middle; }
+    tr:hover td { background: #fafcff; }
+    .doc-item {
+      background: #e2e8f0; border-radius: 20px; padding: 2px 8px 2px 6px;
+      display: inline-flex; align-items: center; gap: 4px; font-size: 0.7rem;
+      margin: 2px 0;
+    }
+    .doc-item i { cursor: pointer; color: #a0aec0; font-size: 0.65rem; }
+    .doc-item i:hover { color: #b91c1c; }
+    .add-doc-btn {
+      background: transparent; border: 1px dashed #94a3b8; border-radius: 30px;
+      padding: 0 10px; font-size: 0.7rem; color: #334155; cursor: pointer;
+      display: inline-flex; align-items: center; gap: 4px;
+    }
+    .action-icon { color: #475569; margin: 0 4px; cursor: pointer; opacity: 0.6; transition: 0.2s; }
+    .action-icon:hover { opacity: 1; color: #0b2b4a; }
+    .status-badge {
+      background: #dcfce7; color: #166534; padding: 2px 10px;
+      border-radius: 30px; font-size: 0.7rem; font-weight: 500;
+    }
+    .status-inactive { background: #fee2e2; color: #991b1b; }
+    .inline-edit-select {
+      background: white; border: 1px solid #cbd5e1; border-radius: 30px;
+      padding: 0 8px; font-size: 0.65rem; height: 22px; max-width: 80px;
+    }
+    .inline-edit-input {
+      border: 1px solid #cbd5e1; border-radius: 30px; padding: 0 8px;
+      font-size: 0.75rem; width: 55px; text-align: center;
+      background: white;
+    }
+    .inline-edit-input:focus { outline: 2px solid #94a3b8; }
+    .no-result { padding: 40px; text-align: center; color: #94a3b8; }
+    .tag-input-group {
+      display: flex; flex-wrap: wrap; gap: 4px; align-items: center;
+    }
+    .modal {
+      display: none; position: fixed; top:0; left:0; width:100%; height:100%;
+      background: rgba(0,0,0,0.3); backdrop-filter: blur(2px);
+      align-items: center; justify-content: center; z-index: 999;
+    }
+    .modal.active { display: flex; }
+    .modal-content {
+      background: white; max-width: 750px; width: 90%; max-height: 90vh;
+      overflow-y: auto; border-radius: 32px; padding: 32px;
+      box-shadow: 0 30px 60px rgba(0,0,0,0.2);
+    }
+    .modal-content h2 { margin-bottom: 16px; }
+    .modal-close { float: left; background: none; border: none; font-size: 1.8rem; cursor: pointer; }
+    .form-row { display: flex; flex-direction: column; margin-bottom: 14px; }
+    .form-row label { font-weight: 500; margin-bottom: 4px; font-size: 0.85rem; }
+    .form-row input, .form-row select, .form-row textarea {
+      padding: 10px 14px; border-radius: 16px; border: 1px solid #d0d8e0;
+      font-size: 0.9rem; background: #fafcff;
+    }
+    .form-row .inline-group { display: flex; gap: 12px; flex-wrap: wrap; }
+    .form-row .inline-group > * { flex: 1; min-width: 100px; }
+    .doc-editor {
+      background: #f1f5f9; padding: 12px; border-radius: 20px; margin: 8px 0;
+    }
+    .doc-line {
+      display: flex; gap: 8px; align-items: center; margin-bottom: 6px;
+    }
+    .doc-line input { flex: 2; }
+    .doc-line select { flex: 1; }
+    .footer-actions { margin-top: 20px; display: flex; gap: 12px; justify-content: flex-end; }
+    .toast {
+      position: fixed; bottom: 30px; left: 30px;
+      background: #1e293b; color: white; padding: 14px 28px;
+      border-radius: 60px; box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+      font-weight: 500; z-index: 1000;
+    }
+    .category-manager {
+      display: flex; flex-wrap: wrap; gap: 10px; margin: 10px 0;
+    }
+    .category-manager .cat-item {
+      background: #eef2f8; border-radius: 30px; padding: 4px 14px;
+      display: inline-flex; align-items: center; gap: 8px;
+    }
+    .cat-edit-input { border: 1px solid #cbd5e1; border-radius: 30px; padding: 2px 12px; width: 150px; }
+    .cat-seq-input { width: 50px; text-align: center; border: 1px solid #cbd5e1; border-radius: 30px; padding: 2px 4px; }
+    @media (max-width: 700px) { .header { flex-direction: column; align-items: stretch; gap: 10px; } }
+  </style>
+</head>
+<body>
+<div class="container" id="app">
+  <div class="header">
+    <h1><i class="fas fa-edit"></i> مدیریت آیتم‌ها</h1>
+    <div class="header-actions">
+      <button class="btn btn-primary" onclick="openAddModal()"><i class="fas fa-plus"></i> افزودن آیتم</button>
+      <button class="btn btn-outline" onclick="openCategoryModal()"><i class="fas fa-tags"></i> دسته‌ها</button>
+      <button class="btn btn-outline" onclick="exportJSON()"><i class="fas fa-download"></i> خروجی JSON</button>
+      <button class="btn btn-success" onclick="saveChanges()"><i class="fas fa-save"></i> ذخیره</button>
+      <button class="btn btn-outline" onclick="document.getElementById('fileInput').click()"><i class="fas fa-upload"></i> بارگذاری</button>
+      <input type="file" id="fileInput" accept=".json" style="display:none" onchange="loadJSON(event)">
+    </div>
+  </div>
+
+  <div class="search-bar">
+    <input type="text" id="searchInput" placeholder="جستجو در عنوان، دسته‌بندی، مدارک..." oninput="applyFilters()">
+    <select id="categoryFilter" onchange="applyFilters()">
+      <option value="">همه دسته‌بندی‌ها</option>
+    </select>
+    <button class="btn btn-outline" onclick="clearFilters()" style="padding:6px 14px;"><i class="fas fa-times"></i> پاک کردن</button>
+    <span id="filterResultCount" style="color:#64748b; font-size:0.85rem; margin-right:8px;"></span>
+  </div>
+
+  <div class="stats" id="statsBar">
+    <div class="stat-card"><i class="fas fa-list"></i> مجموع: <span id="totalItems">0</span></div>
+    <div class="stat-card"><i class="fas fa-check-circle" style="color:#0f7b3a;"></i> فعال: <span id="activeItems">0</span></div>
+    <div class="stat-card"><i class="fas fa-tag"></i> دسته‌ها: <span id="categoryCount">0</span></div>
+    <div class="stat-card"><i class="fas fa-star" style="color:#eab308;"></i> تاپ ۱۰: <span id="top10Count">0</span></div>
+  </div>
+
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th><th>عنوان</th><th>قیمت</th><th>تخفیف</th><th>دسته‌ها</th>
+          <th>تاپ ۱۰</th><th>ترتیب</th><th>ترتیب دسته</th>
+          <th>مدارک</th><th>وضعیت</th><th>عملیات</th>
+        </tr>
+      </thead>
+      <tbody id="itemsTableBody">
+        <!-- dynamic -->
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal for add / edit -->
+<div class="modal" id="editModal">
+  <div class="modal-content">
+    <button class="modal-close" onclick="closeModal()">&times;</button>
+    <h2 id="modalTitle"><i class="fas fa-pen"></i> ویرایش آیتم</h2>
+    <div id="modalForm"></div>
+    <div class="footer-actions">
+      <button class="btn btn-outline" onclick="closeModal()">انصراف</button>
+      <button class="btn btn-primary" onclick="saveItemFromModal()"><i class="fas fa-check"></i> ذخیره</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal for category management -->
+<div class="modal" id="categoryModal">
+  <div class="modal-content">
+    <button class="modal-close" onclick="closeCategoryModal()">&times;</button>
+    <h2><i class="fas fa-tags"></i> مدیریت دسته‌بندی‌ها</h2>
+    <p style="color:#64748b; margin-bottom:12px;">تغییر نام یا ترتیب دسته‌بندی با شناسه</p>
+    <div id="categoryList" class="category-manager"></div>
+    <div class="form-row" style="margin-top:12px;">
+      <label>افزودن دسته‌بندی جدید</label>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <input type="text" id="newCategoryInput" placeholder="نام دسته‌بندی" style="flex:2; padding:8px 14px; border-radius:30px; border:1px solid #d0d8e0;">
+        <input type="number" id="newCategorySeq" placeholder="ترتیب" value="100" style="width:80px; padding:8px 14px; border-radius:30px; border:1px solid #d0d8e0;">
+        <button class="btn btn-primary" onclick="addNewCategory()"><i class="fas fa-plus"></i> افزودن</button>
+      </div>
+    </div>
+    <div class="footer-actions">
+      <button class="btn btn-outline" onclick="closeCategoryModal()">بستن</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast" style="display:none;"></div>
+
+<script>
+  // ---------- DATA ----------
+  let items = [];
+  let editingIndex = -1;
+  let filteredItems = [];
+
+  // Document Types with ID
+  const docTypeOptions = [
+    { id: 1, title: "Text", REx: ".*" },
+    { id: 2, title: "Number", REx: "^[0-9]+$" },
+    { id: 3, title: "Image", REx: ".*\\.(jpg|jpeg|png|gif|svg)$" },
+    { id: 4, title: "Sheba", REx: "^IR[0-9]{24}$" },
+    { id: 5, title: "Mobile", REx: "^09[0-9]{9}$" },
+    { id: 6, title: "NationalCode", REx: "^[0-9]{10}$" }
+  ];
+
+  // Categories with ID
+  const categories = [
+    { id: 1, name: "خدمات ثبت نام خودرو", sort: 1 },
+    { id: 2, name: "املاک و اسکان", sort: 2 },
+    { id: 3, name: "جواز کسب", sort: 3 },
+    { id: 4, name: "کسب و کار", sort: 4 },
+    { id: 5, name: "وام", sort: 5 },
+    { id: 6, name: "تعویض پلاک", sort: 6 },
+    { id: 7, name: "مهاجرت", sort: 7 },
+    { id: 8, name: "استخدام", sort: 8 },
+    { id: 9, name: "سهام عدالت", sort: 9 },
+    { id: 10, name: "یارانه", sort: 10 },
+    { id: 11, name: "دانشگاه", sort: 11 },
+    { id: 12, name: "مالیات", sort: 12 },
+    { id: 13, name: "طلا", sort: 13 },
+    { id: 14, name: "تحصیلی", sort: 14 },
+    { id: 15, name: "مدرسه", sort: 15 },
+    { id: 16, name: "خدمات خودرو", sort: 16 },
+    { id: 17, name: "قضایی", sort: 17 },
+    { id: 18, name: "آدرس", sort: 18 },
+    { id: 19, name: "احراز نشانی", sort: 19 },
+    { id: 20, name: "ملک", sort: 20 },
+    { id: 21, name: "شرکت", sort: 21 },
+    { id: 22, name: "کمک هزینه", sort: 22 },
+    { id: 23, name: "املاک", sort: 23 },
+    { id: 24, name: "ورزش", sort: 24 },
+    { id: 25, name: "چک", sort: 25 },
+    { id: 26, name: "بهداشت", sort: 26 },
+    { id: 27, name: "سربازی", sort: 27 },
+    { id: 28, name: "دوربین", sort: 28 },
+    { id: 29, name: "امور خارجه", sort: 29 },
+    { id: 30, name: "سفته", sort: 30 },
+    { id: 31, name: "بیمه", sort: 31 },
+    { id: 32, name: "امور استعلامی و ثبتی", sort: 32 },
+    { id: 33, name: "نظام مهندسی", sort: 33 },
+    { id: 34, name: "بازار سرمایه", sort: 34 },
+    { id: 35, name: "کارت سوخت", sort: 35 },
+    { id: 36, name: "مجوز", sort: 36 },
+    { id: 37, name: "نوین اصناف", sort: 37 },
+    { id: 38, name: "سخا", sort: 38 },
+    { id: 39, name: "تایپ", sort: 39 },
+    { id: 40, name: "عوارض", sort: 40 },
+    { id: 41, name: "طرح ترافیک", sort: 41 },
+    { id: 42, name: "بانک", sort: 42 },
+    { id: 43, name: "گواهی الکترونیکی", sort: 43 },
+    { id: 44, name: "سفر", sort: 44 },
+    { id: 45, name: "ثبت احوال", sort: 45 },
+    { id: 46, name: "بورس", sort: 46 },
+    { id: 47, name: "پزشک", sort: 47 },
+    { id: 48, name: "خدمات موتور", sort: 48 },
+    { id: 49, name: "سرقت کالاهای دیجیتال", sort: 49 },
+    { id: 50, name: "کمیته امداد", sort: 50 },
+    { id: 51, name: "بیمه بیکاری تامین اجتماعی", sort: 51 }
+  ];
+
+  // Helper functions
+  function getCategoryNameById(id) {
+    const cat = categories.find(c => c.id === id);
+    return cat ? cat.name : `دسته #${id}`;
+  }
+
+  function getCategoryIdByName(name) {
+    if (!name) return null;
+    const cat = categories.find(c => c.name === name.trim());
+    return cat ? cat.id : null;
+  }
+
+  function convertCategoriesToIds(categoriesInput) {
+    if (!categoriesInput) return [];
+    if (Array.isArray(categoriesInput)) {
+      return categoriesInput.filter(id => categories.some(c => c.id === id));
+    }
+    if (typeof categoriesInput === 'string') {
+      const names = categoriesInput.split(',').map(s => s.trim()).filter(Boolean);
+      const ids = [];
+      names.forEach(name => {
+        const id = getCategoryIdByName(name);
+        if (id !== null && !ids.includes(id)) {
+          ids.push(id);
+        }
+      });
+      return ids;
+    }
+    return [];
+  }
+
+  function getCategoryNames(ids) {
+    if (!ids || !Array.isArray(ids) || ids.length === 0) return 'بدون دسته';
+    return ids.map(id => getCategoryNameById(id)).join('، ');
+  }
+
+  function parseDocumentsToArray(docStr) {
+    if (!docStr || docStr === 'N/A' || docStr === '') return [];
+    return docStr.split('|').map(s => s.trim()).filter(s => s.length > 0).map(title => {
+      return { title, typeId: 1 };
+    });
+  }
+
+  function getAllCategories() {
+    return categories.slice().sort((a, b) => a.sort - b.sort);
+  }
+
+  function updateCategoryFilterOptions() {
+    const select = document.getElementById('categoryFilter');
+    const currentVal = select.value;
+    const cats = getAllCategories();
+    select.innerHTML = '<option value="">همه دسته‌بندی‌ها</option>' + cats.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+    if (currentVal) select.value = currentVal;
+  }
+
+  // ---------- FILTER & SEARCH ----------
+  function applyFilters() {
+    const searchTerm = document.getElementById('searchInput').value.trim().toLowerCase();
+    const categoryFilter = document.getElementById('categoryFilter').value;
+
+    filteredItems = items.filter(item => {
+      const titleMatch = item.Title && item.Title.toLowerCase().includes(searchTerm);
+      const catNames = item.Categories && Array.isArray(item.Categories) 
+        ? item.Categories.map(id => getCategoryNameById(id)).join(' ').toLowerCase()
+        : '';
+      const catMatch = catNames.includes(searchTerm);
+      const docMatch = Array.isArray(item.documents) && item.documents.some(d => d.title && d.title.toLowerCase().includes(searchTerm));
+      const searchMatch = !searchTerm || titleMatch || catMatch || docMatch;
+
+      let catFilterMatch = true;
+      if (categoryFilter) {
+        const filterId = parseInt(categoryFilter);
+        catFilterMatch = (item.Categories && Array.isArray(item.Categories) && item.Categories.includes(filterId));
+      }
+      return searchMatch && catFilterMatch;
+    });
+
+    filteredItems.sort((a, b) => {
+      const seqA = a.Sort || 999;
+      const seqB = b.Sort || 999;
+      if (seqA !== seqB) return seqA - seqB;
+      return (a.Id || 0) - (b.Id || 0);
+    });
+
+    document.getElementById('filterResultCount').textContent = `(${filteredItems.length} مورد)`;
+    renderFilteredTable();
+  }
+
+  function clearFilters() {
+    document.getElementById('searchInput').value = '';
+    document.getElementById('categoryFilter').value = '';
+    applyFilters();
+  }
+
+  function renderFilteredTable() {
+    const tbody = document.getElementById('itemsTableBody');
+    const displayItems = filteredItems.length > 0 ? filteredItems : items;
+
+    if (!displayItems.length) {
+      tbody.innerHTML = `<tr><td colspan="11" style="text-align:center; padding:40px; color:#94a3b8;">هیچ آیتمی با این فیلترها یافت نشد.</td></tr>`;
+      updateStats();
+      return;
+    }
+
+    let html = '';
+    displayItems.forEach((item, idx) => {
+      const origIdx = items.indexOf(item);
+      const isActive = item.IsActive !== undefined ? item.IsActive : true;
+      const isTop10 = item.IsTop10 === true;
+      const sort = item.Sort || 0;
+      const catSeq = item.CategourySequence || 0;
+
+      if (!Array.isArray(item.documents)) {
+        if (Array.isArray(item.Documents)) item.documents = item.Documents;
+        else if (typeof item.Documents === 'string') item.documents = parseDocumentsToArray(item.Documents);
+        else item.documents = [];
+      }
+
+      const docHtml = item.documents.map((d, i) => {
+        const title = d.title || 'بدون عنوان';
+        const typeId = d.typeId || 1;
+        return `<span class="doc-item">
+          <span>${title}</span>
+          <select class="inline-edit-select" onchange="updateDocType(${origIdx}, ${i}, this.value)">
+            ${docTypeOptions.map(opt => `<option value="${opt.id}" ${opt.id===typeId?'selected':''}>${opt.title}</option>`).join('')}
+          </select>
+          <i class="fas fa-pen" onclick="editDocTitle(${origIdx}, ${i})"></i>
+          <i class="fas fa-trash" onclick="removeDocItem(${origIdx}, ${i})"></i>
+        </span>`;
+      }).join(' ');
+      const addBtn = `<span class="add-doc-btn" onclick="addDocItem(${origIdx})"><i class="fas fa-plus"></i> مدرک</span>`;
+
+      html += `<tr>
+        <td>${item.Id || origIdx+1}</td>
+        <td><strong>${item.Title || 'بدون عنوان'}</strong></td>
+        <td class="price-cell">${item.Price ? parseInt(item.Price).toLocaleString() : '0'}</td>
+        <td>${item.Discount ? parseInt(item.Discount).toLocaleString() : '0'}</td>
+        <td>
+          <select multiple style="width:150px; height:60px; border-radius:12px; border:1px solid #d0d8e0; padding:4px;" onchange="updateCategories(${origIdx}, this)">
+            ${categories.map(c => `<option value="${c.id}" ${(item.Categories && Array.isArray(item.Categories) && item.Categories.includes(c.id))?'selected':''}>${c.name}</option>`).join('')}
+          </select>
+          <span style="font-size:0.65rem; color:#64748b; display:block;">(Ctrl+Click برای چندگانه)</span>
+        </td>
+        <td>
+          <select onchange="updateTop10(${origIdx}, this.value)" style="border:1px solid #cbd5e1; border-radius:30px; padding:2px 6px; font-size:0.7rem;">
+            <option value="false" ${!isTop10?'selected':''}>خیر</option>
+            <option value="true" ${isTop10?'selected':''}>بله</option>
+          </select>
+        </td>
+        <td>
+          <input type="number" class="inline-edit-input" value="${sort}" 
+                 onchange="updateSort(${origIdx}, this.value)" min="0" step="1">
+        </td>
+        <td>
+          <input type="number" class="inline-edit-input" value="${catSeq}" 
+                 onchange="updateCategorySequence(${origIdx}, this.value)" min="0" step="1">
+        </td>
+        <td><div class="tag-input-group">${docHtml} ${addBtn}</div></td>
+        <td><span class="status-badge ${isActive ? '' : 'status-inactive'}">${isActive ? 'فعال' : 'غیرفعال'}</span></td>
+        <td>
+          <i class="fas fa-edit action-icon" onclick="openEditModal(${origIdx})" title="ویرایش کامل"></i>
+          <i class="fas fa-copy action-icon" onclick="duplicateItem(${origIdx})" title="کپی"></i>
+          <i class="fas fa-trash action-icon" style="color:#b91c1c;" onclick="deleteItem(${origIdx})" title="حذف"></i>
+        </td>
+      </tr>`;
+    });
+    tbody.innerHTML = html;
+    updateStats();
+  }
+
+  function updateStats() {
+    document.getElementById('totalItems').textContent = items.length;
+    const active = items.filter(it => it.IsActive !== false).length;
+    document.getElementById('activeItems').textContent = active;
+    document.getElementById('categoryCount').textContent = categories.length;
+    const top10 = items.filter(it => it.IsTop10 === true).length;
+    document.getElementById('top10Count').textContent = top10;
+    updateCategoryFilterOptions();
+  }
+
+  // ---------- INLINE UPDATES ----------
+  function updateCategories(idx, select) {
+    if (items[idx]) {
+      const selected = Array.from(select.selectedOptions).map(opt => parseInt(opt.value));
+      items[idx].Categories = selected;
+      showToast('دسته‌بندی‌ها به‌روز شدند');
+      applyFilters();
+    }
+  }
+
+  function updateTop10(idx, value) {
+    if (items[idx]) {
+      items[idx].IsTop10 = value === 'true';
+      showToast('تاپ ۱۰ به‌روز شد');
+      applyFilters();
+    }
+  }
+
+  function updateSort(idx, value) {
+    if (items[idx]) {
+      const num = parseInt(value);
+      if (!isNaN(num) && num >= 0) {
+        items[idx].Sort = num;
+        showToast('ترتیب به‌روز شد');
+        applyFilters();
+      }
+    }
+  }
+
+  function updateCategorySequence(idx, value) {
+    if (items[idx]) {
+      const num = parseInt(value);
+      if (!isNaN(num) && num >= 0) {
+        items[idx].CategourySequence = num;
+        showToast('ترتیب دسته به‌روز شد');
+        applyFilters();
+      }
+    }
+  }
+
+  function updateDocType(idx, docIdx, newTypeId) {
+    const item = items[idx];
+    if (!item || !Array.isArray(item.documents) || !item.documents[docIdx]) return;
+    item.documents[docIdx].typeId = parseInt(newTypeId);
+    showToast('نوع مدرک تغییر کرد');
+    applyFilters();
+  }
+
+  function editDocTitle(idx, docIdx) {
+    const item = items[idx];
+    if (!item || !Array.isArray(item.documents) || !item.documents[docIdx]) return;
+    const current = item.documents[docIdx].title;
+    const newTitle = prompt('عنوان مدرک:', current);
+    if (newTitle !== null) {
+      item.documents[docIdx].title = newTitle.trim() || 'مدرک';
+      applyFilters();
+      showToast('عنوان مدرک به‌روز شد');
+    }
+  }
+
+  function addDocItem(idx) {
+    const item = items[idx];
+    if (!Array.isArray(item.documents)) item.documents = [];
+    item.documents.push({ title: 'مدرک جدید', typeId: 1 });
+    applyFilters();
+    showToast('مدرک اضافه شد');
+  }
+
+  function removeDocItem(idx, docIdx) {
+    const item = items[idx];
+    if (!Array.isArray(item.documents)) return;
+    item.documents.splice(docIdx, 1);
+    applyFilters();
+    showToast('مدرک حذف شد');
+  }
+
+  // ---------- CATEGORY MANAGEMENT ----------
+  function openCategoryModal() {
+    document.getElementById('categoryModal').classList.add('active');
+    renderCategoryList();
+  }
+
+  function closeCategoryModal() {
+    document.getElementById('categoryModal').classList.remove('active');
+  }
+
+  function renderCategoryList() {
+    const container = document.getElementById('categoryList');
+    const cats = getAllCategories();
+    if (cats.length === 0) {
+      container.innerHTML = '<p style="color:#94a3b8;">هیچ دسته‌بندی وجود ندارد.</p>';
+      return;
+    }
+    let html = '';
+    cats.forEach(cat => {
+      html += `<span class="cat-item">
+        <input type="text" value="${cat.name}" class="cat-edit-input" data-catid="${cat.id}" onchange="renameCategory(this)" placeholder="نام جدید">
+        <input type="number" value="${cat.sort || 0}" class="cat-seq-input" data-catid="${cat.id}" onchange="updateCategorySort(this)" placeholder="ترتیب">
+        <i class="fas fa-trash" onclick="deleteCategory(${cat.id})" title="حذف"></i>
+      </span>`;
+    });
+    container.innerHTML = html;
+  }
+
+  function renameCategory(input) {
+    const id = parseInt(input.dataset.catid);
+    const newName = input.value.trim();
+    if (!newName) { showToast('نام معتبر وارد کنید'); return; }
+    const cat = categories.find(c => c.id === id);
+    if (!cat) return;
+    cat.name = newName;
+    showToast(`دسته‌بندی به "${newName}" تغییر یافت`);
+    applyFilters();
+    renderCategoryList();
+  }
+
+  function updateCategorySort(input) {
+    const id = parseInt(input.dataset.catid);
+    const newSort = parseInt(input.value);
+    if (isNaN(newSort) || newSort < 0) { showToast('عدد معتبر وارد کنید'); return; }
+    const cat = categories.find(c => c.id === id);
+    if (!cat) return;
+    cat.sort = newSort;
+    showToast(`ترتیب دسته به ${newSort} تغییر یافت`);
+    applyFilters();
+    renderCategoryList();
+  }
+
+  function deleteCategory(id) {
+    const cat = categories.find(c => c.id === id);
+    if (!cat) return;
+    if (!confirm(`آیا از حذف دسته‌بندی "${cat.name}" اطمینان دارید؟`)) return;
+    const index = categories.indexOf(cat);
+    if (index > -1) categories.splice(index, 1);
+    items.forEach(item => {
+      if (item.Categories && Array.isArray(item.Categories)) {
+        item.Categories = item.Categories.filter(cid => cid !== id);
+      }
+    });
+    showToast(`دسته‌بندی "${cat.name}" حذف شد`);
+    applyFilters();
+    renderCategoryList();
+  }
+
+  function addNewCategory() {
+    const nameInput = document.getElementById('newCategoryInput');
+    const seqInput = document.getElementById('newCategorySeq');
+    const name = nameInput.value.trim();
+    const sort = parseInt(seqInput.value) || 0;
+    if (!name) { showToast('لطفاً نام دسته‌بندی را وارد کنید'); return; }
+    const newId = categories.length ? Math.max(...categories.map(c => c.id)) + 1 : 1;
+    categories.push({ id: newId, name, sort });
+    showToast(`دسته‌بندی "${name}" با ID ${newId} اضافه شد`);
+    nameInput.value = '';
+    seqInput.value = '100';
+    renderCategoryList();
+    applyFilters();
+  }
+
+  // ---------- ADD NEW ITEM ----------
+  function openAddModal() {
+    editingIndex = -1;
+    document.getElementById('modalTitle').innerHTML = '<i class="fas fa-plus"></i> افزودن آیتم جدید';
+    const catOptions = categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+    const form = document.getElementById('modalForm');
+    form.innerHTML = `
+      <div class="form-row"><label>شناسه</label><input type="number" id="editId" value="${items.length+1}"></div>
+      <div class="form-row"><label>عنوان *</label><input type="text" id="editTitle" placeholder="عنوان سرویس"></div>
+      <div class="form-row"><label>قیمت</label><input type="number" id="editPrice" value="0"></div>
+      <div class="form-row"><label>تخفیف</label><input type="number" id="editDiscount" value="0"></div>
+      <div class="form-row"><label>دسته‌بندی‌ها (چندگانه - Ctrl+Click)</label>
+        <select multiple id="editCategories" style="height:100px; border-radius:16px; border:1px solid #d0d8e0; padding:8px;">
+          ${catOptions}
+        </select>
+      </div>
+      <div class="form-row">
+        <div class="inline-group">
+          <div><label>تاپ ۱۰</label><select id="editTop10"><option value="false">خیر</option><option value="true">بله</option></select></div>
+          <div><label>ترتیب</label><input type="number" id="editSort" value="1" min="0"></div>
+          <div><label>ترتیب دسته</label><input type="number" id="editCatSeq" value="1" min="0"></div>
+        </div>
+      </div>
+      <div class="form-row"><label>وضعیت</label>
+        <select id="editActive"><option value="true" selected>فعال</option><option value="false">غیرفعال</option></select>
+      </div>
+      <div class="form-row"><label>مدارک (title + نوع)</label>
+        <div class="doc-editor" id="docEditorContainer">
+          <div class="doc-line"><input type="text" placeholder="عنوان مدرک" class="doc-title-input" value="مدرک نمونه">
+            <select class="doc-type-select">${docTypeOptions.map(opt => `<option value="${opt.id}">${opt.title}</option>`).join('')}</select>
+          </div>
+          <button class="add-doc-btn" onclick="addDocField()" type="button"><i class="fas fa-plus"></i> افزودن مدرک</button>
+        </div>
+      </div>
+      <div class="form-row"><label>URL</label><input type="text" id="editUrl" placeholder="https://..."></div>
+    `;
+    document.getElementById('editModal').classList.add('active');
+  }
+
+  function addDocField() {
+    const container = document.getElementById('docEditorContainer');
+    const line = document.createElement('div');
+    line.className = 'doc-line';
+    line.innerHTML = `<input type="text" placeholder="عنوان مدرک" class="doc-title-input" value="مدرک جدید">
+      <select class="doc-type-select">${docTypeOptions.map(opt => `<option value="${opt.id}">${opt.title}</option>`).join('')}</select>`;
+    container.insertBefore(line, container.lastElementChild);
+  }
+
+  // ---------- EDIT MODAL ----------
+  function openEditModal(idx) {
+    editingIndex = idx;
+    document.getElementById('modalTitle').innerHTML = '<i class="fas fa-pen"></i> ویرایش آیتم';
+    const item = items[idx];
+    if (!item) return;
+    if (!Array.isArray(item.documents)) {
+      if (Array.isArray(item.Documents)) item.documents = item.Documents;
+      else if (typeof item.Documents === 'string') item.documents = parseDocumentsToArray(item.Documents);
+      else item.documents = [];
+    }
+    const catOptions = categories.map(c => `<option value="${c.id}" ${(item.Categories && Array.isArray(item.Categories) && item.Categories.includes(c.id))?'selected':''}>${c.name}</option>`).join('');
+    const form = document.getElementById('modalForm');
+    let docEditorHtml = item.documents.map((d, i) => `
+      <div class="doc-line">
+        <input type="text" value="${d.title || ''}" placeholder="عنوان مدرک" data-docidx="${i}" class="doc-title-input">
+        <select data-docidx="${i}" class="doc-type-select">
+          ${docTypeOptions.map(opt => `<option value="${opt.id}" ${opt.id===d.typeId?'selected':''}>${opt.title}</option>`).join('')}
+        </select>
+        <i class="fas fa-times action-icon" onclick="removeDocItem(${idx}, ${i}); applyFilters(); openEditModal(${idx});" style="color:#b91c1c;"></i>
+      </div>
+    `).join('');
+
+    form.innerHTML = `
+      <div class="form-row"><label>شناسه</label><input type="number" id="editId" value="${item.Id || ''}"></div>
+      <div class="form-row"><label>عنوان</label><input type="text" id="editTitle" value="${item.Title || ''}"></div>
+      <div class="form-row"><label>قیمت</label><input type="number" id="editPrice" value="${item.Price || 0}"></div>
+      <div class="form-row"><label>تخفیف</label><input type="number" id="editDiscount" value="${item.Discount || 0}"></div>
+      <div class="form-row"><label>دسته‌بندی‌ها (چندگانه)</label>
+        <select multiple id="editCategories" style="height:100px; border-radius:16px; border:1px solid #d0d8e0; padding:8px;">
+          ${catOptions}
+        </select>
+      </div>
+      <div class="form-row">
+        <div class="inline-group">
+          <div><label>تاپ ۱۰</label><select id="editTop10"><option value="false" ${item.IsTop10!==true?'selected':''}>خیر</option><option value="true" ${item.IsTop10===true?'selected':''}>بله</option></select></div>
+          <div><label>ترتیب</label><input type="number" id="editSort" value="${item.Sort || 0}" min="0"></div>
+          <div><label>ترتیب دسته</label><input type="number" id="editCatSeq" value="${item.CategourySequence || 0}" min="0"></div>
+        </div>
+      </div>
+      <div class="form-row"><label>وضعیت</label>
+        <select id="editActive">
+          <option value="true" ${item.IsActive!==false?'selected':''}>فعال</option>
+          <option value="false" ${item.IsActive===false?'selected':''}>غیرفعال</option>
+        </select>
+      </div>
+      <div class="form-row"><label>مدارک (title + نوع)</label>
+        <div class="doc-editor" id="docEditorContainer">
+          ${docEditorHtml}
+          <button class="add-doc-btn" onclick="addDocField()" type="button"><i class="fas fa-plus"></i> افزودن مدرک</button>
+        </div>
+      </div>
+      <div class="form-row"><label>URL</label><input type="text" id="editUrl" value="${item.URL || ''}"></div>
+    `;
+    document.getElementById('editModal').classList.add('active');
+  }
+
+  function closeModal() {
+    document.getElementById('editModal').classList.remove('active');
+    editingIndex = -1;
+  }
+
+  function saveItemFromModal() {
+    const isNew = (editingIndex === -1);
+    let item;
+    if (isNew) {
+      item = { IsActive: true, IsTop10: false, documents: [], Categories: [] };
+      items.push(item);
+      editingIndex = items.length - 1;
+    }
+    const idx = editingIndex;
+    item = items[idx];
+
+    item.Id = parseInt(document.getElementById('editId').value) || idx+1;
+    item.Title = document.getElementById('editTitle').value.trim() || 'بدون عنوان';
+    item.Price = parseInt(document.getElementById('editPrice').value) || 0;
+    item.Discount = parseInt(document.getElementById('editDiscount').value) || 0;
+    
+    const catSelect = document.getElementById('editCategories');
+    const selectedCats = Array.from(catSelect.selectedOptions).map(opt => parseInt(opt.value));
+    item.Categories = selectedCats;
+
+    item.IsTop10 = document.getElementById('editTop10').value === 'true';
+    item.Sort = parseInt(document.getElementById('editSort').value) || 0;
+    item.CategourySequence = parseInt(document.getElementById('editCatSeq').value) || 0;
+    item.IsActive = document.getElementById('editActive').value === 'true';
+    item.URL = document.getElementById('editUrl').value.trim() || '';
+
+    const titleInputs = document.querySelectorAll('.doc-title-input');
+    const typeSelects = document.querySelectorAll('.doc-type-select');
+    const newDocs = [];
+    titleInputs.forEach((input, i) => {
+      const title = input.value.trim();
+      const typeId = typeSelects[i] ? parseInt(typeSelects[i].value) : 1;
+      if (title) newDocs.push({ title, typeId });
+    });
+    item.documents = newDocs;
+
+    applyFilters();
+    closeModal();
+    showToast(isNew ? 'آیتم جدید اضافه شد' : 'آیتم به‌روز شد');
+  }
+
+  // ---------- CRUD ----------
+  function deleteItem(idx) {
+    if (!confirm('حذف شود؟')) return;
+    items.splice(idx, 1);
+    applyFilters();
+    showToast('حذف شد');
+  }
+
+  function duplicateItem(idx) {
+    const original = items[idx];
+    const copy = JSON.parse(JSON.stringify(original));
+    copy.Id = Date.now();
+    copy.Title = copy.Title + ' (کپی)';
+    if (Array.isArray(copy.documents)) copy.documents = copy.documents.map(d => ({ ...d }));
+    else copy.documents = [];
+    if (!Array.isArray(copy.Categories)) copy.Categories = [];
+    items.splice(idx+1, 0, copy);
+    applyFilters();
+    showToast('کپی شد');
+  }
+
+  // ---------- JSON IMPORT / EXPORT ----------
+  function loadJSON(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const json = JSON.parse(e.target.result);
+        if (Array.isArray(json)) {
+          items = json.map(item => {
+            // Convert categories to IDs if needed
+            if (item.Categories !== undefined) {
+              item.Categories = convertCategoriesToIds(item.Categories);
+            } else {
+              item.Categories = [];
+            }
+
+            if (Array.isArray(item.documents)) {
+              item.documents = item.documents.map(d => ({
+                title: d.title || d.text || 'مدرک',
+                typeId: d.typeId || d.type || 1
+              }));
+            } else if (Array.isArray(item.Documents)) {
+              item.documents = item.Documents.map(d => ({
+                title: d.title || d.text || 'مدرک',
+                typeId: d.typeId || d.type || 1
+              }));
+            } else if (typeof item.Documents === 'string') {
+              item.documents = parseDocumentsToArray(item.Documents);
+            } else {
+              item.documents = [];
+            }
+            if (item.IsTop10 === undefined) item.IsTop10 = false;
+            if (item.Sort === undefined) item.Sort = 0;
+            if (item.CategourySequence === undefined) item.CategourySequence = 0;
+            if (item.IsActive === undefined) item.IsActive = true;
+            if (item.Discount === undefined) item.Discount = 0;
+            if (item.Price === undefined) item.Price = 0;
+            return item;
+          });
+          applyFilters();
+          showToast(`بارگذاری شد: ${items.length} آیتم`);
+        } else {
+          alert('JSON باید آرایه باشد');
+        }
+      } catch (err) {
+        alert('خطا: ' + err.message);
+      }
+    };
+    reader.readAsText(file);
+    event.target.value = '';
+  }
+
+  function exportJSON() {
+    const exportItems = items.map(item => {
+      const copy = {
+        Id: item.Id || 0,
+        Title: item.Title || '',
+        Price: typeof item.Price === 'number' ? item.Price : (parseInt(item.Price) || 0),
+        Discount: typeof item.Discount === 'number' ? item.Discount : (parseInt(item.Discount) || 0),
+        Categories: Array.isArray(item.Categories) ? item.Categories : [],
+        IsTop10: item.IsTop10 === true,
+        IsActive: item.IsActive !== false,
+        Sort: item.Sort || 0,
+        URL: item.URL || '',
+        Documents: Array.isArray(item.documents) ? item.documents.map(d => ({
+          title: d.title || 'مدرک',
+          typeId: d.typeId || 1
+        })) : []
+      };
+      return copy;
+    });
+    const blob = new Blob([JSON.stringify(exportItems, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'cofenet-items.json';
+    a.click();
+    showToast('خروجی JSON');
+  }
+
+  function saveChanges() {
+    items.forEach(item => {
+      if (!Array.isArray(item.documents)) item.documents = [];
+      if (item.IsTop10 === undefined) item.IsTop10 = false;
+      if (item.Sort === undefined) item.Sort = 0;
+      if (item.CategourySequence === undefined) item.CategourySequence = 0;
+      if (item.IsActive === undefined) item.IsActive = true;
+      if (item.Discount === undefined) item.Discount = 0;
+      if (item.Price === undefined) item.Price = 0;
+      if (!Array.isArray(item.Categories)) item.Categories = [];
+    });
+    applyFilters();
+    showToast('همگام‌سازی شد');
+  }
+
+  // ---------- TOAST ----------
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.style.display = 'block';
+    clearTimeout(t._hide);
+    t._hide = setTimeout(() => { t.style.display = 'none'; }, 3000);
+  }
+
+  // ---------- INIT SAMPLE ----------
+  function initSample() {
+    const sample = [
+      {
+        Id: 1,
+        Title: "ثبت نام ایران خودرو",
+        Price: 199000,
+        Discount: 10000,
+        Categories: [1],
+        IsTop10: false,
+        IsActive: true,
+        Sort: 1,
+        URL: "https://cafeneti.com/services/iran-khodro",
+        Documents: [
+          { title: "کد ملی و اطلاعات هویتی متقاضی", typeId: 1 },
+          { title: "شماره تلفن همراه به نام متقاضی", typeId: 1 },
+          { title: "شماره شبای بانکی", typeId: 1 },
+          { title: "اطلاعات حساب بانکی", typeId: 1 },
+          { title: "آدرس محل سکونت", typeId: 1 }
+        ]
+      },
+      {
+        Id: 2,
+        Title: "ثبت خودروی فرسوده در سامانه اسقاط",
+        Price: 250000,
+        Discount: 0,
+        Categories: [1],
+        IsTop10: false,
+        IsActive: true,
+        Sort: 2,
+        URL: "https://cafeneti.com/services/scrap-car-registration",
+        Documents: [
+          { title: "سند یا کارت شناسایی خودرو", typeId: 1 },
+          { title: "کارت ملی مالک", typeId: 1 },
+          { title: "مشخصات کامل خودرو شامل شماره موتور و شاسی", typeId: 1 },
+          { title: "شماره تماس معتبر برای پیگیری", typeId: 1 }
+        ]
+      },
+      {
+        Id: 3,
+        Title: "ثبت نام وام ازدواج فوری",
+        Price: 280000,
+        Discount: 50000,
+        Categories: [5],
+        IsTop10: true,
+        IsActive: true,
+        Sort: 1,
+        URL: "https://cafeneti.com/services/sabtenam-vam-ezdevaj",
+        Documents: [
+          { title: "کد ملی زوج و زوجه", typeId: 1 },
+          { title: "شماره شناسنامه زوجین", typeId: 1 },
+          { title: "تاریخ عقد و شماره عقدنامه", typeId: 1 },
+          { title: "کد پستی محل سکونت", typeId: 1 },
+          { title: "شماره تماس معتبر", typeId: 1 },
+          { title: "انتخاب بانک مورد نظر", typeId: 1 }
+        ]
+      }
+    ];
+    items = sample.map(item => {
+      item.documents = item.Documents || [];
+      if (item.IsTop10 === undefined) item.IsTop10 = false;
+      if (item.Sort === undefined) item.Sort = 0;
+      if (item.CategourySequence === undefined) item.CategourySequence = 0;
+      if (item.IsActive === undefined) item.IsActive = true;
+      if (item.Discount === undefined) item.Discount = 0;
+      if (item.Price === undefined) item.Price = 0;
+      if (!Array.isArray(item.Categories)) item.Categories = [];
+      return item;
+    });
+    applyFilters();
+  }
+
+  initSample();
+
+  // Make functions globally accessible
+  window.addDocItem = addDocItem;
+  window.removeDocItem = removeDocItem;
+  window.editDocTitle = editDocTitle;
+  window.updateDocType = updateDocType;
+  window.updateCategories = updateCategories;
+  window.updateTop10 = updateTop10;
+  window.updateSort = updateSort;
+  window.updateCategorySequence = updateCategorySequence;
+  window.openEditModal = openEditModal;
+  window.openAddModal = openAddModal;
+  window.closeModal = closeModal;
+  window.saveItemFromModal = saveItemFromModal;
+  window.deleteItem = deleteItem;
+  window.duplicateItem = duplicateItem;
+  window.exportJSON = exportJSON;
+  window.loadJSON = loadJSON;
+  window.saveChanges = saveChanges;
+  window.addDocField = addDocField;
+  window.openCategoryModal = openCategoryModal;
+  window.closeCategoryModal = closeCategoryModal;
+  window.renameCategory = renameCategory;
+  window.deleteCategory = deleteCategory;
+  window.addNewCategory = addNewCategory;
+  window.updateCategorySort = updateCategorySort;
+  window.applyFilters = applyFilters;
+  window.clearFilters = clearFilters;
+</script>
+</body>
+</html>
