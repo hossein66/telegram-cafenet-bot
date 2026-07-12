@@ -245,13 +245,11 @@ def handle_errors(func):
     return wrapper
 
 async def set_menu_button(application: Application) -> None:
-    """Set the menu button for the bot"""
+    """Set the menu button for the bot - only show start and menu"""
     try:
         commands = [
             BotCommand("start", "🏠 صفحه اصلی"),
-            BotCommand("menu", "📋 منوی اصلی"),
             BotCommand("top", "⭐ خدمات پر کاربرد"),
-            BotCommand("cancel", "❌ لغو عملیات"),
         ]
         await application.bot.set_my_commands(commands)
         logger.info("Menu button commands set successfully")
@@ -998,6 +996,7 @@ async def go_to_previous_document(query, doc_index: int, context: ContextTypes.D
             await query.edit_message_text("❌ خطا در دریافت اطلاعات سرویس.")
             return
         
+        # Go to previous document (doc_index - 1)
         prev_index = doc_index - 1
         if prev_index < 0:
             await query.edit_message_text("❌ شما در اولین مرحله هستید.")
@@ -1008,6 +1007,7 @@ async def go_to_previous_document(query, doc_index: int, context: ContextTypes.D
             await query.edit_message_text("❌ خطا در بازگشت به مرحله قبل.")
             return
         
+        # Remove the current document's value from collected docs
         current_label = docs[doc_index]['title']
         if current_label in context.user_data['documents_collected']:
             del context.user_data['documents_collected'][current_label]
@@ -1016,6 +1016,7 @@ async def go_to_previous_document(query, doc_index: int, context: ContextTypes.D
         context.user_data.pop('validation_error', None)
         context.user_data['awaiting_image'] = False
         
+        # Go to the previous document
         await collect_next_document(query, prev_index, context)
     except Exception as e:
         logger.error(f"Error in go_to_previous_document: {e}")
@@ -1065,9 +1066,11 @@ async def show_document_summary_and_payment(query, context: ContextTypes.DEFAULT
         summary += "✅ آیا اطلاعات وارد شده صحیح است؟"
         
         docs = get_documents_with_types(service)
+        last_index = len(docs) - 1
+        
         keyboard = [
             [InlineKeyboardButton("✅ بله، صحیح است - پرداخت", callback_data="pay_now")],
-            [InlineKeyboardButton("🔙 بازگشت به مرحله قبل", callback_data=f"prev_doc_{len(docs)-1}")],
+            [InlineKeyboardButton("🔙 بازگشت به مرحله قبل", callback_data=f"prev_doc_{last_index}")],
             [InlineKeyboardButton("🔄 شروع مجدد", callback_data="start_over")],
             [InlineKeyboardButton("❌ لغو و بازگشت به منو", callback_data="back_to_menu")]
         ]
@@ -1147,6 +1150,10 @@ async def handle_document_input(update: Update, context: ContextTypes.DEFAULT_TY
         # If not collecting docs, treat as search
         if not context.user_data.get('collecting_docs', False) and doc_value:
             await handle_search(update, context)
+            return
+        
+        # If we're not collecting docs or no doc_label, ignore
+        if not context.user_data.get('collecting_docs', False) or not doc_label:
             return
         
         # Validate the document
@@ -1378,6 +1385,17 @@ async def handle_payment_receipt(update: Update, context: ContextTypes.DEFAULT_T
             "🙏 از اعتماد شما سپاسگزاریم!"
         )
         
+        # Show button to return to main page
+        keyboard = [
+            [InlineKeyboardButton("🏠 بازگشت به صفحه اصلی", callback_data="back_to_menu")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await update.message.reply_text(
+            "🔹 برای مشاهده سایر خدمات، روی دکمه زیر کلیک کنید:",
+            reply_markup=reply_markup
+        )
+        
         context.user_data.clear()
     except Exception as e:
         logger.error(f"Error in handle_payment_receipt: {e}")
@@ -1467,9 +1485,9 @@ def run_bot():
             
             # Add handlers
             application.add_handler(CommandHandler("start", start))
-            application.add_handler(CommandHandler("menu", menu_command))
+            # application.add_handler(CommandHandler("menu", menu_command))
             application.add_handler(CommandHandler("top", top_command))
-            application.add_handler(CommandHandler("cancel", cancel))
+            # application.add_handler(CommandHandler("cancel", cancel))
             application.add_handler(CallbackQueryHandler(button_callback))
             
             application.add_handler(MessageHandler(filters.PHOTO, handle_photo))
