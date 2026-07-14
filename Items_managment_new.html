@@ -37,6 +37,8 @@
     .btn-outline { background: transparent; border: 1px solid #cdd6e2; }
     .btn-outline i { color: #475569; }
     .btn-danger { background: #b91c1c; border-color: #b91c1c; color: white; }
+    .btn-sm { padding: 4px 12px; font-size: 0.7rem; border-radius: 30px; border: 1px solid #d0d8e0; background: white; cursor: pointer; }
+    .btn-danger-sm { color: #b91c1c; border-color: #b91c1c; }
     .btn:hover { transform: scale(0.97); opacity: 0.85; }
     .search-bar {
       display: flex; gap: 12px; flex-wrap: wrap; align-items: center;
@@ -63,7 +65,7 @@
       background: white; border-radius: 24px; border: 1px solid #e9edf2;
       overflow-x: auto; box-shadow: 0 10px 25px -8px rgba(0,0,0,0.04);
     }
-    table { width: 100%; border-collapse: collapse; min-width: 1800px; font-size: 0.8rem; }
+    table { width: 100%; border-collapse: collapse; min-width: 2000px; font-size: 0.8rem; }
     th {
       background: #f8fafc; color: #1e3a5f; font-weight: 600;
       padding: 12px 8px; text-align: right; border-bottom: 2px solid #dde3ea;
@@ -75,30 +77,39 @@
       background: #e2e8f0; border-radius: 20px; padding: 2px 8px 2px 6px;
       display: inline-flex; align-items: center; gap: 4px; font-size: 0.65rem;
       margin: 2px 0;
+      flex-wrap: wrap;
     }
     .doc-item i { cursor: pointer; color: #a0aec0; font-size: 0.65rem; }
     .doc-item i:hover { color: #b91c1c; }
     .action-icon { color: #475569; margin: 0 4px; cursor: pointer; opacity: 0.6; transition: 0.2s; }
     .action-icon:hover { opacity: 1; color: #0b2b4a; }
-    .status-badge {
-      background: #dcfce7; color: #166534; padding: 2px 10px;
-      border-radius: 30px; font-size: 0.7rem; font-weight: 500;
+    .service-id { font-size: 0.7rem; color: #64748b; direction: ltr; display: inline-block; }
+    .inline-title-input {
+      border: 1px solid #cbd5e1; border-radius: 30px; padding: 0 10px;
+      font-size: 0.9rem; width: 180px; background: white; text-align: right;
+      font-family: 'Vazirmatn', sans-serif;
     }
-    .status-inactive { background: #fee2e2; color: #991b1b; }
-    .inline-edit-select {
-      background: white; border: 1px solid #cbd5e1; border-radius: 30px;
-      padding: 0 8px; font-size: 0.65rem; height: 22px; max-width: 80px;
-    }
-    .inline-edit-input {
+    .inline-title-input:focus { outline: 2px solid #94a3b8; }
+    .inline-price-input {
       border: 1px solid #cbd5e1; border-radius: 30px; padding: 0 8px;
-      font-size: 0.75rem; width: 55px; text-align: center;
-      background: white;
+      font-size: 0.75rem; width: 80px; text-align: center; background: white;
     }
-    .inline-edit-input:focus { outline: 2px solid #94a3b8; }
-    .no-result { padding: 40px; text-align: center; color: #94a3b8; }
-    .tag-input-group {
-      display: flex; flex-wrap: wrap; gap: 4px; align-items: center;
+    .inline-price-input:focus { outline: 2px solid #94a3b8; }
+    .inline-cat-select {
+      border: 1px solid #cbd5e1; border-radius: 30px; padding: 0 6px;
+      font-size: 0.7rem; height: 24px; background: white; max-width: 120px;
     }
+    .title-col { min-width: 180px; }
+    .id-col { min-width: 50px; }
+    .badge-true { color: #0f7b3a; }
+    .badge-false { color: #b91c1c; }
+    .field-group { background: #f8fafc; padding: 12px; border-radius: 16px; margin-top: 6px; border: 1px solid #e9edf2; }
+    .field-group .field-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; padding: 6px 0; border-bottom: 1px solid #e9edf2; }
+    .field-group .field-row:last-child { border-bottom: none; }
+    .field-row input, .field-row select { padding: 6px 10px; border-radius: 20px; border: 1px solid #d0d8e0; font-size: 0.8rem; flex: 1; min-width: 80px; }
+    .image-upload-area { border: 2px dashed #d0d8e0; padding: 20px; border-radius: 16px; text-align: center; color: #94a3b8; cursor: pointer; transition: 0.2s; }
+    .image-upload-area:hover { border-color: #2a7de1; background: #f8fafc; }
+    .image-upload-area input { display: none; }
     .modal {
       display: none; position: fixed; top:0; left:0; width:100%; height:100%;
       background: rgba(0,0,0,0.3); backdrop-filter: blur(2px);
@@ -106,7 +117,7 @@
     }
     .modal.active { display: flex; }
     .modal-content {
-      background: white; max-width: 900px; width: 95%; max-height: 92vh;
+      background: white; max-width: 1200px; width: 95%; max-height: 92vh;
       overflow-y: auto; border-radius: 32px; padding: 32px;
       box-shadow: 0 30px 60px rgba(0,0,0,0.2);
     }
@@ -144,36 +155,88 @@
     .cat-preview { display: inline-flex; align-items: center; gap: 4px; background: #eef2f8; padding: 2px 10px; border-radius: 20px; font-size: 0.8rem; }
     .category-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
     @media (max-width: 700px) { .header { flex-direction: column; align-items: stretch; gap: 10px; } }
-    .service-id { font-size: 0.7rem; color: #64748b; direction: ltr; display: inline-block; }
-    .inline-title-input {
-      border: 1px solid #cbd5e1; border-radius: 30px; padding: 0 10px;
-      font-size: 0.9rem; width: 180px; background: white; text-align: right;
-      font-family: 'Vazirmatn', sans-serif;
+    .field-type-badge {
+      background: #f1f5f9; padding: 2px 8px; border-radius: 12px;
+      font-size: 0.6rem; color: #475569;
     }
-    .inline-title-input:focus { outline: 2px solid #94a3b8; }
-    .inline-price-input {
-      border: 1px solid #cbd5e1; border-radius: 30px; padding: 0 8px;
-      font-size: 0.75rem; width: 80px; text-align: center; background: white;
+    .validation-badge {
+      background: #dbeafe; color: #1e40af; padding: 2px 8px;
+      border-radius: 12px; font-size: 0.6rem; display: inline-flex;
+      align-items: center; gap: 3px; cursor: pointer;
     }
-    .inline-price-input:focus { outline: 2px solid #94a3b8; }
-    .inline-cat-select {
-      border: 1px solid #cbd5e1; border-radius: 30px; padding: 0 6px;
-      font-size: 0.7rem; height: 24px; background: white; max-width: 120px;
+    .validation-badge i { font-size: 0.5rem; }
+    .options-badge {
+      background: #fce7f3; color: #9d174d; padding: 2px 8px;
+      border-radius: 12px; font-size: 0.6rem; display: inline-flex;
+      align-items: center; gap: 3px;
     }
-    .title-col { min-width: 180px; }
-    .id-col { min-width: 50px; }
-    .badge-true { color: #0f7b3a; }
-    .badge-false { color: #b91c1c; }
-    .field-group { background: #f8fafc; padding: 12px; border-radius: 16px; margin-top: 6px; border: 1px solid #e9edf2; }
-    .field-group .field-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; padding: 6px 0; border-bottom: 1px solid #e9edf2; }
-    .field-group .field-row:last-child { border-bottom: none; }
-    .field-row input, .field-row select { padding: 6px 10px; border-radius: 20px; border: 1px solid #d0d8e0; font-size: 0.8rem; flex: 1; min-width: 80px; }
-    .field-row .btn-sm { padding: 4px 12px; font-size: 0.7rem; border-radius: 30px; border: 1px solid #d0d8e0; background: white; cursor: pointer; }
-    .field-row .btn-danger-sm { color: #b91c1c; border-color: #b91c1c; }
-    .image-upload-area { border: 2px dashed #d0d8e0; padding: 20px; border-radius: 16px; text-align: center; color: #94a3b8; cursor: pointer; transition: 0.2s; }
-    .image-upload-area:hover { border-color: #2a7de1; background: #f8fafc; }
-    .image-upload-area input { display: none; }
-    .expand-btn { background: none; border: none; color: #2a7de1; cursor: pointer; font-size: 0.7rem; }
+    .options-badge i { font-size: 0.5rem; }
+    .inline-edit-select {
+      background: white; border: 1px solid #cbd5e1; border-radius: 30px;
+      padding: 0 8px; font-size: 0.65rem; height: 22px; max-width: 100px;
+    }
+    .tag-input-group {
+      display: flex; flex-wrap: wrap; gap: 4px; align-items: center;
+    }
+    .options-container {
+      display: flex; flex-wrap: wrap; gap: 4px; align-items: center;
+      background: white; padding: 4px 8px; border-radius: 16px;
+      border: 1px solid #e2e8f0; min-height: 34px; flex: 1;
+    }
+    .option-tag {
+      background: linear-gradient(135deg, #e0e7ff, #c7d2fe);
+      color: #3730a3;
+      border-radius: 16px; padding: 2px 10px;
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 0.75rem; font-weight: 500;
+      border: 1px solid #a5b4fc;
+    }
+    .option-tag i { cursor: pointer; color: #6366f1; font-size: 0.6rem; }
+    .option-tag i:hover { color: #dc2626; }
+    .options-input-wrapper {
+      display: flex; align-items: center; gap: 4px; flex: 1;
+      background: #f8fafc; border-radius: 16px; padding: 0 8px;
+      border: 1px dashed #cbd5e1;
+    }
+    .options-input-wrapper input {
+      border: none !important; padding: 4px 4px !important;
+      background: transparent !important; flex: 1; min-width: 60px;
+      font-size: 0.8rem;
+    }
+    .options-input-wrapper input:focus { outline: none !important; }
+    .validation-selector {
+      display: flex; flex-wrap: wrap; gap: 4px; align-items: center;
+      background: #f1f5f9; padding: 4px 8px; border-radius: 16px;
+      border: 1px solid #e2e8f0;
+    }
+    .validation-selector select, .validation-selector input {
+      border: 1px solid #cbd5e1; border-radius: 20px; padding: 2px 10px;
+      font-size: 0.75rem; background: white; height: 28px;
+    }
+    .validation-selector input { width: 60px; text-align: center; }
+    .validation-rule-tag {
+      background: #dbeafe; color: #1e40af; padding: 2px 10px;
+      border-radius: 12px; font-size: 0.65rem; display: inline-flex;
+      align-items: center; gap: 4px; border: 1px solid #93c5fd;
+    }
+    .validation-rule-tag i { cursor: pointer; font-size: 0.5rem; color: #6366f1; }
+    .validation-rule-tag i:hover { color: #dc2626; }
+    .field-row .field-controls {
+      display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+      flex: 2;
+    }
+    .field-row .field-controls .ctrl-group {
+      display: flex; align-items: center; gap: 4px;
+      background: #f8fafc; padding: 2px 8px; border-radius: 12px;
+      border: 1px solid #e2e8f0;
+    }
+    .field-row .field-controls .ctrl-group label {
+      font-size: 0.65rem; color: #475569; font-weight: 400;
+      margin: 0;
+    }
+    .field-row .field-controls .ctrl-group input[type="checkbox"] {
+      width: 14px; height: 14px; margin: 0; flex: none;
+    }
   </style>
 </head>
 <body>
@@ -224,14 +287,12 @@
           <th>عملیات</th>
         </tr>
       </thead>
-      <tbody id="itemsTableBody">
-        <!-- dynamic -->
-      </tbody>
+      <tbody id="itemsTableBody"></tbody>
     </table>
   </div>
 </div>
 
-<!-- Modal for add / edit -->
+<!-- Edit Modal -->
 <div class="modal" id="editModal">
   <div class="modal-content">
     <button class="modal-close" onclick="closeModal()">&times;</button>
@@ -244,13 +305,12 @@
   </div>
 </div>
 
-<!-- Category Management Modal -->
+<!-- Category Modal -->
 <div class="modal" id="categoryModal">
   <div class="modal-content">
     <button class="modal-close" onclick="closeCategoryModal()">&times;</button>
     <h2><i class="fas fa-tags"></i> مدیریت دسته‌بندی‌ها</h2>
     <p style="color:#64748b; margin-bottom:12px;">افزودن، ویرایش نام، آیکون، وضعیت و ترتیب دسته‌ها</p>
-    
     <div class="category-header">
       <div style="display:flex; gap:8px; flex-wrap:wrap;">
         <input type="text" id="newCategoryName" placeholder="نام دسته" style="padding:6px 14px; border-radius:30px; border:1px solid #d0d8e0;">
@@ -263,9 +323,7 @@
         <button class="btn btn-primary" onclick="addNewCategory()"><i class="fas fa-plus"></i> افزودن</button>
       </div>
     </div>
-    
     <div id="categoryList" class="category-manager" style="margin-top:16px;"></div>
-    
     <div class="footer-actions">
       <button class="btn btn-outline" onclick="closeCategoryModal()">بستن</button>
     </div>
@@ -287,12 +345,39 @@
     { id: 'nationalCode', label: 'کد ملی' },
     { id: 'mobile', label: 'موبایل' },
     { id: 'email', label: 'ایمیل' },
-    { id: 'date', label: 'تاریخ' }
+    { id: 'date', label: 'تاریخ' },
+    { id: 'checkbox', label: 'چند انتخابی (چک‌باکس)' },
+    { id: 'radio', label: 'تک انتخابی (رادیو)' },
+    { id: 'select', label: 'انتخاب از لیست' },
+    { id: 'province', label: 'استان' },
+    { id: 'city', label: 'شهر' }
+  ];
+
+  const validationRulesList = [
+    { id: 'min', label: 'حداقل', type: 'number', placeholder: 'مثلاً 10' },
+    { id: 'max', label: 'حداکثر', type: 'number', placeholder: 'مثلاً 10' },
+    { id: 'minLength', label: 'حداقل طول', type: 'number', placeholder: 'مثلاً 5' },
+    { id: 'maxLength', label: 'حداکثر طول', type: 'number', placeholder: 'مثلاً 100' },
+    { id: 'pattern', label: 'الگو (RegEx)', type: 'text', placeholder: 'مثلاً ^[0-9]+$' },
+    { id: 'email', label: 'ایمیل معتبر', type: 'boolean' },
+    { id: 'phone', label: 'شماره موبایل', type: 'boolean' },
+    { id: 'nationalCode', label: 'کد ملی', type: 'boolean' },
+    { id: 'postalCode', label: 'کد پستی', type: 'boolean' }
   ];
 
   function getDocTypeLabel(typeId) {
     const found = docTypes.find(d => d.id === typeId);
     return found ? found.label : typeId;
+  }
+
+  function getValidationLabel(ruleId) {
+    const found = validationRulesList.find(r => r.id === ruleId);
+    return found ? found.label : ruleId;
+  }
+
+  function getValidationRuleType(ruleId) {
+    const found = validationRulesList.find(r => r.id === ruleId);
+    return found ? found.type : 'boolean';
   }
 
   function extractCategories() {
@@ -317,11 +402,6 @@
     categories = Array.from(catMap.values());
   }
 
-  function getCategoryNameById(id) {
-    const cat = categories.find(c => c.id === id);
-    return cat ? cat.name : `دسته #${id}`;
-  }
-
   function getCategoryIdByName(name) {
     if (!name) return null;
     const cat = categories.find(c => c.name === name.trim());
@@ -337,19 +417,11 @@
     return cat && cat.icon ? cat.icon : 'fa-tag';
   }
 
-  function getCategoryEnable(catName) {
-    const cat = categories.find(c => c.name === catName);
-    return cat ? cat.isEnable : true;
-  }
-
   // ---------- CATEGORY FUNCTIONS ----------
   function downloadCategories() {
     const exportData = categories.map(cat => ({
-      id: cat.id,
-      name: cat.name,
-      icon: cat.icon || 'fa-tag',
-      sort: cat.sort || 0,
-      isEnable: cat.isEnable !== false
+      id: cat.id, name: cat.name, icon: cat.icon || 'fa-tag',
+      sort: cat.sort || 0, isEnable: cat.isEnable !== false
     }));
     const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
     const a = document.createElement('a');
@@ -383,12 +455,10 @@
         <span class="cat-preview"><i class="fas ${icon}"></i> ${cat.name}</span>
         <input type="text" value="${cat.name}" class="cat-edit-input" data-catid="${cat.id}" onchange="renameCategory(this)" placeholder="نام جدید">
         <input type="text" value="${icon}" class="cat-icon-input" data-catid="${cat.id}" onchange="updateCategoryIconInline(this)" placeholder="آیکون">
-        <span class="cat-enable-toggle">
-          <select data-catid="${cat.id}" onchange="updateCategoryEnable(this)">
-            <option value="true" ${isEnable?'selected':''}>فعال</option>
-            <option value="false" ${!isEnable?'selected':''}>غیرفعال</option>
-          </select>
-        </span>
+        <select data-catid="${cat.id}" onchange="updateCategoryEnable(this)">
+          <option value="true" ${isEnable?'selected':''}>فعال</option>
+          <option value="false" ${!isEnable?'selected':''}>غیرفعال</option>
+        </select>
         <input type="number" value="${cat.sort || 0}" class="cat-seq-input" data-catid="${cat.id}" onchange="updateCategorySort(this)" placeholder="ترتیب">
         <i class="fas fa-trash action-icon" style="color:#b91c1c;" onclick="deleteCategory(${cat.id})" title="حذف"></i>
       </div>`;
@@ -404,11 +474,7 @@
     if (!cat) return;
     const oldName = cat.name;
     cat.name = newName;
-    items.forEach(item => {
-      if (item.category === oldName) {
-        item.category = newName;
-      }
-    });
+    items.forEach(item => { if (item.category === oldName) item.category = newName; });
     showToast(`دسته‌بندی به "${newName}" تغییر یافت`);
     renderCategoryList();
     applyFilters();
@@ -454,11 +520,7 @@
     if (!confirm(`آیا از حذف دسته‌بندی "${cat.name}" اطمینان دارید؟`)) return;
     const index = categories.indexOf(cat);
     if (index > -1) categories.splice(index, 1);
-    items.forEach(item => {
-      if (item.category === cat.name) {
-        item.category = 'بدون دسته';
-      }
-    });
+    items.forEach(item => { if (item.category === cat.name) item.category = 'بدون دسته'; });
     showToast(`دسته‌بندی "${cat.name}" حذف شد`);
     renderCategoryList();
     applyFilters();
@@ -474,17 +536,11 @@
     const isEnable = enableSelect.value === 'true';
     const sort = parseInt(seqInput.value) || 0;
     if (!name) { showToast('لطفاً نام دسته‌بندی را وارد کنید'); return; }
-    if (categories.some(c => c.name === name)) {
-      showToast('این دسته قبلاً وجود دارد');
-      return;
-    }
+    if (categories.some(c => c.name === name)) { showToast('این دسته قبلاً وجود دارد'); return; }
     const newId = categories.length ? Math.max(...categories.map(c => c.id)) + 1 : 1;
     categories.push({ id: newId, name, sort, icon, isEnable });
     showToast(`دسته‌بندی "${name}" اضافه شد`);
-    nameInput.value = '';
-    iconInput.value = 'fa-tag';
-    enableSelect.value = 'true';
-    seqInput.value = '100';
+    nameInput.value = ''; iconInput.value = 'fa-tag'; enableSelect.value = 'true'; seqInput.value = '100';
     renderCategoryList();
     applyFilters();
   }
@@ -493,7 +549,6 @@
   function applyFilters() {
     const searchTerm = document.getElementById('searchInput').value.trim().toLowerCase();
     const categoryFilter = document.getElementById('categoryFilter').value;
-
     filteredItems = items.filter(item => {
       const title = item.serviceTitle || item.Title || '';
       const catName = item.category || '';
@@ -502,7 +557,6 @@
         title.toLowerCase().includes(searchTerm) ||
         catName.toLowerCase().includes(searchTerm) ||
         fields.some(f => f.toLowerCase().includes(searchTerm));
-
       let catFilterMatch = true;
       if (categoryFilter) {
         const filterId = parseInt(categoryFilter);
@@ -511,7 +565,6 @@
       }
       return searchMatch && catFilterMatch;
     });
-
     document.getElementById('filterResultCount').textContent = `(${filteredItems.length} مورد)`;
     renderFilteredTable();
   }
@@ -525,13 +578,11 @@
   function renderFilteredTable() {
     const tbody = document.getElementById('itemsTableBody');
     const displayItems = filteredItems.length > 0 ? filteredItems : items;
-
     if (!displayItems.length) {
       tbody.innerHTML = `<tr><td colspan="11" style="text-align:center; padding:40px; color:#94a3b8;">هیچ آیتمی با این فیلترها یافت نشد.</td></tr>`;
       updateStats();
       return;
     }
-
     let html = '';
     displayItems.forEach((item, idx) => {
       const origIdx = items.indexOf(item);
@@ -547,17 +598,29 @@
       
       const fields = item.data?.forms?.flatMap(f => f.fields?.map(fld => ({
         label: fld.label || '',
-        type: fld.type || 'text'
+        type: fld.type || 'text',
+        options: fld.options || [],
+        validationRules: fld.validationRules || {}
       })) || []) || [];
       
-      const fieldsHtml = fields.map(f => 
-        `<span class="doc-item">
+      const fieldsHtml = fields.map((f, fIdx) => {
+        let extraInfo = '';
+        if (f.options && f.options.length > 0) {
+          extraInfo += ` <span class="options-badge"><i class="fas fa-list"></i> ${f.options.length}</span>`;
+        }
+        if (f.validationRules && typeof f.validationRules === 'object' && Object.keys(f.validationRules).length > 0) {
+          const rules = Object.keys(f.validationRules).map(k => getValidationLabel(k)).join('، ');
+          extraInfo += ` <span class="validation-badge"><i class="fas fa-shield-alt"></i> ${rules}</span>`;
+        }
+        return `<span class="doc-item">
           <span>${f.label}</span>
+          <span class="field-type-badge">${getDocTypeLabel(f.type)}</span>
+          ${extraInfo}
           <select class="inline-edit-select" onchange="updateFieldType(${origIdx}, '${f.label}', this.value)">
             ${docTypes.map(d => `<option value="${d.id}" ${d.id===f.type?'selected':''}>${d.label}</option>`).join('')}
           </select>
-        </span>`
-      ).join(' ');
+        </span>`;
+      }).join(' ');
 
       const catOptions = categories.map(c =>
         `<option value="${c.name}" ${c.name===category?'selected':''}>${c.name}</option>`
@@ -661,17 +724,9 @@
       const catName = value || 'بدون دسته';
       items[idx].category = catName;
       if (!categories.some(c => c.name === catName) && catName !== 'بدون دسته') {
-        categories.push({ 
-          id: categories.length + 1, 
-          name: catName, 
-          sort: categories.length + 1,
-          icon: 'fa-tag',
-          isEnable: true
-        });
+        categories.push({ id: categories.length + 1, name: catName, sort: categories.length + 1, icon: 'fa-tag', isEnable: true });
       }
-      if (items[idx].data && items[idx].data.category) {
-        items[idx].data.category.title = catName;
-      }
+      if (items[idx].data && items[idx].data.category) items[idx].data.category.title = catName;
       showToast('دسته به‌روز شد');
       applyFilters();
     }
@@ -704,15 +759,13 @@
         form.fields.forEach(f => {
           if (f.label === fieldLabel) {
             f.type = newType;
+            if (!['checkbox', 'radio', 'select'].includes(newType)) f.options = [];
             found = true;
           }
         });
       }
     });
-    if (found) {
-      showToast('نوع فیلد به‌روز شد');
-      applyFilters();
-    }
+    if (found) { showToast('نوع فیلد به‌روز شد'); applyFilters(); }
   }
 
   // ---------- CRUD ----------
@@ -754,6 +807,7 @@
     document.getElementById('editModal').classList.add('active');
   }
 
+  // ---------- RENDER MODAL FORM WITH IMPROVED UI ----------
   function renderModalForm(item) {
     const isNew = !item;
     const data = isNew ? {} : item.data || {};
@@ -771,7 +825,6 @@
     const autoInvoiceEnabled = isNew ? true : (data.autoInvoiceEnabled !== false);
     const isNoticeEnabled = isNew ? false : (data.isNoticeEnabled === true);
     const noticeText = isNew ? '' : (data.noticeText || '');
-    const noticeImage = isNew ? '' : (data.noticeImage || '');
     const images = isNew ? [] : (data.images || []);
     const forms = isNew ? [{ fields: [] }] : (data.forms || [{ fields: [] }]);
 
@@ -779,7 +832,6 @@
       `<option value="${c.name}" ${c.name===category?'selected':''}>${c.name}</option>`
     ).join('');
 
-    // Build fields HTML
     let fieldsHtml = '';
     forms.forEach((form, formIdx) => {
       const formFields = form.fields || [];
@@ -790,20 +842,77 @@
           <button class="btn-sm btn-danger-sm" onclick="removeForm(${formIdx})">حذف فرم</button>
         </div>
         <div id="fieldsContainer_${formIdx}">
-          ${formFields.map((f, fIdx) => `
+          ${formFields.map((f, fIdx) => {
+            const supportsOptions = ['checkbox', 'radio', 'select'].includes(f.type || 'text');
+            const options = Array.isArray(f.options) ? f.options : [];
+            const validationRules = (f.validationRules && typeof f.validationRules === 'object') ? f.validationRules : {};
+            const ruleKeys = Object.keys(validationRules);
+            return `
             <div class="field-row" id="fieldRow_${formIdx}_${fIdx}">
-              <input type="text" value="${f.label || ''}" placeholder="برچسب" onchange="updateField(${formIdx}, ${fIdx}, 'label', this.value)">
-              <select onchange="updateField(${formIdx}, ${fIdx}, 'type', this.value)">
+              <input type="text" value="${f.label || ''}" placeholder="برچسب" style="flex:0.8; min-width:80px;" onchange="updateField(${formIdx}, ${fIdx}, 'label', this.value)">
+              
+              <select onchange="updateFieldTypeInModal(${formIdx}, ${fIdx}, this.value)" style="flex:0.6; min-width:100px;">
                 ${docTypes.map(d => `<option value="${d.id}" ${d.id===f.type?'selected':''}>${d.label}</option>`).join('')}
               </select>
-              <input type="text" value="${f.placeholder || ''}" placeholder="متن راهنما" style="flex:1;" onchange="updateField(${formIdx}, ${fIdx}, 'placeholder', this.value)">
-              <label style="display:flex; align-items:center; gap:4px; font-size:0.7rem;">
-                <input type="checkbox" ${f.isRequired !== false ? 'checked' : ''} onchange="updateField(${formIdx}, ${fIdx}, 'isRequired', this.checked)">
-                اجباری
-              </label>
+              
+              <div class="field-controls" style="flex:3;">
+                <!-- Options -->
+                <div class="ctrl-group" style="${supportsOptions ? '' : 'opacity:0.5;'}">
+                  <i class="fas fa-list" style="color:#6366f1; font-size:0.7rem;"></i>
+                  <div class="options-container" id="optionsContainer_${formIdx}_${fIdx}" style="${supportsOptions ? '' : 'pointer-events:none;'}">
+                    ${options.map(opt => `<span class="option-tag">${opt} <i class="fas fa-times" onclick="removeOption(${formIdx}, ${fIdx}, '${opt}')"></i></span>`).join('')}
+                    <div class="options-input-wrapper">
+                      <input type="text" placeholder="گزینه جدید..." ${supportsOptions ? '' : 'disabled'}
+                             onkeydown="if(event.key==='Enter'){addOption(${formIdx}, ${fIdx}, this)}">
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Validation Rules -->
+                <div class="ctrl-group">
+                  <i class="fas fa-shield-alt" style="color:#2563eb; font-size:0.7rem;"></i>
+                  <div class="validation-selector" id="validationContainer_${formIdx}_${fIdx}">
+                    ${ruleKeys.map(ruleId => {
+                      const val = validationRules[ruleId];
+                      const displayVal = val !== undefined && val !== true ? `: ${val}` : '';
+                      return `
+                        <span class="validation-rule-tag">
+                          ${getValidationLabel(ruleId)}${displayVal}
+                          <i class="fas fa-times" onclick="removeValidationRule(${formIdx}, ${fIdx}, '${ruleId}')"></i>
+                        </span>
+                      `;
+                    }).join('')}
+                    <select onchange="addValidationRule(${formIdx}, ${fIdx}, this)" style="height:24px; font-size:0.65rem; padding:0 6px;">
+                      <option value="">افزودن قانون...</option>
+                      ${validationRulesList.filter(r => !ruleKeys.includes(r.id)).map(r => 
+                        `<option value="${r.id}">${r.label}</option>`
+                      ).join('')}
+                    </select>
+                    <div id="validationValue_${formIdx}_${fIdx}" style="display:none; gap:4px; align-items:center;">
+                      <input type="text" id="valInput_${formIdx}_${fIdx}" placeholder="مقدار" style="width:60px; height:24px; font-size:0.65rem; padding:0 6px;">
+                      <button class="btn-sm" style="padding:0 8px; height:24px; font-size:0.6rem;" onclick="confirmValidationRule(${formIdx}, ${fIdx})">ثبت</button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Required & Other -->
+                <label style="display:flex; align-items:center; gap:3px; font-size:0.65rem; white-space:nowrap;">
+                  <input type="checkbox" ${f.isRequired !== false ? 'checked' : ''} onchange="updateField(${formIdx}, ${fIdx}, 'isRequired', this.checked)">
+                  اجباری
+                </label>
+                ${supportsOptions ? `
+                <label style="display:flex; align-items:center; gap:3px; font-size:0.65rem; white-space:nowrap;">
+                  <input type="checkbox" ${f.hasOther === true ? 'checked' : ''} onchange="updateField(${formIdx}, ${fIdx}, 'hasOther', this.checked)">
+                  "سایر"
+                </label>
+                ` : ''}
+                
+                <input type="text" value="${f.placeholder || ''}" placeholder="متن راهنما" style="flex:1; min-width:80px; font-size:0.75rem;" onchange="updateField(${formIdx}, ${fIdx}, 'placeholder', this.value)">
+              </div>
+              
               <button class="btn-sm btn-danger-sm" onclick="removeField(${formIdx}, ${fIdx})">✕</button>
-            </div>
-          `).join('')}
+            </div>`;
+          }).join('')}
         </div>
         <button class="btn-sm" onclick="addField(${formIdx})" style="margin-top:4px;">+ افزودن فیلد</button>
       </div>`;
@@ -813,7 +922,7 @@
       <div style="display:flex; align-items:center; gap:8px; border:1px solid #e2e8f0; border-radius:12px; padding:8px;">
         <img src="${img.url}" alt="${img.originalName}" style="width:60px; height:60px; object-fit:cover; border-radius:8px;">
         <span style="font-size:0.7rem;">${img.originalName}</span>
-        <i class="fas fa-trash action-icon" style="color:#b91c1c;" onclick="removeImage(${images.indexOf(img)})"></i>
+        <i class="fas fa-trash action-icon" style="color:#b91c1c;" onclick="this.parentElement.remove()"></i>
       </div>
     `).join('');
 
@@ -828,10 +937,7 @@
       </div>
       <div class="form-row">
         <label>دسته‌بندی</label>
-        <select id="editCategory">
-          <option value="">بدون دسته</option>
-          ${catOptions}
-        </select>
+        <select id="editCategory">${catOptions}</select>
       </div>
       <div class="form-row">
         <label>توضیحات</label>
@@ -911,18 +1017,132 @@
       </div>
       <div class="form-row">
         <label>فرم‌ها و فیلدها</label>
-        <div id="formsContainer">
-          ${fieldsHtml}
-        </div>
+        <div id="formsContainer">${fieldsHtml}</div>
         <button class="btn-sm" onclick="addForm()" style="margin-top:8px; padding:8px 16px; background:#e2e8f0; border:none; border-radius:30px; cursor:pointer;">+ افزودن فرم جدید</button>
       </div>
     `;
-
     document.getElementById('modalForm').innerHTML = formHtml;
-
-    // Store form data globally for field operations
     if (!window._formData) window._formData = {};
     window._formData = { forms: forms };
+  }
+
+  // ---------- OPTIONS MANAGEMENT ----------
+  function addOption(formIdx, fIdx, input) {
+    const value = input.value.trim();
+    if (!value) return;
+    const container = document.getElementById(`optionsContainer_${formIdx}_${fIdx}`);
+    if (!container) return;
+    const wrapper = container.querySelector('.options-input-wrapper');
+    const tag = document.createElement('span');
+    tag.className = 'option-tag';
+    tag.innerHTML = `${value} <i class="fas fa-times" onclick="removeOption(${formIdx}, ${fIdx}, '${value}')"></i>`;
+    container.insertBefore(tag, wrapper);
+    input.value = '';
+    if (!window._tempOptionData) window._tempOptionData = {};
+    if (!window._tempOptionData[formIdx]) window._tempOptionData[formIdx] = {};
+    if (!window._tempOptionData[formIdx][fIdx]) window._tempOptionData[formIdx][fIdx] = [];
+    window._tempOptionData[formIdx][fIdx].push(value);
+  }
+
+  function removeOption(formIdx, fIdx, value) {
+    const container = document.getElementById(`optionsContainer_${formIdx}_${fIdx}`);
+    if (!container) return;
+    const tags = container.querySelectorAll('.option-tag');
+    tags.forEach(tag => {
+      if (tag.textContent.trim() === value) tag.remove();
+    });
+    if (window._tempOptionData && window._tempOptionData[formIdx] && window._tempOptionData[formIdx][fIdx]) {
+      const idx = window._tempOptionData[formIdx][fIdx].indexOf(value);
+      if (idx > -1) window._tempOptionData[formIdx][fIdx].splice(idx, 1);
+    }
+  }
+
+  // ---------- VALIDATION RULES MANAGEMENT ----------
+  function addValidationRule(formIdx, fIdx, select) {
+    const ruleId = select.value;
+    if (!ruleId) return;
+    const rule = validationRulesList.find(r => r.id === ruleId);
+    if (!rule) return;
+    
+    const valContainer = document.getElementById(`validationContainer_${formIdx}_${fIdx}`);
+    if (!valContainer) return;
+    
+    const valDiv = document.getElementById(`validationValue_${formIdx}_${fIdx}`);
+    if (rule.type === 'number' || rule.type === 'text') {
+      valDiv.style.display = 'flex';
+      document.getElementById(`valInput_${formIdx}_${fIdx}`).value = '';
+      document.getElementById(`valInput_${formIdx}_${fIdx}`).focus();
+      valDiv.dataset.pendingRule = ruleId;
+    } else {
+      if (!window._tempValidationData) window._tempValidationData = {};
+      if (!window._tempValidationData[formIdx]) window._tempValidationData[formIdx] = {};
+      if (!window._tempValidationData[formIdx][fIdx]) window._tempValidationData[formIdx][fIdx] = {};
+      window._tempValidationData[formIdx][fIdx][ruleId] = true;
+      addValidationTag(formIdx, fIdx, ruleId, true);
+      select.value = '';
+    }
+  }
+
+  function confirmValidationRule(formIdx, fIdx) {
+    const valDiv = document.getElementById(`validationValue_${formIdx}_${fIdx}`);
+    const ruleId = valDiv.dataset.pendingRule;
+    if (!ruleId) return;
+    const input = document.getElementById(`valInput_${formIdx}_${fIdx}`);
+    const value = input.value.trim();
+    if (!value) { showToast('لطفاً مقدار را وارد کنید'); return; }
+    
+    if (!window._tempValidationData) window._tempValidationData = {};
+    if (!window._tempValidationData[formIdx]) window._tempValidationData[formIdx] = {};
+    if (!window._tempValidationData[formIdx][fIdx]) window._tempValidationData[formIdx][fIdx] = {};
+    window._tempValidationData[formIdx][fIdx][ruleId] = isNaN(value) ? value : Number(value);
+    
+    addValidationTag(formIdx, fIdx, ruleId, window._tempValidationData[formIdx][fIdx][ruleId]);
+    valDiv.style.display = 'none';
+    valDiv.dataset.pendingRule = '';
+    
+    const select = document.querySelector(`#validationContainer_${formIdx}_${fIdx} select`);
+    if (select) select.value = '';
+  }
+
+  function addValidationTag(formIdx, fIdx, ruleId, value) {
+    const valContainer = document.getElementById(`validationContainer_${formIdx}_${fIdx}`);
+    if (!valContainer) return;
+    const select = valContainer.querySelector('select');
+    const tag = document.createElement('span');
+    tag.className = 'validation-rule-tag';
+    const label = getValidationLabel(ruleId);
+    const displayValue = value === true ? '' : `: ${value}`;
+    tag.innerHTML = `${label}${displayValue} <i class="fas fa-times" onclick="removeValidationRule(${formIdx}, ${fIdx}, '${ruleId}')"></i>`;
+    valContainer.insertBefore(tag, select);
+  }
+
+  function removeValidationRule(formIdx, fIdx, ruleId) {
+    const valContainer = document.getElementById(`validationContainer_${formIdx}_${fIdx}`);
+    if (!valContainer) return;
+    const tags = valContainer.querySelectorAll('.validation-rule-tag');
+    tags.forEach(tag => {
+      if (tag.textContent.includes(getValidationLabel(ruleId))) tag.remove();
+    });
+    if (window._tempValidationData && window._tempValidationData[formIdx] && window._tempValidationData[formIdx][fIdx]) {
+      delete window._tempValidationData[formIdx][fIdx][ruleId];
+    }
+  }
+
+  function updateFieldTypeInModal(formIdx, fIdx, value) {
+    if (!window._tempFieldData) window._tempFieldData = {};
+    if (!window._tempFieldData[formIdx]) window._tempFieldData[formIdx] = {};
+    if (!window._tempFieldData[formIdx][fIdx]) window._tempFieldData[formIdx][fIdx] = {};
+    window._tempFieldData[formIdx][fIdx].type = value;
+    
+    const row = document.getElementById(`fieldRow_${formIdx}_${fIdx}`);
+    if (!row) return;
+    const supportsOptions = ['checkbox', 'radio', 'select'].includes(value);
+    const optContainer = row.querySelector('.options-container');
+    if (optContainer) {
+      optContainer.style.opacity = supportsOptions ? '1' : '0.5';
+      const input = optContainer.querySelector('input');
+      if (input) input.disabled = !supportsOptions;
+    }
   }
 
   // ---------- FORM FIELD OPERATIONS ----------
@@ -954,15 +1174,38 @@
     const fIdx = container.querySelectorAll('.field-row').length;
     const html = `
       <div class="field-row" id="fieldRow_${formIdx}_${fIdx}">
-        <input type="text" placeholder="برچسب" onchange="updateField(${formIdx}, ${fIdx}, 'label', this.value)">
-        <select onchange="updateField(${formIdx}, ${fIdx}, 'type', this.value)">
+        <input type="text" placeholder="برچسب" style="flex:0.8; min-width:80px;" onchange="updateField(${formIdx}, ${fIdx}, 'label', this.value)">
+        <select onchange="updateFieldTypeInModal(${formIdx}, ${fIdx}, this.value)" style="flex:0.6; min-width:100px;">
           ${docTypes.map(d => `<option value="${d.id}">${d.label}</option>`).join('')}
         </select>
-        <input type="text" placeholder="متن راهنما" style="flex:1;" onchange="updateField(${formIdx}, ${fIdx}, 'placeholder', this.value)">
-        <label style="display:flex; align-items:center; gap:4px; font-size:0.7rem;">
-          <input type="checkbox" checked onchange="updateField(${formIdx}, ${fIdx}, 'isRequired', this.checked)">
-          اجباری
-        </label>
+        <div class="field-controls" style="flex:3;">
+          <div class="ctrl-group">
+            <i class="fas fa-list" style="color:#6366f1; font-size:0.7rem;"></i>
+            <div class="options-container" id="optionsContainer_${formIdx}_${fIdx}">
+              <div class="options-input-wrapper">
+                <input type="text" placeholder="گزینه جدید..." onkeydown="if(event.key==='Enter'){addOption(${formIdx}, ${fIdx}, this)}">
+              </div>
+            </div>
+          </div>
+          <div class="ctrl-group">
+            <i class="fas fa-shield-alt" style="color:#2563eb; font-size:0.7rem;"></i>
+            <div class="validation-selector" id="validationContainer_${formIdx}_${fIdx}">
+              <select onchange="addValidationRule(${formIdx}, ${fIdx}, this)" style="height:24px; font-size:0.65rem; padding:0 6px;">
+                <option value="">افزودن قانون...</option>
+                ${validationRulesList.map(r => `<option value="${r.id}">${r.label}</option>`).join('')}
+              </select>
+              <div id="validationValue_${formIdx}_${fIdx}" style="display:none; gap:4px; align-items:center;">
+                <input type="text" id="valInput_${formIdx}_${fIdx}" placeholder="مقدار" style="width:60px; height:24px; font-size:0.65rem; padding:0 6px;">
+                <button class="btn-sm" style="padding:0 8px; height:24px; font-size:0.6rem;" onclick="confirmValidationRule(${formIdx}, ${fIdx})">ثبت</button>
+              </div>
+            </div>
+          </div>
+          <label style="display:flex; align-items:center; gap:3px; font-size:0.65rem; white-space:nowrap;">
+            <input type="checkbox" checked onchange="updateField(${formIdx}, ${fIdx}, 'isRequired', this.checked)">
+            اجباری
+          </label>
+          <input type="text" placeholder="متن راهنما" style="flex:1; min-width:80px; font-size:0.75rem;" onchange="updateField(${formIdx}, ${fIdx}, 'placeholder', this.value)">
+        </div>
         <button class="btn-sm btn-danger-sm" onclick="removeField(${formIdx}, ${fIdx})">✕</button>
       </div>
     `;
@@ -974,7 +1217,6 @@
     if (row) row.remove();
   }
 
-  // These functions store changes temporarily - will be collected on save
   function updateFormTitle(formIdx, value) {
     if (!window._tempFormData) window._tempFormData = {};
     if (!window._tempFormData[formIdx]) window._tempFormData[formIdx] = {};
@@ -1004,18 +1246,54 @@
       const fieldRows = group.querySelectorAll('.field-row');
       fieldRows.forEach(row => {
         const label = row.querySelector('input[placeholder="برچسب"]')?.value || '';
-        const type = row.querySelector('select')?.value || 'text';
+        const typeSelect = row.querySelector('select');
+        const type = typeSelect?.value || 'text';
         const placeholder = row.querySelector('input[placeholder="متن راهنما"]')?.value || '';
         const isRequired = row.querySelector('input[type="checkbox"]')?.checked !== false;
+        const hasOther = row.querySelector('label:has(input[type="checkbox"])')?.querySelector('input[type="checkbox"]')?.checked || false;
+        
+        const options = [];
+        const optionsContainer = row.querySelector('.options-container');
+        if (optionsContainer) {
+          const optionTags = optionsContainer.querySelectorAll('.option-tag');
+          optionTags.forEach(tag => {
+            const text = tag.textContent.trim();
+            if (text) options.push(text);
+          });
+        }
+        
+        const validationRules = {};
+        const valContainer = row.querySelector('.validation-selector');
+        if (valContainer) {
+          const tags = valContainer.querySelectorAll('.validation-rule-tag');
+          tags.forEach(tag => {
+            const text = tag.textContent.trim();
+            const matchedRule = validationRulesList.find(r => text.startsWith(r.label));
+            if (matchedRule) {
+              const rest = text.replace(matchedRule.label, '').trim();
+              if (rest.startsWith(':')) {
+                const val = rest.substring(1).trim();
+                validationRules[matchedRule.id] = isNaN(val) ? val : (val === 'true' ? true : (val === 'false' ? false : Number(val)));
+              } else {
+                validationRules[matchedRule.id] = true;
+              }
+            }
+          });
+        }
+        
         if (label) {
-          fields.push({
+          const fieldData = {
             id: 'fld_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
             label: label,
             key: 'text_' + label.replace(/\s/g, '_').toLowerCase(),
             type: type,
             isRequired: isRequired,
             placeholder: placeholder || label + ' را وارد کنید'
-          });
+          };
+          if (options.length > 0) fieldData.options = options;
+          if (hasOther) fieldData.hasOther = true;
+          if (Object.keys(validationRules).length > 0) fieldData.validationRules = validationRules;
+          fields.push(fieldData);
         }
       });
       forms.push({ 
@@ -1033,7 +1311,6 @@
   function handleImageUpload(event) {
     const files = event.target.files;
     const preview = document.getElementById('imagePreview');
-    // In a real app, you'd upload to server. Here we just show placeholder
     Array.from(files).forEach(file => {
       const reader = new FileReader();
       reader.onload = (e) => {
@@ -1044,20 +1321,12 @@
             <i class="fas fa-trash action-icon" style="color:#b91c1c;" onclick="this.parentElement.remove()"></i>
           </div>
         `;
-        if (preview.querySelector('span')) {
-          preview.innerHTML = imgHtml;
-        } else {
-          preview.insertAdjacentHTML('beforeend', imgHtml);
-        }
+        if (preview.querySelector('span')) preview.innerHTML = imgHtml;
+        else preview.insertAdjacentHTML('beforeend', imgHtml);
       };
       reader.readAsDataURL(file);
     });
     event.target.value = '';
-  }
-
-  function removeImage(idx) {
-    // In real app, remove from array
-    showToast('تصویر حذف شد');
   }
 
   function closeModal() {
@@ -1065,20 +1334,17 @@
     editingIndex = -1;
     window._tempFormData = {};
     window._tempFieldData = {};
+    window._tempOptionData = {};
+    window._tempValidationData = {};
   }
 
   function saveItemFromModal() {
     const isNew = (editingIndex === -1);
     let item;
-    if (isNew) {
-      item = { data: {} };
-      items.push(item);
-      editingIndex = items.length - 1;
-    }
+    if (isNew) { item = { data: {} }; items.push(item); editingIndex = items.length - 1; }
     const idx = editingIndex;
     item = items[idx];
 
-    // Basic fields
     item.serviceId = document.getElementById('editServiceId').value.trim() || 'svc_' + Date.now();
     item.serviceTitle = document.getElementById('editTitle').value.trim() || 'بدون عنوان';
     item.category = document.getElementById('editCategory').value.trim() || 'دسته‌بندی نشده';
@@ -1103,10 +1369,8 @@
     data.title = item.serviceTitle;
     data.id = item.serviceId;
 
-    // Collect forms and fields from DOM
     data.forms = collectFormData();
 
-    // Collect images from preview
     const imagePreviews = document.querySelectorAll('#imagePreview img');
     data.images = Array.from(imagePreviews).map((img, idx) => ({
       id: 'img_' + Date.now() + '_' + idx,
@@ -1116,15 +1380,8 @@
       createdAt: new Date().toISOString()
     }));
 
-    // Add category if new
     if (!categories.some(c => c.name === item.category) && item.category !== 'دسته‌بندی نشده') {
-      categories.push({ 
-        id: categories.length + 1, 
-        name: item.category, 
-        sort: categories.length + 1,
-        icon: 'fa-tag',
-        isEnable: true
-      });
+      categories.push({ id: categories.length + 1, name: item.category, sort: categories.length + 1, icon: 'fa-tag', isEnable: true });
     }
 
     data.updatedAt = new Date().toISOString();
@@ -1158,17 +1415,21 @@
             if (item.data.type === undefined) item.data.type = 'selectable';
             if (item.data.isPaymentRequired === undefined) item.data.isPaymentRequired = true;
             if (item.data.autoInvoiceEnabled === undefined) item.data.autoInvoiceEnabled = true;
+            item.data.forms.forEach(form => {
+              if (form.fields) {
+                form.fields.forEach(field => {
+                  if (!field.options) field.options = [];
+                  if (!field.validationRules) field.validationRules = {};
+                });
+              }
+            });
             return item;
           });
           extractCategories();
           applyFilters();
           showToast(`بارگذاری شد: ${items.length} آیتم`);
-        } else {
-          alert('JSON باید آرایه باشد');
-        }
-      } catch (err) {
-        alert('خطا: ' + err.message);
-      }
+        } else alert('JSON باید آرایه باشد');
+      } catch (err) { alert('خطا: ' + err.message); }
     };
     reader.readAsText(file);
     event.target.value = '';
@@ -1206,6 +1467,8 @@
             type: fld.type || 'text',
             isRequired: fld.isRequired !== false,
             placeholder: fld.placeholder || '',
+            options: fld.options || [],
+            hasOther: fld.hasOther || false,
             validationRules: fld.validationRules || {}
           })) || []
         })) || [{ fields: [] }],
@@ -1213,11 +1476,7 @@
         title: item.serviceTitle || '',
         createdAt: item.data?.createdAt || new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        category: {
-          title: item.category || '',
-          type: 'service',
-          is_enabled: true
-        }
+        category: { title: item.category || '', type: 'service', is_enabled: true }
       }
     }));
     const blob = new Blob([JSON.stringify(exportItems, null, 2)], { type: 'application/json' });
@@ -1311,6 +1570,125 @@
         "isEnabled": true,
         "autoInvoiceEnabled": true
       }
+    }, {
+      "serviceId": "69abf8e1211b422dcd653975",
+      "serviceTitle": " درخواست تاییدیه پلیس اماکن",
+      "category": "اصناف و کسب‌وکارها",
+      "data": {
+        "price": 97000,
+        "duration": "50 دقیقه",
+        "images": [{
+          "id": "69e6003b295c4208c62b68d1",
+          "url": "https://s3.ir-thr-at1.arvanstorage.ir/kfnpublic/users/699ddc0cd763d24a41f821e8/1776681019796-91ed520b-492d-4be6-a404-12858dffb9be-1000001621.jpg",
+          "size": 18781,
+          "originalName": "1000001621.jpg",
+          "createdAt": "2026-04-20T10:30:19.872Z"
+        }],
+        "forms": [{
+          "id": "69a024f0b795053ea80b6a45",
+          "title": "درخواست تاییدیه پلیس اماکن",
+          "description": "اگه برای واحد صنفی‌ت جریمه ثبت شده، بدون دردسر و اتلاف وقت همین‌جا تسویه کن؛ سریع، مطمئن و رسمی تا کارت قانونی و بی‌حاشیه جلو بره👇🏻",
+          "fields": [{
+            "id": "69f628cade9c2c806e2a38b9",
+            "label": "نوع درخواست",
+            "key": "field_text_0",
+            "type": "checkbox",
+            "placeholder": "نوع درخوستتون رو اینجا وارد کنید",
+            "options": ["درخواست جدید", "انتقال پروانه", "تمدید", "تغییر مکان"],
+            "isRequired": true
+          }, {
+            "id": "69f628cade9c2c806e2a38ba",
+            "label": "نام و نام خانوادگی",
+            "key": "number_ejia",
+            "type": "text",
+            "placeholder": "نام و نام خانوادگیتون رو اینجا وارد کنید",
+            "isRequired": true
+          }, {
+            "id": "69f628cade9c2c806e2a38bb",
+            "label": "استان",
+            "key": "province_e2gf",
+            "type": "province",
+            "placeholder": "استان محل سکونتتون رو وارد کنید",
+            "isRequired": true
+          }, {
+            "id": "69f628cade9c2c806e2a38bc",
+            "label": "شهر",
+            "key": "city_z753",
+            "type": "city",
+            "placeholder": "شهر محل سکونتتون رو وارد کنید",
+            "isRequired": true
+          }, {
+            "id": "69f628cade9c2c806e2a38bd",
+            "label": "کد ملی",
+            "key": "nationalCode_cf2m",
+            "type": "nationalCode",
+            "placeholder": "کد ملیتون رو وارد کنید",
+            "isRequired": true,
+            "validationRules": { "min": 10, "max": 10 }
+          }, {
+            "id": "69f628cade9c2c806e2a38be",
+            "label": "وضعیت تاهل",
+            "key": "textarea_yqkl",
+            "type": "radio",
+            "placeholder": "وضعیت تاهل تون رو وارد کنید",
+            "options": ["مجرد", "متاهل"],
+            "isRequired": true
+          }, {
+            "id": "69f628cade9c2c806e2a38bf",
+            "label": "شماره تلفن",
+            "key": "nationalCode_or74",
+            "type": "text",
+            "placeholder": "شماره موبایلی که وارد میکنید باید با کدملیتون مطابقت داشته باشه",
+            "isRequired": true,
+            "validationRules": { "min": 10, "max": 10 }
+          }, {
+            "id": "69f628cade9c2c806e2a38c0",
+            "label": "کد پستی محل سکونت",
+            "key": "text_tihq",
+            "type": "text",
+            "placeholder": "کد پستی محل سکونتتون رو وارد کنید",
+            "isRequired": true,
+            "validationRules": { "min": 10, "max": 10 }
+          }, {
+            "id": "69f628cade9c2c806e2a38c1",
+            "label": "دین و مذهب",
+            "key": "textarea_xmar",
+            "type": "radio",
+            "placeholder": "نوع مذهبتون رو وارد کنید",
+            "options": ["اهل تسنن", "اهل تشیع"],
+            "isRequired": true
+          }],
+          "createdAt": "2026-02-26T10:48:16.359Z",
+          "updatedAt": "2026-05-02T16:39:38.225Z"
+        }],
+        "isPaymentRequired": true,
+        "isSpecial": false,
+        "type": "selectable",
+        "description": "",
+        "isNoticeEnabled": false,
+        "noticeText": null,
+        "noticeImage": null,
+        "id": "69abf8e1211b422dcd653975",
+        "title": " درخواست تاییدیه پلیس اماکن",
+        "cost": 37000,
+        "benefit": 60000,
+        "createdAt": "2026-03-07T10:07:29.587Z",
+        "updatedAt": "2026-06-21T19:19:32.074Z",
+        "category": {
+          "id": "682051f1a0cde3ab1c00000b",
+          "title": "اصناف و کسب‌وکارها",
+          "type": "service",
+          "description": null,
+          "is_enabled": true,
+          "parent": null,
+          "image": null,
+          "createdAt": "2026-02-24T19:23:53.528Z",
+          "updatedAt": "2026-02-24T19:23:53.528Z"
+        },
+        "isLocationBased": true,
+        "isEnabled": true,
+        "autoInvoiceEnabled": true
+      }
     }];
 
     items = sampleData.map(item => {
@@ -1322,20 +1700,25 @@
       if (item.data.type === undefined) item.data.type = 'selectable';
       if (item.data.isPaymentRequired === undefined) item.data.isPaymentRequired = true;
       if (item.data.autoInvoiceEnabled === undefined) item.data.autoInvoiceEnabled = true;
+      item.data.forms.forEach(form => {
+        if (form.fields) {
+          form.fields.forEach(field => {
+            if (!field.options) field.options = [];
+            if (!field.validationRules || typeof field.validationRules !== 'object') field.validationRules = {};
+          });
+        }
+      });
       return item;
     });
     
-    // Add categories from data
-    categories = [
-    ];
-    
+    categories = [{ id: 1, name: 'اصناف و کسب‌وکارها', sort: 1, icon: 'fa-store', isEnable: true }];
     extractCategories();
     applyFilters();
   }
 
   init();
 
-  // Make functions globally accessible
+  // Global functions
   window.openEditModal = openEditModal;
   window.openAddModal = openAddModal;
   window.closeModal = closeModal;
@@ -1370,8 +1753,13 @@
   window.updateFormDesc = updateFormDesc;
   window.updateField = updateField;
   window.handleImageUpload = handleImageUpload;
-  window.removeImage = removeImage;
   window.collectFormData = collectFormData;
+  window.addOption = addOption;
+  window.removeOption = removeOption;
+  window.updateFieldTypeInModal = updateFieldTypeInModal;
+  window.addValidationRule = addValidationRule;
+  window.removeValidationRule = removeValidationRule;
+  window.confirmValidationRule = confirmValidationRule;
 </script>
 </body>
 </html>
