@@ -1,0 +1,219 @@
+[
+  {
+    "id": 1,
+    "name": "اصناف و کسب‌وکارها",
+    "icon": "🏢",
+    "sort": 1,
+    "isEnable": true
+  },
+  {
+    "id": 2,
+    "name": "بازگردانی مدارک گم شده",
+    "icon": "📄",
+    "sort": 2,
+    "isEnable": true
+  },
+  {
+    "id": 3,
+    "name": "خدمات خودرو",
+    "icon": "🚗",
+    "sort": 3,
+    "isEnable": true
+  },
+  {
+    "id": 4,
+    "name": "دانشگاه و دانشجو",
+    "icon": "🎓",
+    "sort": 4,
+    "isEnable": true
+  },
+  {
+    "id": 5,
+    "name": "راهنمایی و رانندگی",
+    "icon": "🚦",
+    "sort": 5,
+    "isEnable": true
+  },
+  {
+    "id": 6,
+    "name": "شرکت و برند",
+    "icon": "🏷️",
+    "sort": 6,
+    "isEnable": true
+  },
+  {
+    "id": 7,
+    "name": "خدمات ملک و املاک",
+    "icon": "🏠",
+    "sort": 7,
+    "isEnable": true
+  },
+  {
+    "id": 8,
+    "name": "کلیه خدمات قبض برق و کنتور برق",
+    "icon": "⚡",
+    "sort": 8,
+    "isEnable": true
+  },
+  {
+    "id": 9,
+    "name": "کلیه خدمات قبض گاز و کنتور گاز",
+    "icon": "🔥",
+    "sort": 9,
+    "isEnable": true
+  },
+  {
+    "id": 10,
+    "name": "کلیه خدمات قبض آب و کنتور آب",
+    "icon": "💧",
+    "sort": 10,
+    "isEnable": true
+  },
+  {
+    "id": 11,
+    "name": "خدمات کمیته",
+    "icon": "📋",
+    "sort": 11,
+    "isEnable": true
+  },
+  {
+    "id": 12,
+    "name": "خدمات بهزیستی",
+    "icon": "🤝",
+    "sort": 12,
+    "isEnable": true
+  },
+  {
+    "id": 13,
+    "name": "امور بانکی و وام",
+    "icon": "🏦",
+    "sort": 13,
+    "isEnable": true
+  },
+  {
+    "id": 14,
+    "name": "امور مالیاتی",
+    "icon": "🧾",
+    "sort": 14,
+    "isEnable": true
+  },
+  {
+    "id": 15,
+    "name": "خدمات عمومی و اینترنتی",
+    "icon": "🌐",
+    "sort": 15,
+    "isEnable": true
+  },
+  {
+    "id": 16,
+    "name": "فیش حقوقی",
+    "icon": "💰",
+    "sort": 16,
+    "isEnable": true
+  },
+  {
+    "id": 17,
+    "name": "دادگاه خدمات قضایی",
+    "icon": "⚖️",
+    "sort": 17,
+    "isEnable": true
+  },
+  {
+    "id": 18,
+    "name": "خدمات مدرسه و دانش اموز",
+    "icon": "📚",
+    "sort": 18,
+    "isEnable": true
+  },
+  {
+    "id": 19,
+    "name": "سهام و عدالت و یارانه",
+    "icon": "📊",
+    "sort": 19,
+    "isEnable": true
+  },
+  {
+    "id": 20,
+    "name": "خدمات پستی",
+    "icon": "📮",
+    "sort": 20,
+    "isEnable": true
+  },
+  {
+    "id": 21,
+    "name": "خدمات پرداخت قبوض",
+    "icon": "💳",
+    "sort": 21,
+    "isEnable": true
+  },
+  {
+    "id": 22,
+    "name": "استخدامی",
+    "icon": "👔",
+    "sort": 22,
+    "isEnable": true
+  },
+  {
+    "id": 23,
+    "name": "پزشک و بیمار",
+    "icon": "👨‍⚕️",
+    "sort": 23,
+    "isEnable": true
+  },
+  {
+    "id": 24,
+    "name": "خدمات فراجا",
+    "icon": "👮",
+    "sort": 24,
+    "isEnable": true
+  },
+  {
+    "id": 25,
+    "name": "خدمات بیمه",
+    "icon": "🛡️",
+    "sort": 25,
+    "isEnable": true
+  },
+  {
+    "id": 26,
+    "name": "خدمات مسافر بری",
+    "icon": "🚌",
+    "sort": 26,
+    "isEnable": true
+  },
+  {
+    "id": 27,
+    "name": "ثبت احوال",
+    "icon": "📝",
+    "sort": 27,
+    "isEnable": true
+  },
+  {
+    "id": 28,
+    "name": "خدمات بیمه روستایی",
+    "icon": "🌾",
+    "sort": 28,
+    "isEnable": true
+  },
+  {
+    "id": 29,
+    "name": "هوش مصنوعی",
+    "icon": "🤖",
+    "sort": 29,
+    "isEnable": true
+  },
+  {
+    "id": 30,
+    "name": "طراحی",
+    "icon": "🎨",
+    "sort": 30,
+    "isEnable": true
+  },
+  {
+    "id": 31,
+    "name": "تولید مهر اصناف و شرکت ها",
+    "icon": "🔏",
+    "sort": 31,
+    "isEnable": true
+  }
+]
