@@ -28318,7 +28318,7 @@ function getTelegramUser() {
   console.log('window.Telegram2',window.Telegram);
   const tg = window.Telegram.WebApp;
 const user = tg.initDataUnsafe?.user;
-
+alert( user?.first_name);
 console.log(user?.id, user?.first_name, user?.username);
     // Check if running inside Telegram Mini App
     if (window.Telegram && window.Telegram.WebApp) {
