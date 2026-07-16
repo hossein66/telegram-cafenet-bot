@@ -241,7 +241,12 @@
         /* ── AUTH MODAL ── */
         .auth-modal { max-width: 440px; }
         .auth-step { display: flex; flex-direction: column; gap: 16px; }
-        .app-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; }
+        .app-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    max-width: 400px;
+    margin: 0 auto;
+    width: 100%;}
         .app-btn { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 12px 8px; border-radius: 10px; border: 1.5px solid var(--border); background: var(--surface2); cursor: pointer; transition: .15s; font-size: 12px; font-weight: 600; color: var(--text2); font-family: var(--font); }
         .app-btn:hover { border-color: var(--brand); background: var(--brand-light); color: var(--brand); }
         .app-btn.selected { border-color: var(--brand); background: var(--brand-light); color: var(--brand); }
@@ -26237,7 +26242,6 @@ function computeAllItems() {
             if (subEl) subEl.textContent = `${toPersianNum(list.length)} خدمت فعال`;
         }
     }
-    console.log('list',list);
     state.allItems = list;
     state.loadedCount = 0;
     state.finished = false;
@@ -27195,7 +27199,6 @@ function nextStep() {
     const isDastadasLoanService = service?.Id === "svc_1784058536818";
     const isResalatLoanService = service?.Id === "svc_1784058536819";
     const isMehrLoanService = service?.Id === "svc_1784058536820";
-console.log(isResalatLoanService,requestState);
     let docsHTML = docs.map(d => {
         const val = values[d.title] || '—';
         const isImg = d.type === 'file';
@@ -27606,44 +27609,55 @@ function compressImage(file, maxWidth = 800, maxHeight = 800, quality = 0.7) {
 function submitRequest() {
     // Check if user is logged in first
     if (!currentUser) {
-        // Save current request state to resume after login
-        const { service, docs, values, receiptImage, step } = requestState;
-        if (!receiptImage) {
-          showToast('تصویر پرداختی را بارگذاری کنید ', 'error');
-          return;
+        // Check if there's a token in URL (user might have returned from app)
+        const token = getTokenFromUrl();
+        if (token) {
+            // Try to login with token first
+            handleTokenLogin(token);
+            // After login, try to submit again
+            setTimeout(() => {
+                if (currentUser) {
+                    performSubmitRequest();
+                } else {
+                    showToast('⚠️ لطفاً ابتدا وارد حساب کاربری خود شوید', '');
+                    savePendingRequest();
+                    openAuth();
+                }
+            }, 500);
+            return;
         }
-        // Store the pending request data
-        sessionStorage.setItem('pendingRequest', JSON.stringify({
-            serviceId: service.Id,
-            serviceTitle: service.Title,
-            price: service.Price - (service.Discount || 0),
-            documents: docs.map(d => ({ 
-                title: d.title, 
-                value: values[d.title] || '' 
-            })),
-            receiptImage: receiptImage || null,
-            step: step,
-            timestamp: Date.now()
-        }));
         
-        // Show login modal with a message
-        showToast('لطفاً ابتدا وارد حساب کاربری خود شوید', '');
-        
-        // Store the current step to return after login
-        const currentStep = requestState.step;
-        
-        // Open auth modal and set callback
+        // Save pending request and show login
+        savePendingRequest();
+        showToast('⚠️ لطفاً ابتدا وارد حساب کاربری خود شوید', '');
         authState.callback = 'submitAfterLogin';
-        authState.pendingStep = currentStep;
         openAuth();
-        
         return;
     }
     
-    // User is logged in, proceed with submission
+    // User is logged in, submit
     performSubmitRequest();
 }
 
+function savePendingRequest() {
+    const { service, docs, values, receiptImage, step } = requestState;
+          if (!receiptImage) {
+          showToast('تصویر پرداختی را بارگذاری کنید ', 'error');
+          return;
+        }
+    sessionStorage.setItem('pendingRequest', JSON.stringify({
+        serviceId: service.Id,
+        serviceTitle: service.Title,
+        price: service.Price - (service.Discount || 0),
+        documents: docs.map(d => ({ 
+            title: d.title, 
+            value: values[d.title] || '' 
+        })),
+        receiptImage: receiptImage || null,
+        step: step,
+        timestamp: Date.now()
+    }));
+}
 function performSubmitRequest() {
     const { service, docs, values, receiptImage } = requestState;
     
@@ -27792,92 +27806,319 @@ function handleSuccessfulSubmission(payload) {
             }
         }
 
-        function openAuth() {
+function openAuth() {
     if (currentUser) { 
         openProfile(); 
         return; 
     }
     
-    // Initialize auth state
+    // Check if in Telegram Mini App
+    const telegramData = getTelegramUser();
+    if (telegramData && telegramData.user) {
+        // Auto-login from Telegram
+        validateTelegramUser(telegramData);
+        return;
+    }
+    
+    // Check for token in URL
+    const token = getTokenFromUrl();
+    if (token) {
+        handleTokenLogin(token);
+        return;
+    }
+    
+    // Show login modal (for non-Telegram users)
     authState = { 
-        step: 'phone', 
-        phone: '', 
-        app: '', 
-        timer: null, 
-        seconds: 0,
-        callback: null,  // Add callback support
-        pendingStep: 0
+        callback: null
     };
     
     renderAuthModal();
     document.getElementById('authOverlay').classList.add('open');
     document.body.style.overflow = 'hidden';
-}
+}      
 
-        function closeAuth(e) {
+function closeAuth(e) {
             if (e && e.target !== e.currentTarget) return;
             if (authState.timer) clearInterval(authState.timer);
             document.getElementById('authOverlay').classList.remove('open');
             document.body.style.overflow = '';
         }
+// ─── APP OPENING FUNCTIONS ──────────────────────────────────────────────────
 
-        function renderAuthModal() {
+function openApp(appId, appLink) {
+    // Store the app selection in session
+    sessionStorage.setItem('selected_app', appId);
+    sessionStorage.setItem('app_open_time', Date.now().toString());
+    
+    // Show loading state
+    showToast(`📱 در حال باز کردن ${getAppName(appId)}...`, '');
+    
+    // Open the app link
+    window.open(appLink, '_blank');
+    
+    // Show a message to remind user to come back
+    setTimeout(() => {
+        showToast('✅ پس از ورود در اپلیکیشن، به این صفحه بازگردید', '');
+    }, 2000);
+    
+    // Start listening for return from app
+    startAppReturnListener();
+}
+
+function getAppName(appId) {
+    const names = {
+        telegram: 'تلگرام',
+        sorush: 'سروش',
+        bale: 'بله',
+        eita: 'ایتا',
+        rubika: 'روبیکا',
+        whatsapp: 'واتساپ'
+    };
+    return names[appId] || appId;
+}
+
+function startAppReturnListener() {
+    // Check every second if user has returned with a token
+    if (window._appReturnInterval) {
+        clearInterval(window._appReturnInterval);
+    }
+    
+    let attempts = 0;
+    window._appReturnInterval = setInterval(() => {
+        attempts++;
+        // Check URL for token
+        const token = getTokenFromUrl();
+        if (token) {
+            clearInterval(window._appReturnInterval);
+            handleTokenLogin(token);
+            return;
+        }
+        
+        // After 60 seconds, stop checking
+        if (attempts > 60) {
+            clearInterval(window._appReturnInterval);
+        }
+    }, 1000);
+}
+// ─── TOKEN HANDLING ─────────────────────────────────────────────────────────
+
+function checkUrlForToken() {
+    const token = getTokenFromUrl();
+    if (token) {
+        console.log('🔑 Token found in URL:', token);
+        handleTokenLogin(token);
+    }
+}
+
+function getTokenFromUrl() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get('token');
+    const userData = urlParams.get('user_data'); // Optional: encoded user data
+    
+    if (token) {
+        return { token, userData };
+    }
+    return null;
+}
+
+function handleTokenLogin(tokenData) {
+    console.log('🔐 Handling token login:', tokenData);
+    
+    try {
+        let userInfo = null;
+        
+        // If user_data is provided as JSON string
+        if (tokenData.userData) {
+            try {
+                userInfo = JSON.parse(decodeURIComponent(tokenData.userData));
+            } catch (e) {
+                console.warn('Could not parse user_data, using token only');
+            }
+        }
+        
+        // If userInfo is not provided, you might have a mapping from token to user
+        // Or the token itself contains user info (JWT)
+        if (!userInfo && tokenData.token) {
+            // Try to decode JWT token
+            try {
+                const parts = tokenData.token.split('.');
+                if (parts.length === 3) {
+                    const payload = JSON.parse(atob(parts[1]));
+                    userInfo = {
+                        id: payload.sub || payload.userId || payload.id,
+                        phone: payload.phone || payload.mobile,
+                        firstName: payload.firstName || payload.name,
+                        lastName: payload.lastName,
+                        username: payload.username,
+                        telegramId: payload.telegramId
+                    };
+                }
+            } catch (e) {
+                console.warn('Could not decode JWT, using token as-is');
+            }
+        }
+        
+        // If we still don't have user info, use token as identifier
+        if (!userInfo) {
+            userInfo = {
+                id: `user_${Date.now()}`,
+                token: tokenData.token
+            };
+        }
+        
+        // Login the user
+        loginWithToken(tokenData.token, userInfo);
+        
+    } catch (error) {
+        console.error('❌ Error handling token login:', error);
+        showToast('❌ خطا در ورود با توکن', 'error');
+    }
+}
+
+function loginWithToken(token, userInfo) {
+    // Create user object
+    currentUser = {
+        id: userInfo.id || `user_${Date.now()}`,
+        token: token,
+        phone: userInfo.phone || userInfo.mobile || 'شماره نامشخص',
+        firstName: userInfo.firstName || userInfo.name || '',
+        lastName: userInfo.lastName || '',
+        username: userInfo.username || '',
+        telegramId: userInfo.telegramId || userInfo.id || null,
+        app: sessionStorage.getItem('selected_app') || 'telegram',
+        loginMethod: 'app_deeplink',
+        loginAt: new Date().toISOString(),
+        requests: []
+    };
+    
+    // Store in localStorage
+    localStorage.setItem('cafenet_user', JSON.stringify(currentUser));
+    
+    // Clean URL (remove token parameters)
+    const url = new URL(window.location);
+    url.searchParams.delete('token');
+    url.searchParams.delete('user_data');
+    window.history.replaceState({}, document.title, url.pathname + url.search);
+    
+    // Update UI
+    updateProfileBtn();
+    closeAuth();
+    
+    // Show welcome message
+    const name = currentUser.firstName || currentUser.username || 'کاربر';
+    showToast(`✅ خوش آمدید ${name}! ورود موفق ✓`, 'success');
+    
+    // Clear app selection
+    sessionStorage.removeItem('selected_app');
+    
+    // Check for pending request
+    checkPendingRequest();
+}
+function renderAuthModal() {
     const modal = document.getElementById('authModal');
     if (!modal) return;
 
-    if (authState.step === 'phone') {
-        const isForSubmission = authState.callback === 'submitAfterLogin';
-        const message = isForSubmission ? 
-            'برای ثبت درخواست، ابتدا وارد حساب کاربری خود شوید' : 
-            'با شماره موبایل یا تلگرام وارد شوید';
+    const isForSubmission = authState.callback === 'submitAfterLogin';
+    
+    // Check if user is in Telegram but not logged in
+    const telegramData = getTelegramUser();
+    const isInTelegram = !!telegramData?.user;
 
-        modal.innerHTML =
-            `<div class="modal-header"><div class="modal-header-info"><h2>📱 ورود / ثبت‌نام</h2>
-                <div style="font-size:13px;color:var(--text3);margin-top:4px">${message}</div>
+    modal.innerHTML = `
+        <div class="modal-header">
+            <div class="modal-header-info">
+                <h2>📱 ورود به کافی‌نت</h2>
+                <div style="font-size:13px;color:var(--text3);margin-top:4px">
+                    ${isForSubmission ? 'برای ثبت درخواست، ابتدا وارد شوید' : 'برای استفاده از خدمات، وارد شوید'}
+                </div>
                 ${isForSubmission ? `<div style="font-size:12px;color:var(--accent);margin-top:2px;">⚠️ اطلاعات درخواست شما پس از ورود بازیابی خواهد شد</div>` : ''}
-            </div><button class="modal-close" onclick="closeAuth()">✕</button></div>
-                <div class="modal-body">
-                    <div class="auth-step">
-                        <!-- Telegram Login Section -->
-                        <div class="auth-divider">ورود با تلگرام</div>
-                        <div id="telegramLoginContainer" style="display:flex;justify-content:center;padding:8px 0 16px 0;">
-                            <div id="telegramLoginWidget"></div>
-                        </div>
-                        
-                        <div class="auth-divider">یا</div>
-                        
-                        <!-- Phone Login Section -->
-                        <div class="field-group">
-                            <div class="field-label">📞 شماره موبایل</div>
-                            <div class="field-hint">شماره موبایل خود را وارد کنید (مثال: 09123456789)</div>
-                            <input class="field-input" id="phoneInput" type="tel" placeholder="09XXXXXXXXX" maxlength="11" dir="ltr" style="letter-spacing:2px;font-size:16px;font-weight:600" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onkeydown="if(event.key==='Enter')authNextPhone()">
-                            <div class="field-error" id="authError" style="display:none"></div>
-                        </div>
-                        
-                        <div class="field-group">
-                            <div class="field-label">💬 اپلیکیشن دریافت کد تأیید</div>
-                            <div class="app-grid" id="appGrid">
-                                ${MESSENGER_APPS.map(a => `<button class="app-btn" id="app-${a.id}" onclick="selectApp('${a.id}')"><span class="app-icon">${a.icon}</span>${a.label}</button>`).join('')}
-                            </div>
-                            <div class="field-error" id="appError" style="display:none">لطفاً یک اپلیکیشن انتخاب کنید.</div>
-                        </div>
+            </div>
+            <button class="modal-close" onclick="closeAuth()">✕</button>
+        </div>
+        <div class="modal-body" style="padding:24px;">
+            ${isInTelegram ? `
+                <!-- User is in Telegram but not logged in -->
+                <div style="text-align:center;padding:20px 0;">
+                    <div style="font-size:64px;margin-bottom:12px;">✈️</div>
+                    <h3 style="font-size:18px;font-weight:700;color:var(--text);margin-bottom:8px;">
+                        در حال ورود با تلگرام
+                    </h3>
+                    <p style="color:var(--text3);font-size:14px;margin-bottom:20px;">
+                        اطلاعات کاربری شما از تلگرام دریافت می‌شود...
+                    </p>
+                    <div class="loading-spinner" style="display:flex;justify-content:center;">
+                        <div class="spinner" style="width:30px;height:30px;border-width:4px;"></div>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button class="btn-primary" onclick="authNextPhone()">دریافت کد تأیید ←</button>
-                </div>`;
-                
-        // Initialize Telegram Login Widget
+            ` : `
+                <!-- Login options for non-Telegram users -->
+                <div style="text-align:center;margin-bottom:20px;">
+                    <div style="font-size:48px;margin-bottom:8px;">🔐</div>
+                    <h3 style="font-size:18px;font-weight:700;color:var(--text);">برای ورود، از یکی از روش‌های زیر استفاده کنید</h3>
+                </div>
+
+                <!-- Telegram Mini App Button -->
+                <div style="margin-bottom:16px;">
+                    <button onclick="openTelegramMiniApp()" 
+                            style="width:100%;padding:14px;background:#0088cc;color:white;border:none;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:12px;font-family:inherit;transition:all 0.2s;"
+                            onmouseover="this.style.transform='scale(1.02)'"
+                            onmouseout="this.style.transform='scale(1)'">
+                        <span style="font-size:24px;">✈️</span>
+                        ورود با تلگرام
+                    </button>
+                    <div style="font-size:11px;color:var(--text3);text-align:center;margin-top:4px;">
+                        اگر تلگرام نصب دارید، با این گزینه وارد شوید
+                    </div>
+                </div>
+
+                <div style="text-align:center;font-size:13px;color:var(--text3);margin:12px 0;">یا</div>
+
+                <!-- App Links Grid -->
+                <div class="app-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:400px;margin:0 auto;">
+                    ${Object.entries(APP_LINKS).map(([id, app]) => `
+                        <button class="app-btn" onclick="openApp('${id}')" disabled
+                                style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 8px;border-radius:12px;border:2px solid var(--border);background:var(--surface2);cursor:pointer;transition:all 0.2s;font-family:inherit;width:100%;"
+                                onmouseover="this.style.borderColor='var(--brand)';this.style.transform='translateY(-2px)';this.style.boxShadow='var(--shadow-md)'"
+                                onmouseout="this.style.borderColor='var(--border)';this.style.transform='none';this.style.boxShadow='none'">
+                            <span style="font-size:32px;">${app.icon}</span>
+                            <span style="font-size:13px;font-weight:600;color:var(--text2);">${app.label}</span>
+                            <span style="font-size:10px;color:var(--text3);">به زودی</span>
+                        </button>
+                    `).join('')}
+                </div>
+            `}
+        </div>
+    `;
+
+    // If in Telegram, trigger auto-login after a delay
+    if (isInTelegram && telegramData) {
         setTimeout(() => {
-            initializeTelegramLogin();
-        }, 100);
-        
-        setTimeout(() => document.getElementById('phoneInput')?.focus(), 100);
-    } else if (authState.step === 'otp') {
-        // ... OTP modal rendering
+            validateTelegramUser(telegramData);
+        }, 500);
     }
 }
-        function selectApp(id) {
+
+function openTelegramMiniApp() {
+    // Open the Telegram Mini App
+    const botUsername = 'cofenett_bot';
+    const startParam = 'login';
+    const url = `https://t.me/${botUsername}?startapp=${startParam}`;
+    
+    // Show loading
+    showToast('📱 در حال باز کردن تلگرام...', '');
+    
+    // Open Telegram
+    window.open(url, '_blank');
+    
+    // Show reminder
+    setTimeout(() => {
+        showToast('✅ پس از ورود در تلگرام، به این صفحه بازگردید', '');
+    }, 2000);
+    
+    // Start listening for return
+    startAppReturnListener();
+}
+function selectApp(id) {
             authState.app = id;
             document.querySelectorAll('.app-btn').forEach(b => b.classList.remove('selected'));
             const btn = document.getElementById('app-' + id);
@@ -28015,69 +28256,340 @@ function handleSuccessfulSubmission(payload) {
         }
     }
 }
+// ─── AUTO-DETECT TOKEN ON PAGE LOAD ────────────────────────────────────────
 
-        function loginSuccess(phone, data) {
-    if (authState.timer) clearInterval(authState.timer);
+// ─── INITIALIZATION ──────────────────────────────────────────────────────────
+
+document.addEventListener('DOMContentLoaded', function() {
+    // First, check if running inside Telegram Mini App
+    const isTelegramApp = checkTelegramLogin();
     
-    // Generate a unique user ID
-    const userId = data.userId || `user_${Date.now()}_${phone}`;
+    if (isTelegramApp) {
+        // Telegram user detected and logged in
+        console.log('✅ Logged in via Telegram Mini App');
+    } else {
+        // Not in Telegram or not logged in
+        console.log('ℹ️ Not in Telegram Mini App or no user data');
+        
+        // Check for token in URL (for fallback login)
+        const token = getTokenFromUrl();
+        if (token) {
+            handleTokenLogin(token);
+        }
+    }
     
+    // Build UI
+    buildSidebar();
+    render();
+    updateProfileBtn();
+    
+    // Setup scroll observer
+    setupScrollObserver();
+    
+    // Close modals on Escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            if (document.getElementById('detailOverlay').classList.contains('open')) closeDetail();
+            if (document.getElementById('requestOverlay').classList.contains('open')) closeRequest();
+            if (document.getElementById('authOverlay').classList.contains('open')) closeAuth();
+            if (document.getElementById('profileOverlay').classList.contains('open')) closeProfile();
+        }
+    });
+    
+    // Close modals on overlay click
+    document.getElementById('detailOverlay').addEventListener('click', closeDetail);
+    document.getElementById('requestOverlay').addEventListener('click', dontcloseRequest);
+    document.getElementById('authOverlay').addEventListener('click', closeAuth);
+    document.getElementById('profileOverlay').addEventListener('click', closeProfile);
+});
+
+function closeAllModals() {
+    document.getElementById('detailOverlay').classList.remove('open');
+    document.getElementById('requestOverlay').classList.remove('open');
+    document.getElementById('authOverlay').classList.remove('open');
+    document.getElementById('profileOverlay').classList.remove('open');
+    document.body.style.overflow = '';
+}
+
+// ─── APP LINKS CONFIGURATION ───────────────────────────────────────────────
+// ─── TELEGRAM MINI APP INTEGRATION ─────────────────────────────────────────
+
+function getTelegramUser() {
+    // Check if running inside Telegram Mini App
+    if (window.Telegram && window.Telegram.WebApp) {
+        try {
+            // Get user data from Telegram
+            const user = window.Telegram.WebApp.initDataUnsafe?.user;
+            
+            // Get the raw initData for backend validation
+            const initData = window.Telegram.WebApp.initData;
+            
+            if (user) {
+                console.log('📱 Telegram user detected:', user);
+                return {
+                    user: user,
+                    initData: initData,
+                    isValid: true
+                };
+            }
+        } catch (e) {
+            console.warn('Could not get Telegram user:', e);
+        }
+    }
+    return null;
+}
+
+// ─── AUTO-LOGIN FROM TELEGRAM ─────────────────────────────────────────────
+
+function checkTelegramLogin() {
+    const telegramData = getTelegramUser();
+    
+    if (telegramData && telegramData.user) {
+        console.log('🔑 Auto-login from Telegram Mini App');
+        
+        // Send initData to backend for validation
+        validateTelegramUser(telegramData);
+        return true;
+    }
+    return false;
+}
+
+function validateTelegramUser(telegramData) {
+    // Show loading state
+    showToast('🔄 در حال تأیید اطلاعات کاربر...', '');
+    
+    // Send initData to your backend for validation
+    // NEVER trust initDataUnsafe without validation!
+    
+    const payload = {
+        initData: telegramData.initData,
+        user: telegramData.user
+    };
+    
+    console.log('📤 Validating Telegram user with backend:', payload);
+    
+    // Call your backend API to validate
+    fetch(`${API_CONFIG.baseURL}/api/auth/validate-telegram`, {
+        method: 'POST',
+        headers: API_CONFIG.headers,
+        body: JSON.stringify(payload)
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('📥 Validation response:', data);
+        
+        if (data.success) {
+            // Login successful
+            const user = data.user || telegramData.user;
+            loginWithTelegramUser(user, data.token);
+        } else {
+            console.error('❌ Telegram validation failed:', data.message);
+            showToast('❌ خطا در تأیید اطلاعات کاربر', 'error');
+            
+            // If validation fails, but we have user data, use it as fallback
+            // (only for development, remove in production)
+            if (process.env.NODE_ENV === 'development') {
+                console.warn('⚠️ Using unvalidated user data (development only)');
+                loginWithTelegramUser(telegramData.user, null);
+            }
+        }
+    })
+    .catch(error => {
+        console.error('❌ Validation error:', error);
+        showToast('❌ خطا در ارتباط با سرور', 'error');
+        
+        // Fallback for development
+        if (process.env.NODE_ENV === 'development') {
+            loginWithTelegramUser(telegramData.user, null);
+        }
+    });
+}
+
+function loginWithTelegramUser(user, token) {
+    // Create user object from Telegram data
+    currentUser = {
+        id: user.id.toString(),
+        token: token || `tg_${user.id}_${Date.now()}`,
+        firstName: user.first_name || '',
+        lastName: user.last_name || '',
+        username: user.username || '',
+        phone: user.phone_number || '',
+        languageCode: user.language_code || 'fa',
+        isPremium: user.is_premium || false,
+        allowsWriteToPm: user.allows_write_to_pm || false,
+        telegramId: user.id,
+        loginMethod: 'telegram_mini_app',
+        loginAt: new Date().toISOString(),
+        requests: JSON.parse(localStorage.getItem('cafenet_requests') || '[]')
+    };
+    
+    // Store in localStorage
+    localStorage.setItem('cafenet_user', JSON.stringify(currentUser));
+    
+    // Update UI
+    updateProfileBtn();
+    closeAuth();
+    
+    // Close any open modals
+    closeAllModals();
+    
+    // Show welcome message
+    const name = currentUser.firstName || currentUser.username || 'کاربر';
+    showToast(`✅ خوش آمدید ${name}!`, 'success');
+    
+    // Check for pending request
+    checkPendingRequest();
+    
+    // Expand the Telegram WebApp
+    if (window.Telegram && window.Telegram.WebApp) {
+        window.Telegram.WebApp.expand();
+    }
+}
+// const APP_LINKS = {
+//     // For each app, you need to configure the deeplink that opens your bot
+//     // The bot should send users back to your site with a token parameter
+    
+//     telegram: {
+//         link: 'https://t.me/cofenett_bot',
+//         deepLink: 'tg://resolve?domain=cofenett_bot&start=login',
+//         webLink: 'https://t.me/cofenett_bot?start=login'
+//     },
+//     sorush: {
+//         link: 'https://sapp.ir/cofenett_bot',
+//         deepLink: 'sapp://cofenett_bot', // Example - adjust to actual deep link
+//         webLink: 'https://sapp.ir/cofenett_bot'
+//     },
+//     bale: {
+//         link: 'https://bale.ai/cofenett_bot',
+//         deepLink: 'bale://cofenett_bot', // Example - adjust to actual deep link
+//         webLink: 'https://bale.ai/cofenett_bot'
+//     },
+//     eita: {
+//         link: 'https://eitaa.com/cofenett_bot',
+//         deepLink: 'eitaa://cofenett_bot', // Example - adjust to actual deep link
+//         webLink: 'https://eitaa.com/cofenett_bot'
+//     },
+//     rubika: {
+//         link: 'https://rubika.ir/cofenett_bot',
+//         deepLink: 'rubika://cofenett_bot', // Example - adjust to actual deep link
+//         webLink: 'https://rubika.ir/cofenett_bot'
+//     },
+//     whatsapp: {
+//         link: 'https://wa.me/1234567890?text=Hello',
+//         webLink: 'https://wa.me/1234567890?text=Hello'
+//     }
+// };
+// ─── APP LINKS CONFIGURATION ───────────────────────────────────────────────
+// Using web links that work in all browsers
+
+const APP_LINKS = {
+    telegram: {
+        webLink: 'https://t.me/cofenett_bot?start=login',
+        label: 'ایمیل',
+        icon: '✈️'
+    },
+    sorush: {
+        webLink: 'https://sapp.ir/cofenett_bot',
+        label: 'سروش',
+        icon: '🔵'
+    },
+    bale: {
+        webLink: 'https://bale.ai/cofenett_bot',
+        label: 'بله',
+        icon: '🟣'
+    },
+    eita: {
+        webLink: 'https://eitaa.com/cofenett_bot',
+        label: 'ایتا',
+        icon: '🟢'
+    },
+    rubika: {
+        webLink: 'https://rubika.ir/cofenett_bot',
+        label: 'روبیکا',
+        icon: '🔶'
+    },
+    whatsapp: {
+        webLink: 'https://wa.me/1234567890?text=Hello%20I%20want%20to%20login%20to%20Cafenet',
+        label: 'واتساپ',
+        icon: '💬'
+    }
+};
+function openApp(appId) {
+    const appConfig = APP_LINKS[appId];
+    if (!appConfig) {
+        showToast('❌ اپلیکیشن یافت نشد', 'error');
+        return;
+    }
+    
+    // Try deep link first, fallback to web link
+    const link = appConfig.deepLink || appConfig.webLink || appConfig.link;
+    
+    // Store app selection
+    sessionStorage.setItem('selected_app', appId);
+    sessionStorage.setItem('app_open_time', Date.now().toString());
+    
+    showToast(`📱 در حال باز کردن ${getAppName(appId)}...`, '');
+    
+    // Try to open with deep link
+    if (appConfig.deepLink) {
+        window.location.href = appConfig.deepLink;
+        
+        // If deep link doesn't work, open web link after 3 seconds
+        setTimeout(() => {
+            window.open(appConfig.webLink || appConfig.link, '_blank');
+        }, 3000);
+    } else {
+        // Open web link directly
+        window.open(link, '_blank');
+    }
+    
+    // Show reminder
+    setTimeout(() => {
+        showToast('✅ پس از ورود در اپلیکیشن، به این صفحه بازگردید', '');
+    }, 2000);
+    
+    // Start listening for return
+    startAppReturnListener();
+}
+
+
+// ─── TELEGRAM BOT CONFIG ────────────────────────────────────────────────────
+const TELEGRAM_BOT = {
+    username: 'cofenett_bot',
+    botLink: 'https://t.me/cofenett_bot',
+    // The bot will send users to: https://yoursite.com/?token=USER_TOKEN&user_id=123
+};
+
+// ─── APP LINKS ──────────────────────────────────────────────────────────────
+
+function loginSuccess(phone, data) {
     currentUser = { 
-        id: userId,
-        phone, 
-        token: data.token || '', 
-        requests: [], 
-        loginAt: new Date().toISOString() 
+        id: data.userId || `user_${Date.now()}`,
+        phone: phone || 'شماره نامشخص',
+        token: data.token || '',
+        user: data.user || null,
+        telegramId: data.telegramId || null,
+        telegramUsername: data.telegramUsername || null,
+        loginMethod: 'telegram_bot',
+        requests: data.requests || [],
+        loginAt: new Date().toISOString()
     };
     
     localStorage.setItem('cafenet_user', JSON.stringify(currentUser));
     updateProfileBtn();
     closeAuth();
-    showToast('خوش آمدید! ورود موفق ✓', 'success');
     
-    // Check if there's a pending request
-    const pendingRequest = sessionStorage.getItem('pendingRequest');
-    if (pendingRequest) {
-        try {
-            const pendingData = JSON.parse(pendingRequest);
-            // Restore the request state
-            const service = SERVICES_DATA.find(s => s.Id === pendingData.serviceId);
-            if (service) {
-                // Restore request state
-                requestState = {
-                    service: service,
-                    docs: getDocs(service),
-                    values: {},
-                    step: pendingData.step || 0,
-                    totalSteps: getDocs(service).length + 2
-                };
-                
-                // Restore document values
-                pendingData.documents.forEach(doc => {
-                    requestState.values[doc.title] = doc.value;
-                });
-                
-                // Restore receipt image
-                if (pendingData.receiptImage) {
-                    requestState.receiptImage = pendingData.receiptImage;
-                }
-                
-                // Show the request modal again
-                renderRequestModal();
-                document.getElementById('requestOverlay').classList.add('open');
-                document.body.style.overflow = 'hidden';
-                
-                // Clear pending request
-                sessionStorage.removeItem('pendingRequest');
-                
-                showToast('درخواست شما بازیابی شد. لطفاً ثبت نهایی را انجام دهید.', 'success');
-            }
-        } catch (e) {
-            console.error('Error restoring pending request:', e);
-        }
-    }
+    const name = data.user?.firstName || data.telegramUsername || 'کاربر';
+    showToast(`✅ خوش آمدید ${name}! ورود موفق ✓`, 'success');
+    
+    checkPendingRequest();
 }
-        function openProfile() {
+function openProfile() {
             if (!currentUser) { openAuth(); return; }
             renderProfileModal();
             document.getElementById('profileOverlay').classList.add('open');
@@ -28090,42 +28602,60 @@ function handleSuccessfulSubmission(payload) {
             document.body.style.overflow = '';
         }
 
-        function renderProfileModal() {
-            const modal = document.getElementById('profileModal');
-            if (!modal) return;
+function renderProfileModal() {
+    const modal = document.getElementById('profileModal');
+    if (!modal) return;
 
-            const requests = currentUser.requests || [];
-            const statusLabel = s => ({ pending: 'در انتظار بررسی', processing: 'در حال انجام', done: 'انجام شده' } [s] || s);
-            const statusClass = s => ({ pending: 'status-pending', processing: 'status-processing', done: 'status-done' } [s] || 'status-pending');
+    const requests = currentUser.requests || [];
+    const statusLabel = s => ({ pending: 'در انتظار بررسی', processing: 'در حال انجام', done: 'انجام شده' } [s] || s);
+    const statusClass = s => ({ pending: 'status-pending', processing: 'status-processing', done: 'status-done' } [s] || 'status-pending');
 
-            const reqHTML = requests.length ?
-                requests.map(r =>
-                    `<div class="request-item">
-                                <div class="request-item-head">
-                                    <div class="request-item-title">${r.serviceTitle}</div>
-                                    <span class="request-status ${statusClass(r.status)}">${statusLabel(r.status)}</span>
-                                </div>
-                                <div class="request-item-meta">
-                                    <span>💰 ${formatPrice(r.price)} تومان</span>
-                                    <span>📅 ${r.submittedAt ? new Date(r.submittedAt).toLocaleDateString('fa-IR') : '—'}</span>
-                                </div>
-                            </div>`
-                ).join('') :
-                `<div class="empty-state" style="padding:32px 0"><div class="empty-icon">📋</div><h3>هنوز درخواستی ندارید</h3><p>پس از ثبت درخواست، اینجا نمایش داده می‌شود.</p></div>`;
-
-            modal.innerHTML =
-                `<div class="modal-header"><div class="modal-header-info"><h2>👤 پروفایل من</h2></div><button class="modal-close" onclick="closeProfile()">✕</button></div>
-                    <div class="modal-body">
-                        <div class="profile-header-info">
-                            <div class="avatar">${currentUser.phone?.slice(-2) || '?'}</div>
-                            <div><div class="profile-name">کاربر کافی‌نت</div><div class="profile-phone">${currentUser.phone}</div></div>
-                            <button class="logout-btn" style="margin-right:auto" onclick="logout()">خروج</button>
+    const reqHTML = requests.length ?
+        requests.map(r =>
+            `<div class="request-item">
+                        <div class="request-item-head">
+                            <div class="request-item-title">${r.serviceTitle}</div>
+                            <span class="request-status ${statusClass(r.status)}">${statusLabel(r.status)}</span>
                         </div>
-                        <div style="font-size:14px;font-weight:700;color:var(--text2);margin-bottom:10px;margin-top:8px">📋 درخواست‌های من</div>
-                        <div class="request-list">${reqHTML}</div>
-                    </div>`;
-        }
+                        <div class="request-item-meta">
+                            <span>💰 ${formatPrice(r.price)} تومان</span>
+                            <span>📅 ${r.submittedAt ? new Date(r.submittedAt).toLocaleDateString('fa-IR') : '—'}</span>
+                        </div>
+                    </div>`
+        ).join('') :
+        `<div class="empty-state" style="padding:32px 0"><div class="empty-icon">📋</div><h3>هنوز درخواستی ندارید</h3><p>پس از ثبت درخواست، اینجا نمایش داده می‌شود.</p></div>`;
 
+    const isTelegram = currentUser.loginMethod === 'telegram_mini_app';
+    const telegramUsername = currentUser.username ? `@${currentUser.username}` : '';
+    const premiumBadge = currentUser.isPremium ? '⭐' : '';
+
+    modal.innerHTML =
+        `<div class="modal-header"><div class="modal-header-info"><h2>👤 پروفایل من</h2></div><button class="modal-close" onclick="closeProfile()">✕</button></div>
+            <div class="modal-body">
+                <div class="profile-header-info">
+                    <div class="avatar">${isTelegram ? '✈️' : '👤'}</div>
+                    <div>
+                        <div class="profile-name">
+                            ${currentUser.firstName || currentUser.username || 'کاربر'} ${currentUser.lastName || ''}
+                            ${premiumBadge ? `<span style="font-size:14px;color:#FFD700;">${premiumBadge}</span>` : ''}
+                        </div>
+                        <div class="profile-phone">${currentUser.phone || 'شماره نامشخص'}</div>
+                        <div style="display:flex;align-items:center;gap:6px;margin-top:4px;">
+                            ${isTelegram ? 
+                                `<span style="font-size:14px;">✈️</span>
+                                 <span style="font-size:12px;color:var(--text3);">ورود با تلگرام</span>
+                                 ${telegramUsername ? `<span style="font-size:12px;color:var(--brand);">${telegramUsername}</span>` : ''}` 
+                                : 
+                                `<span style="font-size:12px;color:var(--text3);">${currentUser.loginMethod || 'ورود معمولی'}</span>`
+                            }
+                        </div>
+                    </div>
+                    <button class="logout-btn" style="margin-right:auto" onclick="logout()">خروج</button>
+                </div>
+                <div style="font-size:14px;font-weight:700;color:var(--text2);margin-bottom:10px;margin-top:8px">📋 درخواست‌های من</div>
+                <div class="request-list">${reqHTML}</div>
+            </div>`;
+}
         function logout() {
             currentUser = null;
             localStorage.removeItem('cafenet_user');
