@@ -28269,7 +28269,7 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('✅ Logged in via Telegram Mini App');
     } else {
         // Not in Telegram or not logged in
-        console.log('ℹ️ Not in Telegram Mini App or no user data');
+        console.log('ℹ️ Not in Telegram Mini App or no user data22');
         
         // Check for token in URL (for fallback login)
         const token = getTokenFromUrl();
@@ -28315,6 +28315,11 @@ function closeAllModals() {
 // ─── TELEGRAM MINI APP INTEGRATION ─────────────────────────────────────────
 
 function getTelegramUser() {
+  console.log('window.Telegram2',window.Telegram);
+  const tg = window.Telegram.WebApp;
+const user = tg.initDataUnsafe?.user;
+
+console.log(user?.id, user?.first_name, user?.username);
     // Check if running inside Telegram Mini App
     if (window.Telegram && window.Telegram.WebApp) {
         try {
