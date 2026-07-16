@@ -28319,7 +28319,6 @@ function getTelegramUser() {
   console.log('window.Telegram2',window.Telegram);
   const tg = window.Telegram.WebApp;
 const user = tg.initDataUnsafe?.user;
-alert( user?.first_name);
 console.log(user?.id, user?.first_name, user?.username);
     // Check if running inside Telegram Mini App
     if (window.Telegram && window.Telegram.WebApp) {
@@ -28359,7 +28358,17 @@ function checkTelegramLogin() {
     }
     return false;
 }
-
+const API_CONFIG = {
+    baseURL: 'https://cofenet-online.com', // Replace with your API URL
+    endpoints: {
+        telegramLogin: '/api/auth/telegram-login',
+        submitRequest: '/api/requests/submit'
+    },
+    headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+    }
+};
 function validateTelegramUser(telegramData) {
     // Show loading state
     showToast('🔄 در حال تأیید اطلاعات کاربر...', '');
@@ -28373,48 +28382,50 @@ function validateTelegramUser(telegramData) {
     };
     
     console.log('📤 Validating Telegram user with backend:', payload);
-    
-    // Call your backend API to validate
-    fetch(`${API_CONFIG.baseURL}/api/auth/validate-telegram`, {
-        method: 'POST',
-        headers: API_CONFIG.headers,
-        body: JSON.stringify(payload)
-    })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        return response.json();
-    })
-    .then(data => {
-        console.log('📥 Validation response:', data);
-        
-        if (data.success) {
-            // Login successful
-            const user = data.user || telegramData.user;
-            loginWithTelegramUser(user, data.token);
-        } else {
-            console.error('❌ Telegram validation failed:', data.message);
-            showToast('❌ خطا در تأیید اطلاعات کاربر', 'error');
-            
-            // If validation fails, but we have user data, use it as fallback
-            // (only for development, remove in production)
-            if (process.env.NODE_ENV === 'development') {
-                console.warn('⚠️ Using unvalidated user data (development only)');
                 loginWithTelegramUser(telegramData.user, null);
-            }
-        }
-    })
-    .catch(error => {
-        console.error('❌ Validation error:', error);
-        showToast('❌ خطا در ارتباط با سرور', 'error');
+
+    // Call your backend API to validate
+    // fetch(`${API_CONFIG.baseURL}/api/auth/validate-telegram`, {
+    //     method: 'POST',
+    //     headers: API_CONFIG.headers,
+    //     body: JSON.stringify(payload)
+    // })
+    // .then(response => {
+    //     if (!response.ok) {
+    //         throw new Error(`HTTP error! status: ${response.status}`);
+    //     }
+    //     return response.json();
+    // })
+    // .then(data => {
+    //     console.log('📥 Validation response:', data);
         
-        // Fallback for development
-        if (process.env.NODE_ENV === 'development') {
-            loginWithTelegramUser(telegramData.user, null);
-        }
-    });
-}
+    //     if (data.success) {
+    //         // Login successful
+    //         const user = data.user || telegramData.user;
+    //         loginWithTelegramUser(user, data.token);
+    //     } else {
+    //         console.error('❌ Telegram validation failed:', data.message);
+    //         showToast('❌ خطا در تأیید اطلاعات کاربر', 'error');
+            
+    //         // If validation fails, but we have user data, use it as fallback
+    //         // (only for development, remove in production)
+    //         if (process.env.NODE_ENV === 'development') {
+    //             console.warn('⚠️ Using unvalidated user data (development only)');
+    //             loginWithTelegramUser(telegramData.user, null);
+    //         }
+    //     }
+    // })
+    // .catch(error => {
+    //     console.error('❌ Validation error:', error);
+    //     showToast('❌ خطا در ارتباط با سرور', 'error');
+        
+    //     // Fallback for development
+    //     if (process.env.NODE_ENV === 'development') {
+    //         loginWithTelegramUser(telegramData.user, null);
+    //     }
+    // });
+
+  }
 
 function loginWithTelegramUser(user, token) {
     // Create user object from Telegram data
