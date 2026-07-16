@@ -325,7 +325,7 @@
         </aside>
         <main>
             <button class="mobile-sidebar-btn" id="mobSidebarBtn" onclick="toggleSidebar()">
-                <span>📂 دسته‌بندی‌ها</span>
+                <span>📂  دسته‌بندی‌ها (انتخاب کنید)</span>
                 <svg id="mobSidebarArrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="transition:transform .2s">
                     <path d="M6 9l6 6 6-6" />
                 </svg>
@@ -27661,7 +27661,10 @@ function savePendingRequest() {
 }
 function performSubmitRequest() {
     const { service, docs, values, receiptImage } = requestState;
-    
+    if (!receiptImage) {
+             showToast('تصویر پرداختی را بارگذاری کنید ', 'error');
+             return;
+    }
     // Get user ID from currentUser
     const userId = currentUser?.id || currentUser?.phone || null;
     
@@ -28371,7 +28374,7 @@ const API_CONFIG = {
 };
 function validateTelegramUser(telegramData) {
     // Show loading state
-    showToast('🔄 در حال تأیید اطلاعات کاربر...', '');
+    // showToast('🔄 در حال تأیید اطلاعات کاربر...', '');
     
     // Send initData to your backend for validation
     // NEVER trust initDataUnsafe without validation!
