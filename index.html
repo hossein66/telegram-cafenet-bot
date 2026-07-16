@@ -28315,7 +28315,11 @@ function closeAllModals() {
 // ─── TELEGRAM MINI APP INTEGRATION ─────────────────────────────────────────
 
 function getTelegramUser() {
-  console.log('window.Telegram',window.Telegram);
+  console.log('window.Telegram2',window.Telegram);
+  const tg = window.Telegram.WebApp;
+const user = tg.initDataUnsafe?.user;
+
+console.log(user?.id, user?.first_name, user?.username);
     // Check if running inside Telegram Mini App
     if (window.Telegram && window.Telegram.WebApp) {
         try {
