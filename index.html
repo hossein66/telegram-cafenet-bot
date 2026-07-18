@@ -26135,6 +26135,7 @@
         }
 
         function resetView() {
+          closeServicePage();
             state.mode = 'all';
             state.catId = null;
             state.searchTerm = '';
@@ -28374,7 +28375,7 @@ const API_CONFIG = {
 };
 function validateTelegramUser(telegramData) {
     // Show loading state
-    // showToast('🔄 در حال تأیید اطلاعات کاربر...', '');
+    showToast('🔄 در حال تأیید اطلاعات کاربر...', '');
     
     // Send initData to your backend for validation
     // NEVER trust initDataUnsafe without validation!
@@ -28385,48 +28386,48 @@ function validateTelegramUser(telegramData) {
     };
     
     console.log('📤 Validating Telegram user with backend:', payload);
-                loginWithTelegramUser(telegramData.user, null);
+    // loginWithTelegramUser(telegramData.user, null);
 
     // Call your backend API to validate
-    // fetch(`${API_CONFIG.baseURL}/api/auth/validate-telegram`, {
-    //     method: 'POST',
-    //     headers: API_CONFIG.headers,
-    //     body: JSON.stringify(payload)
-    // })
-    // .then(response => {
-    //     if (!response.ok) {
-    //         throw new Error(`HTTP error! status: ${response.status}`);
-    //     }
-    //     return response.json();
-    // })
-    // .then(data => {
-    //     console.log('📥 Validation response:', data);
+    fetch(`${API_CONFIG.baseURL}/${API_CONFIG.endpoints.telegramLogin}`, {
+        method: 'POST',
+        headers: API_CONFIG.headers,
+        body: JSON.stringify(payload)
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('📥 Validation response:', data);
         
-    //     if (data.success) {
-    //         // Login successful
-    //         const user = data.user || telegramData.user;
-    //         loginWithTelegramUser(user, data.token);
-    //     } else {
-    //         console.error('❌ Telegram validation failed:', data.message);
-    //         showToast('❌ خطا در تأیید اطلاعات کاربر', 'error');
+        if (data.success) {
+            // Login successful
+            const user = data.user || telegramData.user;
+            loginWithTelegramUser(user, data.token);
+        } else {
+            console.error('❌ Telegram validation failed:', data.message);
+            showToast('❌ خطا در تأیید اطلاعات کاربر', 'error');
             
-    //         // If validation fails, but we have user data, use it as fallback
-    //         // (only for development, remove in production)
-    //         if (process.env.NODE_ENV === 'development') {
-    //             console.warn('⚠️ Using unvalidated user data (development only)');
-    //             loginWithTelegramUser(telegramData.user, null);
-    //         }
-    //     }
-    // })
-    // .catch(error => {
-    //     console.error('❌ Validation error:', error);
-    //     showToast('❌ خطا در ارتباط با سرور', 'error');
+            // If validation fails, but we have user data, use it as fallback
+            // (only for development, remove in production)
+            if (process.env.NODE_ENV === 'development') {
+                console.warn('⚠️ Using unvalidated user data (development only)');
+                loginWithTelegramUser(telegramData.user, null);
+            }
+        }
+    })
+    .catch(error => {
+        console.error('❌ Validation error:', error);
+        showToast('❌ خطا در ارتباط با سرور', 'error');
         
-    //     // Fallback for development
-    //     if (process.env.NODE_ENV === 'development') {
-    //         loginWithTelegramUser(telegramData.user, null);
-    //     }
-    // });
+        // Fallback for development
+        if (process.env.NODE_ENV === 'development') {
+            loginWithTelegramUser(telegramData.user, null);
+        }
+    });
 
   }
 
