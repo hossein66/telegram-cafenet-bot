@@ -1,0 +1,2209 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>کافی‌نت آنلاین – خدمات اداری و دولتی</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+      href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800&display=swap"
+      rel="stylesheet">
+    <link href="./style.css" rel="stylesheet">
+    <!-- Telegram Login Widget -->
+    <script src="https://telegram.org/js/telegram-web-app.js">
+    </script>
+  </head>
+  <body>
+
+    <!-- HEADER -->
+    <header>
+      <div class="header-inner">
+        <a href="#" class="logo" onclick="resetView();return false">
+          <div class="logo-icon">🖥️</div>
+          <div>
+            <div class="logo-text">کافی‌نت آنلاین</div>
+            <div class="logo-sub">خدمات اداری و دولتی</div>
+          </div>
+        </a>
+        <button class="btn-profile" id="profileBtn" onclick="openAuth()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="8" r="4" />
+            <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
+          </svg>
+          <span id="profileBtnText">ورود / ثبت‌نام</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- HERO -->
+    <div class="hero">
+      <div class="hero-bar">
+        <div class="hero-search-wrap">
+          <svg class="hero-search-icon" width="18" height="18"
+            viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2">
+            <circle cx="11" cy="11" r="8" />
+            <path d="m21 21-4.35-4.35" />
+          </svg>
+          <input type="text" id="searchInput" class="hero-search-input"
+            placeholder="جستجوی خدمات... نام سرویس یا دسته‌بندی"
+            autocomplete="off">
+        </div>
+      </div>
+    </div>
+
+    <!-- MAIN -->
+    <div class="page-body" id="pageBody">
+      <aside class="sidebar" id="sidebar">
+        <div class="sidebar-head"><span>📂</span> دسته‌بندی‌ها</div>
+        <div class="cat-list" id="catList"></div>
+      </aside>
+      <main>
+        <button class="mobile-sidebar-btn" id="mobSidebarBtn"
+          onclick="toggleSidebar()">
+          <span>📂 دسته‌بندی‌ها (انتخاب کنید)</span>
+          <svg id="mobSidebarArrow" width="16" height="16" viewBox="0 0 24 24"
+            fill="none" stroke="currentColor" stroke-width="2.5"
+            style="transition:transform .2s">
+            <path d="M6 9l6 6 6-6" />
+          </svg>
+        </button>
+        <div id="searchBanner" style="display:none"></div>
+        <div class="content-head">
+          <div>
+            <h2 id="contentTitle">همه خدمات</h2>
+            <div class="content-head-sub" id="contentSub"></div>
+          </div>
+        </div>
+        <div class="service-grid" id="serviceGrid"></div>
+        <div id="scrollLoader" class="loading-spinner" style="display:none">
+          <div class="spinner"></div> در حال بارگذاری...
+        </div>
+        <div id="endMessage" class="end-message" style="display:none">✨ همه
+          خدمات نمایش داده شد</div>
+      </main>
+    </div>
+
+    <!-- SERVICE PAGE -->
+    <div class="service-page" id="servicePage"></div>
+
+    <!-- MODALS -->
+    <div class="modal-overlay" id="detailOverlay" onclick="closeDetail(event)">
+      <div class="modal" id="detailModal"></div>
+    </div>
+    <div class="modal-overlay" id="requestOverlay"
+      onclick="closeRequest(event)">
+      <div class="modal flow-modal" id="requestModal"></div>
+    </div>
+    <div class="modal-overlay" id="authOverlay" onclick="closeAuth(event)">
+      <div class="modal" id="authModal"></div>
+    </div>
+    <div class="modal-overlay" id="profileOverlay"
+      onclick="closeProfile(event)">
+      <div class="modal" id="profileModal"></div>
+    </div>
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script>
+        // ─── CONFIG ────────────────────────────────────────────────────────────────
+        const API_BASE = window.API_BASE || 'http://localhost:8000/api';
+        const TOKEN_KEY = 'cafenet_token';
+        const USER_KEY = 'cafenet_user';
+
+        // ─── GLOBALS ──────────────────────────────────────────────────────────────
+        let CATEGORIES_DATA = [];
+        let SERVICES_DATA = [];
+        let PROVINCE_CITY_DATA = {};
+        const CAT_LOOKUP_BY_ID = {};
+        const CAT_LOOKUP_BY_NAME = {};
+        const CAT_LIST = [];
+        let scrollObserver = null;
+        let currentUser = JSON.parse(localStorage.getItem(USER_KEY) || 'null');
+        let requestState = {};
+        let authState = { step: 'phone', phone: '', app: '', timer: null, seconds: 0 };
+
+        // ─── API CLIENT ──────────────────────────────────────────────────────────
+        const api = {
+            async request(endpoint, options = {}) {
+                const token = localStorage.getItem(TOKEN_KEY);
+                const headers = {
+                    'Content-Type': 'application/json',
+                    ...(options.headers || {})
+                };
+                if (token) {
+                    headers['Authorization'] = `Bearer ${token}`;
+                }
+
+                const res = await fetch(`${API_BASE}${endpoint}`, {
+                    ...options,
+                    headers
+                });
+
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({ detail: 'خطای سرور' }));
+                    throw new Error(err.detail || 'خطا در ارتباط با سرور');
+                }
+                return res.json();
+            },
+
+            // ─── SERVICES ──────────────────────────────────────────────────────
+            async getServices(params = {}) {
+                const qs = new URLSearchParams(params).toString();
+                return this.request(`/services?${qs}`);
+            },
+            async getService(id) {
+                return this.request(`/services/${id}`);
+            },
+            async getFeatured() {
+                return this.request('/services/featured');
+            },
+
+            // ─── CATEGORIES ────────────────────────────────────────────────────
+            async getCategories() {
+                return this.request('/categories');
+            },
+
+            // ─── PROVINCES ─────────────────────────────────────────────────────
+            async getProvinces() {
+                return this.request('/provinces');
+            },
+            async getCities(province) {
+                return this.request(`/cities/${encodeURIComponent(province)}`);
+            },
+
+            // ─── AUTH ──────────────────────────────────────────────────────────
+            async sendOTP(phone, app) {
+                return this.request('/auth/otp/send', {
+                    method: 'POST',
+                    body: JSON.stringify({ phone, app })
+                });
+            },
+            async verifyOTP(phone, otp) {
+                return this.request('/auth/otp/verify', {
+                    method: 'POST',
+                    body: JSON.stringify({ phone, otp })
+                });
+            },
+            async telegramLogin(initData, user) {
+                return this.request('/auth/telegram-login', {
+                    method: 'POST',
+                    body: JSON.stringify({ initData, user })
+                });
+            },
+            async getMe() {
+                return this.request('/auth/me');
+            },
+            async logout() {
+                return this.request('/auth/logout', { method: 'POST' });
+            },
+
+            // ─── REQUESTS ─────────────────────────────────────────────────────
+            async submitRequest(payload) {
+                return this.request('/requests', {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
+            },
+            async getMyRequests() {
+                return this.request('/requests');
+            }
+        };
+
+        // ─── HELPERS ──────────────────────────────────────────────────────────────
+        function toPersianNum(n) {
+            if (n === undefined || n === null) return '۰';
+            return String(n).replace(/\d/g, d => '۰۱۲۳۴۵۶۷۸۹'[d]);
+        }
+
+        function formatPrice(p) {
+            if (!p && p !== 0) return '۰';
+            return toPersianNum(Number(p).toLocaleString('en'));
+        }
+
+        function getCatNames(cats) {
+            return (cats || []).map(id => CAT_LOOKUP_BY_ID[id]?.name || '').filter(Boolean);
+        }
+
+        function getCategoryIcon(catName) {
+            const cat = CAT_LOOKUP_BY_NAME[catName];
+            return cat?.icon || '📂';
+        }
+
+        function typeIcon(type) {
+            const icons = {
+                'text': '📝',
+                'number': '🔢',
+                'nationalCode': '🆔',
+                'date': '📅',
+                'checkbox': '☑️',
+                'radio': '🔘',
+                'select': '📋',
+                'boolean': '✔️',
+                'province': '📍',
+                'city': '🏙️',
+                'file': '📎',
+                'textarea': '📄',
+                'licensePlate': '🚗',
+                'motorcycleLicensePlate': '🏍️'
+            };
+            return icons[type] || '📄';
+        }
+
+        function getCitiesForProvince(province) {
+            return PROVINCE_CITY_DATA[province] || [];
+        }
+
+        function getDocInfo(doc) {
+            const docTypes = [
+                { Id: 1, title: 'متن', REx: '.*' },
+                { Id: 2, title: 'عدد', REx: '^[0-9]+$' },
+                { Id: 3, title: 'تصویر', REx: '.*\\.(jpg|jpeg|png|gif|svg)$' },
+                { Id: 4, title: 'شبا', REx: '^IR[0-9]{24}$' },
+                { Id: 5, title: 'مبایل', REx: '^09[0-9]{9}$' },
+                { Id: 6, title: 'کد ملی', REx: '^[0-9]{10}$' },
+                { Id: 7, title: 'کد پستی', REx: '^[0-9]{10}$' },
+                { Id: 8, title: 'تاریخ', REx: '^\\d{4}-(0?[1-9]|1[0-2])-(0?[1-9]|[12]\\d|3[01])$' }
+            ];
+            const dt = docTypes.find(d => d.Id === doc.typeId) || { title: 'متن', REx: '.*' };
+            return {
+                title: doc.title,
+                typeId: doc.typeId,
+                type: doc.type || 'text',
+                displayType: dt.title,
+                regex: dt.REx,
+                placeholder: doc.placeholder || '',
+                isRequired: doc.isRequired || false,
+                options: doc.options || [],
+                validationRules: doc.validationRules || {}
+            };
+        }
+
+        function getDocs(service) {
+            const docs = service.Documents || [];
+            if (!docs.length) return [{ title: 'نیازی به مدارک نیست', typeId: 1, type: 'text', displayType: 'متن',
+                    regex: '.*', placeholder: '', isRequired: false, options: [], validationRules: {} }];
+            return docs.map(getDocInfo);
+        }
+
+        function validateDoc(value, doc) {
+            if (doc.type === 'nationalCode' && !/^[0-9]{10}$/.test(value)) {
+                return { ok: false, msg: 'کد ملی باید ۱۰ رقم باشد.' };
+            }
+            if (doc.type === 'number' && isNaN(value)) {
+                return { ok: false, msg: 'لطفاً یک عدد معتبر وارد کنید.' };
+            }
+            if (doc.type === 'date' && value) {
+                const dateObj = new Date(value);
+                if (isNaN(dateObj.getTime())) {
+                    return { ok: false, msg: 'تاریخ وارد شده معتبر نیست.' };
+                }
+            }
+            if (doc.validationRules?.min && value.length < doc.validationRules.min) {
+                return { ok: false, msg: `حداقل ${doc.validationRules.min} کاراکتر وارد کنید.` };
+            }
+            if (doc.validationRules?.max && value.length > doc.validationRules.max) {
+                return { ok: false, msg: `حداکثر ${doc.validationRules.max} کاراکتر مجاز است.` };
+            }
+            if (doc.validationRules?.pattern) {
+                try {
+                    const regex = new RegExp(doc.validationRules.pattern);
+                    if (!regex.test(value)) {
+                        return { ok: false, msg: 'فرمت وارد شده معتبر نیست.' };
+                    }
+                } catch (e) {}
+            }
+            return { ok: true };
+        }
+
+        // ─── STATE ──────────────────────────────────────────────────────────────
+        let state = {
+            mode: 'all', // 'all' | 'category' | 'search'
+            catId: null,
+            searchTerm: '',
+            sort: 'default',
+            page: 0,
+            pageSize: 12,
+            allItems: [],
+            loadedCount: 0,
+            loading: false,
+            finished: false,
+            nextCursor: null,
+            total: 0
+        };
+
+        // ─── LOAD DATA FROM API ──────────────────────────────────────────────────
+async function loadInitialData() {
+    try {
+        const cats = await api.getCategories();
+        CATEGORIES_DATA = cats;
+        CATEGORIES_DATA.forEach(cat => {
+            CAT_LOOKUP_BY_ID[cat.id] = cat;
+            CAT_LOOKUP_BY_NAME[cat.name] = cat;
+            // CAT_LIST.push(cat);
+        });
+
+        await loadServices();
+
+        const provinces = await api.getProvinces();
+        const cityPromises = provinces.map(async(p) => {
+            const cities = await api.getCities(p);
+            return [p, cities];
+        });
+        const cityEntries = await Promise.all(cityPromises);
+        PROVINCE_CITY_DATA = Object.fromEntries(cityEntries);
+
+        buildSidebar();
+        updateProfileBtn();
+
+    } catch (err) {
+        console.error('❌ Failed to load data:', err);
+        showToast('⚠️ خطا در دریافت اطلاعات از سرور', 'error');
+    }
+}
+
+async function loadServices(append = false, cursor = null) {
+    try {
+        const params = { limit: state.pageSize, sort: state.sort };
+        if (state.mode === 'category' && state.catId) {
+            const cat = CATEGORIES_DATA.find(c => c.id == state.catId);
+            if (cat) params.category = cat.name;
+        }
+        if (state.searchTerm && state.searchTerm !== '__TOP__') {
+            params.search = state.searchTerm;
+        }
+        if (cursor) params.cursor = cursor;
+
+        const result = await api.getServices(params);
+        const items = result.items || [];
+        state.nextCursor = result.nextCursor || null;
+        state.total = result.total || 0;
+
+        const transformed = items.map(s => ({
+    Id: s.serviceId,
+    Title: s.serviceTitle,
+    Price: s.price || 0,
+    Discount: 0,
+    Categories: [s.category],
+    IsActive: s.isEnabled !== false,
+    Sort: s.sort || 0,
+    URL: '#',
+    Duration: s.duration || '',
+    Description: s.description || '',
+    Notice: null,
+            Documents: s.documents || [],   // <-- keep documents
+    _raw: { ...s },
+    _catTitle: s.category
+}));
+        if (append) {
+            // append new page of items
+            state.allItems = [...state.allItems, ...transformed];
+            // if API returned no items on append, mark finished
+            if ((transformed || []).length === 0) {
+                state.finished = true;
+                document.getElementById('scrollLoader').style.display = 'none';
+                document.getElementById('endMessage').style.display = 'block';
+                return;
+            }
+        } else {
+            state.allItems = transformed;
+            state.loadedCount = 0;                // reset for fresh render
+            // Clear the grid to remove old items
+            document.getElementById('serviceGrid').innerHTML = '';
+            document.getElementById('endMessage').style.display = 'none';
+        }
+
+        // ❌ REMOVE this line: state.finished = !result.hasMore;
+        // ❌ Do NOT set state.finished here – let renderChunk handle it.
+
+        updateTitleAndSub();
+        renderChunk();
+        setupScrollObserver();
+
+    } catch (err) {
+        console.error('❌ Failed to load services:', err);
+        showToast('⚠️ خطا در بارگذاری خدمات', 'error');
+    }
+}
+        function updateTitleAndSub() {
+            const titleEl = document.getElementById('contentTitle');
+            const subEl = document.getElementById('contentSub');
+            const count = state.allItems.length;
+
+            if (state.mode === 'category' && state.catId) {
+                const cat = CATEGORIES_DATA.find(c => c.id == state.catId);
+                if (titleEl) titleEl.textContent = cat?.name || 'دسته';
+                if (subEl) subEl.textContent = `${toPersianNum(state.total || count)} خدمت در این دسته`;
+            } else if (state.mode === 'search' && state.searchTerm && state.searchTerm !== '__TOP__') {
+                if (titleEl) titleEl.textContent = 'نتایج جستجو';
+                if (subEl) subEl.textContent = `${toPersianNum(state.total || count)} مورد یافت شد`;
+            } else if (state.mode === 'search' && state.searchTerm === '__TOP__') {
+                if (titleEl) titleEl.textContent = '⭐ خدمات پرکاربرد';
+                if (subEl) subEl.textContent = 'محبوب‌ترین خدمات کافی‌نت';
+            } else {
+                if (titleEl) titleEl.textContent = 'همه خدمات';
+                if (subEl) subEl.textContent = `${toPersianNum(state.total || count)} خدمت فعال`;
+            }
+        }
+
+        // ─── RENDER ──────────────────────────────────────────────────────────────
+        function render() {
+            const grid = document.getElementById('serviceGrid');
+            if (grid) grid.innerHTML = '';
+            document.getElementById('endMessage').style.display = 'none';
+            document.getElementById('scrollLoader').style.display = 'none';
+            state.loadedCount = 0;
+            renderChunk();
+            setupScrollObserver();
+        }
+
+        function renderChunk() {
+            if (state.loading || state.finished) return;
+            const { allItems, loadedCount, pageSize } = state;
+
+                    // If we've rendered all items currently loaded, try fetching next page
+                    if (loadedCount >= allItems.length) {
+                        // if server provided a cursor, request next page
+                        if (state.nextCursor && !state.loading && !state.finished) {
+                            loadServices(true, state.nextCursor);
+                            return;
+                        }
+
+                        // no more pages available
+                        state.finished = true;
+                        document.getElementById('scrollLoader').style.display = 'none';
+                        document.getElementById('endMessage').style.display = 'block';
+                        return;
+                    }
+
+            state.loading = true;
+            const loader = document.getElementById('scrollLoader');
+            if (loader) loader.style.display = 'flex';
+
+            setTimeout(() => {
+                const chunk = allItems.slice(loadedCount, loadedCount + pageSize);
+                const grid = document.getElementById('serviceGrid');
+                if (!grid) { state.loading = false; return; }
+
+                const html = chunk.map(s => {
+                    const cats = getCatNames(s.Categories);
+                    const finalPrice = s.Price;
+                    return `<div class="service-card" onclick="openServicePage('${s.Id}')">
+                        <div class="service-card-head">
+                            <h3>${s.Title}</h3>
+                        </div>
+                        ${s.Duration ? `<div class="service-duration">⏱ ${s.Duration}</div>` : ''}
+                        <div class="service-cats">
+                            ${cats.slice(0,2).map(c=>`<span class="service-cat-tag">${c}</span>`).join('')}
+                            ${cats.length>2 ? `<span class="service-cat-tag">+${toPersianNum(cats.length-2)}</span>` : ''}
+                        </div>
+                        <div class="service-footer">
+                            <div>
+                                <div class="service-price">${formatPrice(finalPrice)} <span>تومان</span></div>
+                            </div>
+                            <button class="btn-request" onclick="event.stopPropagation();startRequest('${s.Id}')">ثبت درخواست</button>
+                        </div>
+                    </div>`;
+                }).join('');
+
+                grid.insertAdjacentHTML('beforeend', html);
+                state.loadedCount += chunk.length;
+                state.loading = false;
+                if (loader) loader.style.display = 'none';
+
+                if (state.loadedCount >= allItems.length) {
+                    state.finished = true;
+                    document.getElementById('endMessage').style.display = 'block';
+                } else {
+                    setupScrollObserver();
+                }
+            }, 150);
+        }
+
+        // ─── INFINITE SCROLL ───────────────────────────────────────────────────
+        function setupScrollObserver() {
+            if (scrollObserver) {
+                scrollObserver.disconnect();
+                scrollObserver = null;
+            }
+
+            const loader = document.getElementById('scrollLoader');
+            if (!loader) return;
+
+            scrollObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting && !state.loading && !state.finished) {
+                        // If we have a next cursor, load more from API
+                        if (state.nextCursor) {
+                            loadServices(true, state.nextCursor);
+                        } else {
+                            // Fallback: use local chunking
+                            renderChunk();
+                        }
+                    }
+                });
+            }, { rootMargin: '0px 0px 200px 0px', threshold: 0.1 });
+
+            scrollObserver.observe(loader);
+        }
+
+        // ─── SIDEBAR ────────────────────────────────────────────────────────────
+        function buildSidebar() {
+            const list = document.getElementById('catList');
+            if (!list) return;
+
+            const isTop = state.mode === 'search' && state.searchTerm === '__TOP__';
+            const allCount =CATEGORIES_DATA.filter(cat => cat.id === 0).count || 0;
+            const isSpecialCount =CATEGORIES_DATA.filter(cat => cat.id === -1).count || 0;
+
+            let html ='';
+
+            CATEGORIES_DATA.sort((a, b) => a.sort - b.sort).filter(cat => cat.isEnable !== false)
+                .forEach(cat => {
+                  console.log(state.allItems);
+                    const active = state.mode === 'category' && state.catId == cat.id ? 'active' : '';
+const count = cat.count || 0;
+                    html +=
+                        `<div class="cat-item ${active}" onclick="selectCat('${cat.id}')"><span class="cat-icon">${getCategoryIcon(cat.name)}</span> ${cat.name} <span class="cat-count">${toPersianNum(count)}</span></div>`;
+                });
+            list.innerHTML = html;
+        }
+
+        function selectCat(id) {
+          if (id===-1 || id==='-1') {
+            showTopServices();
+            return;
+          }
+            if (id === null || id === 'null' || id === '0' || id === 0) {
+                state.mode = 'all';
+                state.catId = null;
+            } else {
+                state.mode = 'category';
+                state.catId = id;
+            }
+            state.searchTerm = '';
+            state.page = 0;
+            state.loadedCount = 0;
+            state.finished = false;
+            state.nextCursor = null;
+            document.getElementById('searchInput').value = '';
+            clearSearchBanner();
+            buildSidebar();
+            loadServices(false, null);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            document.getElementById('sidebar').classList.remove('show');
+        }
+
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('show');
+        }
+
+        function showTopServices() {
+            state.mode = 'search';
+            state.searchTerm = '__TOP__';
+            state.catId = null;
+            state.page = 0;
+            state.loadedCount = 0;
+            state.finished = false;
+            state.nextCursor = null;
+            document.getElementById('searchInput').value = '';
+            clearSearchBanner();
+            buildSidebar();
+            loadServices(false, null);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            document.getElementById('sidebar').classList.remove('show');
+        }
+
+        function resetView() {
+            closeServicePage();
+            state.mode = 'all';
+            state.catId = null;
+            state.searchTerm = '';
+            state.page = 0;
+            state.loadedCount = 0;
+            state.finished = false;
+            state.nextCursor = null;
+            document.getElementById('searchInput').value = '';
+            clearSearchBanner();
+            buildSidebar();
+            loadServices(false, null);
+        }
+
+        // ─── SEARCH ──────────────────────────────────────────────────────────────
+        let searchTimer;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchInput = document.getElementById('searchInput');
+            if (searchInput) {
+                searchInput.addEventListener('input', function() {
+                    clearTimeout(searchTimer);
+                    closeServicePage();
+                    searchTimer = setTimeout(() => {
+                        const v = this.value.trim();
+                        if (v) {
+                            state.mode = 'search';
+                            state.searchTerm = v;
+                            state.catId = null;
+                            state.page = 0;
+                            state.loadedCount = 0;
+                            state.finished = false;
+                            state.nextCursor = null;
+                            buildSidebar();
+                            showSearchBanner(v);
+                            loadServices(false, null);
+                        } else {
+                            clearSearch();
+                        }
+                    }, 300);
+                });
+            }
+        });
+
+        function showSearchBanner(term) {
+            const b = document.getElementById('searchBanner');
+            if (!b) return;
+            b.style.display = 'flex';
+            b.innerHTML =
+                `<div class="search-banner"><span>🔍 نتایج جستجو برای <strong>«${term}»</strong>: ${toPersianNum(state.total || state.allItems.length)} مورد یافت شد</span><button class="btn-clear-search" onclick="clearSearch()">✕ پاک کردن</button></div>`;
+        }
+
+        function clearSearchBanner() {
+            const b = document.getElementById('searchBanner');
+            if (b) b.style.display = 'none';
+        }
+
+        function clearSearch() {
+            state.mode = 'all';
+            state.searchTerm = '';
+            state.catId = null;
+            state.page = 0;
+            state.loadedCount = 0;
+            state.finished = false;
+            state.nextCursor = null;
+            document.getElementById('searchInput').value = '';
+            clearSearchBanner();
+            buildSidebar();
+            loadServices(false, null);
+        }
+
+        // ─── SERVICE PAGE ──────────────────────────────────────────────────────
+        async function openServicePage(id) {
+            let s = state.allItems.find(x => x.Id === id);
+            // If we don't have full details (forms/documents) fetch from server
+            const needFetch = !s || !(s.Documents && s.Documents.length) && (!s._raw || !s._raw.forms);
+            if (needFetch) {
+                try {
+                    const res = await api.getService(id);
+                    const data = res.data || {};
+                    const forms = data.forms || data.Forms || [];
+                    const detail = {
+                        Id: res.serviceId || id,
+                        Title: res.serviceTitle || data.title || '',
+                        Price: data.price || 0,
+                        Documents: forms,
+                        Description: data.description || '',
+                        Duration: data.duration || '',
+                        _raw: data,
+                        Categories: [res.category]
+                    };
+                    // merge or add to state list so subsequent opens are instant
+                    const idx = state.allItems.findIndex(x => x.Id === detail.Id);
+                    if (idx === -1) state.allItems.unshift(detail);
+                    else state.allItems[idx] = { ...state.allItems[idx], ...detail };
+                    s = detail;
+                } catch (err) {
+                    console.error('Failed to load service detail', err);
+                    showToast('⚠️ خطا در دریافت جزئیات سرویس', 'error');
+                    return;
+                }
+            }
+
+            if (!s) return;
+            document.title = s.Title + ' | کافی‌نت آنلاین';
+            renderServicePage(s);
+        }
+
+        function renderServicePage(s) {
+            const cats = getCatNames(s.Categories);
+            const docs = getDocs(s);
+            const finalPrice = s.Price;
+
+            const docsHTML = docs.map((d, i) =>
+                `<div class="sp-doc-item"><div class="sp-doc-num">${toPersianNum(i+1)}</div><div style="flex:1;font-weight:500">${typeIcon(d.type)} ${d.title}</div>${d.isRequired ? '<span style="color:var(--danger);font-size:12px;">*</span>' : ''}<span class="doc-type-badge">${d.displayType}</span></div>`
+            ).join('');
+
+            const pageEl = document.getElementById('servicePage');
+            if (!pageEl) return;
+
+            pageEl.innerHTML =
+                `<div class="breadcrumb"><a onclick="closeServicePage()">🏠 خانه</a><span class="breadcrumb-sep">›</span>${cats.length ? `<span>${cats[0]}</span><span class="breadcrumb-sep">›</span>` : ''}<span>${s.Title}</span></div>
+                <div class="sp-header">
+                    <div class="sp-title">${s.Title}</div>
+                    ${s.Duration ? `<div style="color:var(--text3);font-size:14px;margin-bottom:10px;">⏱ ${s.Duration}</div>` : ''}
+                    <div class="sp-cats">${cats.map(c=>`<span class="sp-cat">${c}</span>`).join('')}</div>
+                    ${s.Description ? `<div style="color:var(--text2);font-size:14px;margin-bottom:12px;line-height:1.8;">${s.Description.replace(/\n/g, '<br>')}</div>` : ''}
+                    <div class="sp-price-row">
+                        <div>
+                            <div class="sp-price">${formatPrice(finalPrice)} <span class="sp-price-label">تومان</span></div>
+                        </div>
+                        <button class="btn-sp-request" onclick="startRequest('${s.Id}')">📝 ثبت درخواست</button>
+                    </div>
+                </div>
+                <div class="sp-section">
+                    <div class="sp-section-title">📄 مدارک مورد نیاز (${toPersianNum(docs.length)})</div>
+                    <div class="sp-doc-list">${docsHTML}</div>
+                </div>`;
+
+            pageEl.classList.add('active');
+            document.getElementById('pageBody').style.display = 'none';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function closeServicePage() {
+            const pageEl = document.getElementById('servicePage');
+            if (pageEl) pageEl.classList.remove('active');
+            document.getElementById('pageBody').style.display = '';
+            document.title = 'کافی‌نت آنلاین – خدمات اداری و دولتی';
+        }
+
+        // ─── REQUEST FLOW ─────────────────────────────────────────────────────
+        function startRequest(id) {
+            const s = state.allItems.find(x => x.Id === id);
+            if (!s) return;
+            const docs = getDocs(s);
+            requestState = { service: s, docs, step: 0, values: {}, totalSteps: docs.length + 2 };
+            renderRequestModal();
+            document.getElementById('requestOverlay').classList.add('open');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeRequest(e) {
+            if (e && e.target !== e.currentTarget) return;
+            document.getElementById('requestOverlay').classList.remove('open');
+            document.body.style.overflow = '';
+        }
+
+        function closeRequestFinal(e) {
+            if (e && e.target !== e.currentTarget) return;
+            document.getElementById('requestOverlay').classList.remove('open');
+            document.body.style.overflow = '';
+            closeServicePage();
+            clearSearch();
+        }
+
+        function dontcloseRequest(e) {
+            e.stopPropagation();
+        }
+
+        function renderRequestModal() {
+            const { service, docs, step, totalSteps } = requestState;
+            const modal = document.getElementById('requestModal');
+            if (!modal) return;
+
+            const isSummary = step === docs.length;
+            const isPayment = step === docs.length + 1;
+
+            const stepLabels = docs.map((d, i) => docs.length <= 3 ? d.title.slice(0, 8) + '…' :
+            `مدرک ${toPersianNum(i + 1)}`);
+            stepLabels.push('تأیید');
+            stepLabels.push('پرداخت');
+
+            const stepsHTML = stepLabels.map((label, i) => {
+                const cls = i < step ? 'done' : i === step ? 'active' : '';
+                return `<div class="flow-step ${cls}"><div class="step-circle">${i < step ? '✓' : toPersianNum(i + 1)}</div><div class="step-label">${label}</div></div>`;
+            }).join('');
+
+            let bodyHTML;
+            if (isPayment) bodyHTML = renderPaymentStep();
+            else if (isSummary) bodyHTML = renderSummary();
+            else bodyHTML = renderDocStep(step);
+
+            modal.innerHTML = `
+                <div class="modal-header">
+                    <div class="modal-header-info">
+                        <h2>📝 ثبت درخواست</h2>
+                        <div style="font-size:13px;color:var(--text3);margin-top:4px">${service.Title}</div>
+                    </div>
+                    <button class="modal-close" onclick="closeRequest()">✕</button>
+                </div>
+                <div class="flow-progress">
+                    <div class="flow-steps">${stepsHTML}</div>
+                </div>
+                <div class="modal-body" id="requestBody">${bodyHTML}</div>
+                <div class="modal-footer" id="requestFooter">${renderRequestFooter(isSummary, step)}</div>
+            `;
+
+            // Special handling for province/city fields
+            if (!isSummary && !isPayment && step < docs.length) {
+                const doc = docs[step];
+                if (doc.type === 'city') {
+                    const provinceValue = requestState.values['استان'] || requestState.values['استان محل زندگی'] || '';
+                    const citySelect = document.getElementById('docSelect');
+                    if (citySelect) {
+                        const cities = getCitiesForProvince(provinceValue);
+                        citySelect.innerHTML =
+                            `<option value="">${cities.length ? 'انتخاب شهر...' : 'ابتدا استان را انتخاب کنید'}</option>`;
+                        cities.forEach(c => {
+                            const opt = document.createElement('option');
+                            opt.value = c;
+                            opt.textContent = c;
+                            if (requestState.values[doc.title] === c) opt.selected = true;
+                            citySelect.appendChild(opt);
+                        });
+                        citySelect.disabled = !cities.length;
+                    }
+                }
+            }
+        }
+
+        function renderDocStep(step) {
+            const doc = requestState.docs[step];
+            const val = requestState.values[doc.title] || '';
+            const isRequired = doc.isRequired !== false;
+            const requiredMark = isRequired ? '<span class="field-required">*</span>' : '';
+
+            let fieldHTML = '';
+
+            switch (doc.type) {
+                case 'checkbox':
+                    const checkboxOptions = doc.options || [];
+                    const selectedValues = val ? (Array.isArray(val) ? val : val.split(',')) : [];
+                    fieldHTML = `
+                        <div class="field-group">
+                            <div class="field-label">${typeIcon(doc.type)} ${doc.title} ${requiredMark}</div>
+                            <div class="field-options" id="checkboxGroup_${step}">
+                                ${checkboxOptions.map((opt, idx) => `
+                                    <div class="option-item">
+                                        <input type="checkbox" id="chk_${step}_${idx}" value="${opt}" 
+                                            ${selectedValues.includes(opt) ? 'checked' : ''}
+                                            onchange="updateCheckboxValue(${step})">
+                                        <label for="chk_${step}_${idx}">${opt}</label>
+                                    </div>
+                                `).join('')}
+                            </div>
+                            <div class="field-error" id="fieldError" style="display:none"></div>
+                        </div>
+                    `;
+                    break;
+
+                case 'radio':
+                    const radioOptions = doc.options || [];
+                    fieldHTML = `
+                        <div class="field-group">
+                            <div class="field-label">${typeIcon(doc.type)} ${doc.title} ${requiredMark}</div>
+                            <div class="field-options">
+                                ${radioOptions.map((opt, idx) => `
+                                    <div class="option-item">
+                                        <input type="radio" name="radio_${step}" id="radio_${step}_${idx}" value="${opt}" 
+                                            ${val === opt ? 'checked' : ''}
+                                            onchange="updateRadioValue(${step}, '${opt}')">
+                                        <label for="radio_${step}_${idx}">${opt}</label>
+                                    </div>
+                                `).join('')}
+                            </div>
+                            <div class="field-error" id="fieldError" style="display:none"></div>
+                        </div>
+                    `;
+                    break;
+
+                case 'select':
+                    const selectOptions = doc.options || [];
+                    fieldHTML = `
+                        <div class="field-group">
+                            <div class="field-label">${typeIcon(doc.type)} ${doc.title} ${requiredMark}</div>
+                            <select class="field-select" id="docSelect" onchange="selectOnChange(this)">
+                                <option value="">انتخاب کنید...</option>
+                                ${selectOptions.map(opt => `
+                                    <option value="${opt}" ${val === opt ? 'selected' : ''}>${opt}</option>
+                                `).join('')}
+                            </select>
+                            <div class="field-error" id="fieldError" style="display:none"></div>
+                        </div>
+                    `;
+                    break;
+
+                case 'boolean':
+                    fieldHTML = `
+                        <div class="field-group">
+                            <div class="field-label">${typeIcon(doc.type)} ${doc.title} ${requiredMark}</div>
+                            <div class="field-boolean">
+                                <label>
+                                    <input type="radio" name="boolean_${step}" value="true" ${val === 'true' || val === true ? 'checked' : ''} 
+                                        onchange="updateBooleanValue(${step}, true)">
+                                    بله
+                                </label>
+                                <label>
+                                    <input type="radio" name="boolean_${step}" value="false" ${val === 'false' || val === false ? 'checked' : ''} 
+                                        onchange="updateBooleanValue(${step}, false)">
+                                    خیر
+                                </label>
+                            </div>
+                            <div class="field-error" id="fieldError" style="display:none"></div>
+                        </div>
+                    `;
+                    break;
+
+                case 'province':
+                    const provinces = Object.keys(PROVINCE_CITY_DATA);
+                    fieldHTML = `
+                        <div class="field-group">
+                            <div class="field-label">${typeIcon(doc.type)} ${doc.title} ${requiredMark}</div>
+                            <select class="field-select" id="docSelect" onchange="provinceOnChange(this, ${step})">
+                                <option value="">انتخاب استان...</option>
+                                ${provinces.map(p => `
+                                    <option value="${p}" ${val === p ? 'selected' : ''}>${p}</option>
+                                `).join('')}
+                            </select>
+                            <div class="field-error" id="fieldError" style="display:none"></div>
+                        </div>
+                    `;
+                    break;
+
+                case 'city':
+                    const currentProvince = requestState.values['استان'] || requestState.values['استان محل زندگی'] || '';
+                    const cities = getCitiesForProvince(currentProvince);
+                    const cityPlaceholder = !cities.length ? 'ابتدا استان را انتخاب کنید' : 'انتخاب شهر...';
+                    fieldHTML = `
+                        <div class="field-group">
+                            <div class="field-label">${typeIcon(doc.type)} ${doc.title} ${requiredMark}</div>
+                            <select class="field-select" id="docSelect" ${!cities.length ? 'disabled' : ''} onchange="cityOnChange(this)">
+                                <option value="">${cityPlaceholder}</option>
+                                ${cities.map(c => `
+                                    <option value="${c}" ${val === c ? 'selected' : ''}>${c}</option>
+                                `).join('')}
+                            </select>
+                            <div class="field-error" id="fieldError" style="display:none"></div>
+                        </div>
+                    `;
+                    break;
+
+                case 'date':
+                    fieldHTML = `
+                        <div class="field-group">
+                            <div class="field-label">${typeIcon(doc.type)} ${doc.title} ${requiredMark}</div>
+                            <input class="field-input" id="docInput" type="date" value="${val}" oninput="clearFieldError()" onchange="dateOnChange(this)">
+                            <div class="field-error" id="fieldError" style="display:none"></div>
+                        </div>
+                    `;
+                    break;
+
+                case 'file':
+                    fieldHTML = `
+                        <div class="field-group">
+                            <div class="field-label">${typeIcon(doc.type)} ${doc.title} ${requiredMark}</div>
+                            <label class="field-upload" onclick="document.getElementById('fileInput_${step}').click()">
+                                <input type="file" id="fileInput_${step}" accept="image/*,.pdf,.doc,.docx" onchange="handleFileUpload(this, ${step})">
+                                <div class="upload-icon">📁</div>
+                                <div class="upload-text">کلیک کنید یا فایل را اینجا بکشید</div>
+                                ${val ? `<img src="${val}" class="upload-preview">` : ''}
+                            </label>
+                            <div class="field-error" id="fieldError" style="display:none"></div>
+                        </div>
+                    `;
+                    break;
+
+                case 'number':
+                    fieldHTML = `
+                        <div class="field-group">
+                            <div class="field-label">${typeIcon(doc.type)} ${doc.title} ${requiredMark}</div>
+                            <input class="field-input" id="docInput" type="number" placeholder="${doc.placeholder || ''}" value="${val}" 
+                                oninput="clearFieldError()" onkeydown="if(event.key==='Enter')nextStep()"
+                                ${doc.validationRules?.min ? `min="${doc.validationRules.min}"` : ''}
+                                ${doc.validationRules?.max ? `max="${doc.validationRules.max}"` : ''}>
+                            <div class="field-error" id="fieldError" style="display:none"></div>
+                            ${doc.validationRules?.min || doc.validationRules?.max ? 
+                                `<div class="field-char-count">حداقل ${doc.validationRules?.min || '—'} و حداکثر ${doc.validationRules?.max || '—'}</div>` : ''}
+                        </div>
+                    `;
+                    break;
+
+                case 'textarea':
+                    fieldHTML = `
+                        <div class="field-group">
+                            <div class="field-label">${typeIcon(doc.type)} ${doc.title} ${requiredMark}</div>
+                            <textarea class="field-input" id="docInput" placeholder="${doc.placeholder || ''}" rows="4" 
+                                oninput="clearFieldError()" 
+                                ${doc.validationRules?.min ? `minlength="${doc.validationRules.min}"` : ''}
+                                ${doc.validationRules?.max ? `maxlength="${doc.validationRules.max}"` : ''}>${val}</textarea>
+                            <div class="field-error" id="fieldError" style="display:none"></div>
+                            ${doc.validationRules?.min || doc.validationRules?.max ? 
+                                `<div class="field-char-count">حداقل ${doc.validationRules?.min || '۰'} و حداکثر ${doc.validationRules?.max || '∞'} کاراکتر</div>` : ''}
+                        </div>
+                    `;
+                    break;
+
+                default: // text
+                    fieldHTML = `
+                        <div class="field-group">
+                            <div class="field-label">${typeIcon(doc.type)} ${doc.title} ${requiredMark}</div>
+                            <input class="field-input" id="docInput" type="text" placeholder="${doc.placeholder || ''}" value="${val}" 
+                                oninput="clearFieldError()" onkeydown="if(event.key==='Enter')nextStep()"
+                                ${doc.validationRules?.min ? `minlength="${doc.validationRules.min}"` : ''}
+                                ${doc.validationRules?.max ? `maxlength="${doc.validationRules.max}"` : ''}>
+                            <div class="field-error" id="fieldError" style="display:none"></div>
+                            ${doc.validationRules?.min || doc.validationRules?.max ? 
+                                `<div class="field-char-count">حداقل ${doc.validationRules?.min || '۰'} و حداکثر ${doc.validationRules?.max || '∞'} کاراکتر</div>` : ''}
+                        </div>
+                    `;
+                    break;
+            }
+
+            return fieldHTML;
+        }
+
+        // ─── FIELD VALUE UPDATE FUNCTIONS ────────────────────────────────────
+        function updateCheckboxValue(step) {
+            const doc = requestState.docs[step];
+            const container = document.getElementById(`checkboxGroup_${step}`);
+            if (!container) return;
+            const checkboxes = container.querySelectorAll('input[type="checkbox"]');
+            const selected = [];
+            checkboxes.forEach(cb => { if (cb.checked) selected.push(cb.value); });
+            requestState.values[doc.title] = selected;
+            clearFieldError();
+        }
+
+        function updateRadioValue(step, value) {
+            const doc = requestState.docs[step];
+            requestState.values[doc.title] = value;
+            clearFieldError();
+        }
+
+        function selectOnChange(el) {
+            const doc = requestState.docs[requestState.step];
+            requestState.values[doc.title] = el.value;
+            clearFieldError();
+        }
+
+        function updateBooleanValue(step, value) {
+            const doc = requestState.docs[step];
+            requestState.values[doc.title] = value;
+            clearFieldError();
+        }
+
+        function provinceOnChange(el, step) {
+            const doc = requestState.docs[step];
+            requestState.values[doc.title] = el.value;
+            clearFieldError();
+        }
+
+        function dateOnChange(el) {
+            const doc = requestState.docs[requestState.step];
+            requestState.values[doc.title] = el.value;
+            clearFieldError();
+        }
+
+        function cityOnChange(el) {
+            const doc = requestState.docs[requestState.step];
+            requestState.values[doc.title] = el.value;
+            clearFieldError();
+        }
+
+        function clearFieldError() {
+            const el = document.getElementById('fieldError');
+            if (el) { el.style.display = 'none';
+                el.textContent = ''; }
+            const inp = document.getElementById('docInput');
+            if (inp) inp.classList.remove('error');
+        }
+
+        function showFieldError(msg) {
+            const el = document.getElementById('fieldError');
+            if (el) { el.style.display = 'block';
+                el.textContent = '⚠️ ' + msg; }
+            const inp = document.getElementById('docInput');
+            if (inp) inp.classList.add('error');
+        }
+
+        // ─── NEXT / PREV STEP ──────────────────────────────────────────────────
+        function nextStep() {
+            const { docs, step } = requestState;
+
+            if (step === docs.length + 1) {
+                if (!requestState.receiptImage) {
+                    showFieldError('لطفاً تصویر رسید پرداخت را آپلود کنید.');
+                    return;
+                }
+                requestState.step++;
+                renderRequestModal();
+                return;
+            }
+
+            if (step === docs.length) {
+                requestState.step++;
+                renderRequestModal();
+                return;
+            }
+
+            const doc = docs[step];
+            const isRequired = doc.isRequired !== false;
+            let val = '';
+
+            switch (doc.type) {
+                case 'checkbox':
+                    val = requestState.values[doc.title];
+                    if (isRequired && (!val || !Array.isArray(val) || val.length === 0)) {
+                        showFieldError('لطفاً حداقل یک گزینه را انتخاب کنید.');
+                        return;
+                    }
+                    break;
+
+                case 'radio':
+                case 'boolean':
+                case 'province':
+                    val = requestState.values[doc.title];
+                    if (isRequired && !val) {
+                        showFieldError('لطفاً یک گزینه را انتخاب کنید.');
+                        return;
+                    }
+                    break;
+
+                case 'city':
+                    const citySelect = document.getElementById('docSelect');
+                    val = citySelect ? citySelect.value : '';
+                    if (isRequired && !val) {
+                        showFieldError('لطفاً یک شهر را انتخاب کنید.');
+                        return;
+                    }
+                    requestState.values[doc.title] = val;
+                    break;
+
+                case 'select':
+                    const selectEl = document.getElementById('docSelect');
+                    val = selectEl ? selectEl.value : '';
+                    if (isRequired && !val) {
+                        showFieldError('لطفاً یک گزینه را انتخاب کنید.');
+                        return;
+                    }
+                    requestState.values[doc.title] = val;
+                    break;
+
+                case 'date':
+                    const dateInput = document.getElementById('docInput');
+                    val = dateInput ? dateInput.value : '';
+                    if (isRequired && !val) {
+                        showFieldError('لطفاً تاریخ را وارد کنید.');
+                        return;
+                    }
+                    if (val) {
+                        const dateObj = new Date(val);
+                        if (isNaN(dateObj.getTime())) {
+                            showFieldError('تاریخ وارد شده معتبر نیست.');
+                            return;
+                        }
+                    }
+                    requestState.values[doc.title] = val;
+                    break;
+
+                case 'file':
+                    val = requestState.values[doc.title] || '';
+                    if (isRequired && !val) {
+                        showFieldError('لطفاً یک فایل آپلود کنید.');
+                        return;
+                    }
+                    break;
+
+                default:
+                    const input = document.getElementById('docInput');
+                    val = input ? input.value.trim() : '';
+
+                    if (isRequired && !val && doc.title !== 'نیازی به مدارک نیست') {
+                        showFieldError('این فیلد الزامی است.');
+                        return;
+                    }
+
+                    if (val) {
+                        const validation = validateDoc(val, doc);
+                        if (!validation.ok) {
+                            showFieldError(validation.msg);
+                            return;
+                        }
+                        if (doc.type === 'nationalCode' && !/^[0-9]{10}$/.test(val)) {
+                            showFieldError('کد ملی باید ۱۰ رقم باشد.');
+                            return;
+                        }
+                        if (doc.type === 'number' && isNaN(val)) {
+                            showFieldError('لطفاً یک عدد معتبر وارد کنید.');
+                            return;
+                        }
+                    }
+                    requestState.values[doc.title] = val;
+                    break;
+            }
+
+            requestState.step++;
+            renderRequestModal();
+            const body = document.getElementById('requestBody');
+            if (body) body.scrollTop = 0;
+        }
+
+        function prevStep() {
+            if (requestState.step > 0) {
+                requestState.step--;
+                renderRequestModal();
+            }
+        }
+
+        function renderRequestFooter(isSummary, step) {
+            const { docs } = requestState;
+            const isPayment = step === docs.length + 1;
+            const hasBack = step > 0;
+
+            if (isPayment) {
+                return `${hasBack ? `<button class="btn-secondary" onclick="prevStep()">→ بازگشت</button>` : ''}
+                        <button class="btn-primary" id="submitBtn" onclick="submitRequest()">✅ ثبت نهایی درخواست</button>`;
+            }
+            if (isSummary) {
+                return `${hasBack ? `<button class="btn-secondary" onclick="prevStep()">→ ویرایش</button>` : ''}
+                        <button class="btn-primary" onclick="nextStep()">پرداخت ←</button>`;
+            }
+            return `${hasBack ? `<button class="btn-secondary" onclick="prevStep()">→ قبلی</button>` : ''}
+                    <button class="btn-primary" onclick="nextStep()">بعدی ←</button>`;
+        }
+
+        function renderSummary() {
+            const { service, docs, values } = requestState;
+
+            let docsHTML = docs.map(d => {
+                const val = values[d.title] || '—';
+                const isImg = d.type === 'file';
+                return `<div class="summary-item">
+                            <div class="summary-key">${d.title}</div>
+                            ${isImg && val && val !== '—' ? `<img src="${val}" class="summary-img">` : `<div class="summary-val">${val}</div>`}
+                        </div>`;
+            }).join('');
+
+            return `<div style="font-size:13px;font-weight:600;color:var(--text2);margin-bottom:10px">بررسی اطلاعات ثبت‌شده:</div>
+                    <div class="summary-list">${docsHTML}</div>
+                    <div style="font-size:12px;color:var(--text3);background:var(--surface2);padding:10px 14px;border-radius:8px;margin-top:4px;">✅ اطلاعات را بررسی کنید، سپس برای رفتن به مرحله پرداخت کلیک کنید.</div>`;
+        }
+
+        function renderPaymentStep() {
+            const { service } = requestState;
+            const finalPrice = service.Price;
+            const cardNumber = "6037-9912-3456-7890";
+            return `<div class="receipt-info">
+                        <h4>💳 اطلاعات پرداخت</h4>
+                        <div class="receipt-line"><span class="rk">مبلغ قابل پرداخت:</span><span class="rv">${formatPrice(finalPrice)} تومان <button class="receipt-copy-btn" onclick="copyPrice('${formatPrice(finalPrice)}')">کپی</button></span></div>
+                        <div class="receipt-line"><span class="rk">شماره کارت:</span><span class="rv">${cardNumber} <button class="receipt-copy-btn" onclick="copyCard('${cardNumber}')">کپی</button></span></div>
+                        <div class="receipt-line"><span class="rk">به نام:</span><span class="rv">کافی‌نت آنلاین</span></div>
+                    </div>
+                    <div class="field-group">
+                        <div class="field-label">📎 تصویر رسید پرداخت</div>
+                        <div class="field-hint">پس از واریز، اسکرین‌شات یا عکس رسید را آپلود کنید.</div>
+                        <label class="field-upload" onclick="document.getElementById('receiptInput').click()">
+                            <input type="file" id="receiptInput" accept="image/*" onchange="handleReceiptUpload(this)">
+                            <div class="upload-icon">🧾</div>
+                            <div class="upload-text">کلیک کنید تا تصویر رسید را انتخاب کنید</div>
+                            <div id="receiptPreviewWrap"></div>
+                        </label>
+                        <div class="field-error" id="fieldError" style="display:none"></div>
+                    </div>
+                    <div style="font-size:12px;color:var(--text3);background:var(--surface2);padding:10px 14px;border-radius:8px;">⚠️ آپلود رسید پرداخت الزامی است. پس از بررسی، کارشناسان با شما تماس می‌گیرند.</div>`;
+        }
+
+        function handleReceiptUpload(input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            if (file.size > 1024 * 1024) {
+                compressImage(file, 800, 800, 0.7)
+                    .then(compressedImage => {
+                        requestState.receiptImage = compressedImage;
+                        const wrap = document.getElementById('receiptPreviewWrap');
+                        if (wrap) wrap.innerHTML = `<img src="${compressedImage}" class="upload-preview">`;
+                        showToast('تصویر با موفقیت فشرده شد', 'success');
+                    })
+                    .catch(() => {
+                        const reader = new FileReader();
+                        reader.onload = e => {
+                            requestState.receiptImage = e.target.result;
+                            const wrap = document.getElementById('receiptPreviewWrap');
+                            if (wrap) wrap.innerHTML = `<img src="${e.target.result}" class="upload-preview">`;
+                        };
+                        reader.readAsDataURL(file);
+                    });
+            } else {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    requestState.receiptImage = e.target.result;
+                    const wrap = document.getElementById('receiptPreviewWrap');
+                    if (wrap) wrap.innerHTML = `<img src="${e.target.result}" class="upload-preview">`;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function handleFileUpload(input, step) {
+            const file = input.files[0];
+            if (!file) return;
+            if (file.size > 5 * 1024 * 1024) {
+                showFieldError('حجم فایل باید کمتر از ۵ مگابایت باشد.');
+                return;
+            }
+            const doc = requestState.docs[step];
+
+            if (file.type.startsWith('image/')) {
+                compressImage(file, 800, 800, 0.7)
+                    .then(compressedImage => {
+                        requestState.values[doc.title] = compressedImage;
+                        updateFilePreview(compressedImage);
+                        clearFieldError();
+                    })
+                    .catch(() => {
+                        const reader = new FileReader();
+                        reader.onload = e => {
+                            requestState.values[doc.title] = e.target.result;
+                            updateFilePreview(e.target.result);
+                            clearFieldError();
+                        };
+                        reader.readAsDataURL(file);
+                    });
+            } else {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    requestState.values[doc.title] = e.target.result;
+                    clearFieldError();
+                    showToast('فایل با موفقیت آپلود شد', 'success');
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function updateFilePreview(imageData) {
+            const preview = document.querySelector('.upload-preview');
+            if (preview) {
+                preview.src = imageData;
+            } else {
+                const upload = document.querySelector('.field-upload');
+                if (upload) {
+                    const img = document.createElement('img');
+                    img.src = imageData;
+                    img.className = 'upload-preview';
+                    upload.appendChild(img);
+                }
+            }
+        }
+
+        function compressImage(file, maxWidth = 800, maxHeight = 800, quality = 0.7) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.src = e.target.result;
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        let width = img.width;
+                        let height = img.height;
+                        if (width > maxWidth) { height = (height * maxWidth) / width;
+                            width = maxWidth; }
+                        if (height > maxHeight) { width = (width * maxHeight) / height;
+                            height = maxHeight; }
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.imageSmoothingEnabled = true;
+                        ctx.imageSmoothingQuality = 'high';
+                        ctx.drawImage(img, 0, 0, width, height);
+                        const compressed = canvas.toDataURL('image/jpeg', quality);
+                        resolve(compressed);
+                    };
+                    img.onerror = reject;
+                };
+                reader.onerror = reject;
+            });
+        }
+
+        function copyCard(cardNumber) {
+            navigator.clipboard.writeText(cardNumber).then(() => {
+                showToast('شماره کارت کپی شد', 'success');
+            }).catch(() => {});
+        }
+
+        function copyPrice(finalPrice) {
+            navigator.clipboard.writeText(finalPrice).then(() => {
+                showToast('مبلغ کپی شد', 'success');
+            }).catch(() => {});
+        }
+
+        // ─── SUBMIT REQUEST ─────────────────────────────────────────────────────
+        function submitRequest() {
+            if (!currentUser) {
+                const token = getTokenFromUrl();
+                if (token) {
+                    handleTokenLogin(token);
+                    setTimeout(() => {
+                        if (currentUser) performSubmitRequest();
+                        else { showToast('⚠️ لطفاً ابتدا وارد حساب کاربری خود شوید', '');
+                            savePendingRequest();
+                            openAuth(); }
+                    }, 500);
+                    return;
+                }
+                savePendingRequest();
+                showToast('⚠️ لطفاً ابتدا وارد حساب کاربری خود شوید', '');
+                authState.callback = 'submitAfterLogin';
+                openAuth();
+                return;
+            }
+            performSubmitRequest();
+        }
+
+        function savePendingRequest() {
+            const { service, docs, values, receiptImage, step } = requestState;
+            if (!receiptImage) {
+                showToast('تصویر پرداختی را بارگذاری کنید ', 'error');
+                return;
+            }
+            sessionStorage.setItem('pendingRequest', JSON.stringify({
+                serviceId: service.Id,
+                serviceTitle: service.Title,
+                price: service.Price - (service.Discount || 0),
+                documents: docs.map(d => ({ title: d.title, value: values[d.title] || '' })),
+                receiptImage: receiptImage || null,
+                step: step,
+                timestamp: Date.now()
+            }));
+        }
+
+        function performSubmitRequest() {
+            const { service, docs, values, receiptImage } = requestState;
+            if (!receiptImage) {
+                showToast('تصویر پرداختی را بارگذاری کنید ', 'error');
+                return;
+            }
+
+            const payload = {
+                serviceId: service.Id,
+                serviceTitle: service.Title,
+                price: service.Price - (service.Discount || 0),
+                documents: docs.map(d => ({ title: d.title, value: values[d.title] || '' })),
+                receiptImage: receiptImage
+            };
+
+            api.submitRequest(payload)
+                .then(result => {
+                    if (result.success) {
+                        if (currentUser) {
+                            if (!currentUser.requests) currentUser.requests = [];
+                            currentUser.requests.unshift({
+                                id: result.requestId,
+                                serviceId: payload.serviceId,
+                                serviceTitle: payload.serviceTitle,
+                                price: payload.price,
+                                submittedAt: new Date().toISOString(),
+                                status: 'pending'
+                            });
+                            localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
+                        }
+                        sessionStorage.removeItem('pendingRequest');
+                        const modal = document.getElementById('requestModal');
+                        if (modal) {
+                            modal.innerHTML =
+                                `<div class="modal-header"><div class="modal-header-info"><h2>✅ درخواست ثبت شد</h2></div><button class="modal-close" onclick="closeRequest()">✕</button></div>
+                                <div class="modal-body" style="text-align:center;padding:48px 28px">
+                                    <div style="font-size:64px;margin-bottom:20px">🎉</div>
+                                    <h3 style="font-size:20px;font-weight:700;margin-bottom:12px;color:var(--success)">درخواست شما با موفقیت ثبت شد!</h3>
+                                    <p style="color:var(--text3);font-size:14px;line-height:1.8">کارشناسان کافی‌نت در اسرع وقت با شما تماس خواهند گرفت.<br>از اعتماد شما سپاسگزاریم 🙏</p>
+                                    <div style="margin-top:8px;font-size:12px;color:var(--text3);">کد پیگیری: ${result.requestId}</div>
+                                </div>
+                                <div class="modal-footer"><button class="btn-primary" onclick="closeRequestFinal()">بازگشت به خدمات</button></div>`;
+                        }
+                        showToast('✅ درخواست شما با موفقیت ثبت شد!', 'success');
+                    } else {
+                        showToast('❌ ' + (result.message || 'خطا در ثبت درخواست'), 'error');
+                    }
+                })
+                .catch(err => {
+                    showToast('❌ ' + err.message, 'error');
+                    console.error('Submit error:', err);
+                });
+        }
+
+        function handleSuccessfulSubmission(payload) {
+            // Legacy fallback
+            if (currentUser) {
+                if (!currentUser.requests) currentUser.requests = [];
+                currentUser.requests.unshift({
+                    id: Date.now(),
+                    serviceId: payload.serviceId,
+                    serviceTitle: payload.serviceTitle,
+                    price: payload.price,
+                    submittedAt: payload.submittedAt,
+                    status: 'pending'
+                });
+                localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
+            }
+            sessionStorage.removeItem('pendingRequest');
+            const modal = document.getElementById('requestModal');
+            if (modal) {
+                modal.innerHTML =
+                    `<div class="modal-header"><div class="modal-header-info"><h2>✅ درخواست ثبت شد</h2></div><button class="modal-close" onclick="closeRequest()">✕</button></div>
+                            <div class="modal-body" style="text-align:center;padding:48px 28px">
+                                <div style="font-size:64px;margin-bottom:20px">🎉</div>
+                                <h3 style="font-size:20px;font-weight:700;margin-bottom:12px;color:var(--success)">درخواست شما با موفقیت ثبت شد!</h3>
+                                <p style="color:var(--text3);font-size:14px;line-height:1.8">کارشناسان کافی‌نت در اسرع وقت با شما تماس خواهند گرفت.<br>از اعتماد شما سپاسگزاریم 🙏</p>
+                            </div>
+                            <div class="modal-footer"><button class="btn-primary" onclick="closeRequestFinal()">بازگشت به خدمات</button></div>`;
+            }
+            showToast('درخواست شما با موفقیت ثبت شد!', 'success');
+        }
+
+        // ─── DETAIL MODAL ─────────────────────────────────────────────────────
+        function openDetail(id) {
+            const s = state.allItems.find(x => x.Id === id);
+            if (!s) return;
+            const docs = getDocs(s);
+            const finalPrice = s.Price;
+            const cats = getCatNames(s.Categories);
+
+            const modal = document.getElementById('detailModal');
+            if (!modal) return;
+
+            modal.innerHTML =
+                `<div class="modal-header"><div class="modal-header-info"><h2>${s.Title}</h2><div class="modal-cats" style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px;">${cats.map(c=>`<span style="background:var(--brand-light);color:var(--brand);font-size:11px;font-weight:600;padding:2px 10px;border-radius:20px;">${c}</span>`).join('')}</div></div><button class="modal-close" onclick="closeDetail()">✕</button></div>
+                    <div class="modal-body">
+                        <div class="price-block"><div><div class="price-label">هزینه خدمت</div><div class="price-val">${formatPrice(finalPrice)} <span class="price-unit">تومان</span></div></div><div style="font-size:32px">💳</div></div>
+                        ${s.Duration ? `<div style="color:var(--text3);font-size:14px;">⏱ ${s.Duration}</div>` : ''}
+                        ${s.Description ? `<div style="color:var(--text2);font-size:14px;line-height:1.8;">${s.Description.replace(/\n/g, '<br>')}</div>` : ''}
+                        <div class="docs-section"><h3>📄 مدارک مورد نیاز (${toPersianNum(docs.length)})</h3><div class="doc-list">${docs.map((d,i)=>`<div class="doc-item"><div class="doc-num">${toPersianNum(i+1)}</div><div class="doc-title">${typeIcon(d.type)} ${d.title}</div><span class="doc-type-badge">${d.displayType}</span></div>`).join('')}</div></div>
+                    </div>
+                    <div class="modal-footer"><button class="btn-secondary" onclick="closeDetail()">بستن</button><button class="btn-primary" onclick="closeDetail();startRequest('${s.Id}')">📝 ثبت درخواست</button></div>`;
+
+            document.getElementById('detailOverlay').classList.add('open');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeDetail(e) {
+            if (e && e.target !== e.currentTarget) return;
+            document.getElementById('detailOverlay').classList.remove('open');
+            document.body.style.overflow = '';
+        }
+
+        // ─── TOAST ─────────────────────────────────────────────────────────────
+        function showToast(msg, type = '') {
+            const container = document.getElementById('toastContainer');
+            if (!container) return;
+            const t = document.createElement('div');
+            t.className = 'toast ' + type;
+            t.textContent = msg;
+            container.appendChild(t);
+            setTimeout(() => t.remove(), 3500);
+        }
+
+        // ─── AUTH ─────────────────────────────────────────────────────────────
+        function updateProfileBtn() {
+            const btn = document.getElementById('profileBtn');
+            const txt = document.getElementById('profileBtnText');
+            if (!btn || !txt) return;
+            if (currentUser) {
+                txt.textContent = currentUser.phone;
+                btn.onclick = openProfile;
+            } else {
+                txt.textContent = 'ورود / ثبت‌نام';
+                btn.onclick = openAuth;
+            }
+        }
+
+        function openAuth() {
+            if (currentUser) { openProfile(); return; }
+
+            const telegramData = getTelegramUser();
+            if (telegramData && telegramData.user) {
+                validateTelegramUser(telegramData);
+                return;
+            }
+
+            const token = getTokenFromUrl();
+            if (token) {
+                handleTokenLogin(token);
+                return;
+            }
+
+            authState = { callback: null };
+            renderAuthModal();
+            document.getElementById('authOverlay').classList.add('open');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeAuth(e) {
+            if (e && e.target !== e.currentTarget) return;
+            if (authState.timer) clearInterval(authState.timer);
+            document.getElementById('authOverlay').classList.remove('open');
+            document.body.style.overflow = '';
+        }
+
+        function renderAuthModal() {
+            const modal = document.getElementById('authModal');
+            if (!modal) return;
+
+            const isForSubmission = authState.callback === 'submitAfterLogin';
+            const telegramData = getTelegramUser();
+            const isInTelegram = !!telegramData?.user;
+
+            modal.innerHTML = `
+                <div class="modal-header">
+                    <div class="modal-header-info">
+                        <h2>📱 ورود به کافی‌نت</h2>
+                        <div style="font-size:13px;color:var(--text3);margin-top:4px">
+                            ${isForSubmission ? 'برای ثبت درخواست، ابتدا وارد شوید' : 'برای استفاده از خدمات، وارد شوید'}
+                        </div>
+                        ${isForSubmission ? `<div style="font-size:12px;color:var(--accent);margin-top:2px;">⚠️ اطلاعات درخواست شما پس از ورود بازیابی خواهد شد</div>` : ''}
+                    </div>
+                    <button class="modal-close" onclick="closeAuth()">✕</button>
+                </div>
+                <div class="modal-body" style="padding:24px;">
+                    ${isInTelegram ? `
+                        <div style="text-align:center;padding:20px 0;">
+                            <div style="font-size:64px;margin-bottom:12px;">✈️</div>
+                            <h3 style="font-size:18px;font-weight:700;color:var(--text);margin-bottom:8px;">در حال ورود با تلگرام</h3>
+                            <p style="color:var(--text3);font-size:14px;margin-bottom:20px;">اطلاعات کاربری شما از تلگرام دریافت می‌شود...</p>
+                            <div class="loading-spinner" style="display:flex;justify-content:center;">
+                                <div class="spinner" style="width:30px;height:30px;border-width:4px;"></div>
+                            </div>
+                        </div>
+                    ` : `
+                        <div style="text-align:center;margin-bottom:20px;">
+                            <div style="font-size:48px;margin-bottom:8px;">🔐</div>
+                            <h3 style="font-size:18px;font-weight:700;color:var(--text);">برای ورود، شماره موبایل خود را وارد کنید</h3>
+                        </div>
+                        <div class="field-group">
+                            <div class="field-label">📱 شماره موبایل</div>
+                            <input class="field-input" id="phoneInput" type="tel" placeholder="مثلاً 09123456789" dir="ltr" style="text-align:right">
+                            <div class="field-error" id="authError" style="display:none"></div>
+                        </div>
+                        <div style="text-align:center;margin-top:8px;">
+                            <button class="btn-primary" style="width:100%" onclick="authNextPhone()">ارسال کد تایید</button>
+                        </div>
+                        <div style="text-align:center;font-size:12px;color:var(--text3);margin-top:12px;">
+                            کد تایید به شماره شما ارسال خواهد شد
+                        </div>
+                    `}
+                </div>
+            `;
+
+            if (isInTelegram && telegramData) {
+                setTimeout(() => {
+                    validateTelegramUser(telegramData);
+                }, 500);
+            }
+        }
+
+        // ─── OTP FUNCTIONS ────────────────────────────────────────────────────
+        function getOtpValue() {
+            return [0, 1, 2, 3, 4].map(i => {
+                const el = document.getElementById('otp' + i);
+                return el ? el.value || '' : '';
+            }).join('');
+        }
+
+        function startOtpTimer() {
+            authState.seconds = 60;
+            if (authState.timer) clearInterval(authState.timer);
+            authState.timer = setInterval(() => {
+                authState.seconds--;
+                const el = document.getElementById('otpTimer');
+                if (el) el.textContent = toPersianNum(authState.seconds);
+                if (authState.seconds <= 0) {
+                    clearInterval(authState.timer);
+                    const txt = document.getElementById('otpTimerText');
+                    const btn = document.getElementById('otpResendBtn');
+                    if (txt) txt.style.display = 'none';
+                    if (btn) btn.style.display = 'inline';
+                }
+            }, 1000);
+        }
+
+        function authResendOtp() {
+            api.sendOTP(authState.phone, authState.app);
+            const txt = document.getElementById('otpTimerText');
+            const btn = document.getElementById('otpResendBtn');
+            if (txt) txt.style.display = '';
+            if (btn) btn.style.display = 'none';
+            startOtpTimer();
+            showToast('کد جدید ارسال شد', 'success');
+        }
+
+        function otpInput(el, i) {
+            el.value = el.value.replace(/[^0-9]/g, '').slice(-1);
+            if (el.value && i < 4) {
+                const next = document.getElementById('otp' + (i + 1));
+                if (next) next.focus();
+            }
+            if (getOtpValue().length === 5) authVerifyOtp();
+        }
+
+        function otpKey(e, i) {
+            if (e.key === 'Backspace' && !e.target.value && i > 0) {
+                const prev = document.getElementById('otp' + (i - 1));
+                if (prev) prev.focus();
+            }
+        }
+
+        async function authNextPhone() {
+            const phoneInput = document.getElementById('phoneInput');
+            const phone = phoneInput ? phoneInput.value.trim() : '';
+            if (!/^09[0-9]{9}$/.test(phone)) {
+                const e = document.getElementById('authError');
+                if (e) { e.style.display = 'block';
+                    e.textContent = '⚠️ شماره موبایل باید 11 رقم و با 09 شروع شود.'; }
+                return;
+            }
+            authState.phone = phone;
+            authState.app = 'telegram';
+
+            try {
+                await api.sendOTP(phone, authState.app);
+                // Show OTP input
+                const modal = document.getElementById('authModal');
+                if (modal) {
+                    modal.innerHTML = `
+                        <div class="modal-header">
+                            <div class="modal-header-info">
+                                <h2>🔑 کد تایید</h2>
+                                <div style="font-size:13px;color:var(--text3);margin-top:4px;">کد ۵ رقمی ارسال شده به ${phone} را وارد کنید</div>
+                            </div>
+                            <button class="modal-close" onclick="closeAuth()">✕</button>
+                        </div>
+                        <div class="modal-body" style="padding:24px;">
+                            <div class="otp-inputs">
+                                ${[0,1,2,3,4].map(i => `
+                                    <input class="otp-input" id="otp${i}" type="text" maxlength="1" inputmode="numeric"
+                                        oninput="otpInput(this, ${i})" onkeydown="otpKey(event, ${i})" autofocus="${i===0}">
+                                `).join('')}
+                            </div>
+                            <div class="otp-resend">
+                                <span id="otpTimerText">⏳ ارسال مجدد کد پس از <span id="otpTimer">${toPersianNum(60)}</span> ثانیه</span>
+                                <button id="otpResendBtn" style="display:none" onclick="authResendOtp()">ارسال مجدد کد</button>
+                            </div>
+                            <div class="field-error" id="otpError" style="display:none"></div>
+                            <div style="text-align:center;margin-top:8px;">
+                                <button class="btn-primary" style="width:100%" onclick="authVerifyOtp()">تأیید و ورود</button>
+                            </div>
+                        </div>
+                    `;
+                    startOtpTimer();
+                    document.getElementById('otp0').focus();
+                }
+                showToast('✅ کد تایید ارسال شد', 'success');
+            } catch (err) {
+                showToast('❌ ' + err.message, 'error');
+            }
+        }
+
+        async function authVerifyOtp() {
+            const otp = getOtpValue();
+            if (otp.length < 5) {
+                const e = document.getElementById('otpError');
+                if (e) { e.style.display = 'block';
+                    e.textContent = '⚠️ کد ۵ رقمی را کامل وارد کنید.'; }
+                return;
+            }
+
+            try {
+                const result = await api.verifyOTP(authState.phone, otp);
+                if (result.success) {
+                    localStorage.setItem(TOKEN_KEY, result.token);
+                    localStorage.setItem(USER_KEY, JSON.stringify(result.user));
+                    currentUser = result.user;
+                    updateProfileBtn();
+                    closeAuth();
+                    const name = result.user.firstName || result.user.phone || 'کاربر';
+                    showToast(`✅ خوش آمدید ${name}! ورود موفق ✓`, 'success');
+                    checkPendingRequest();
+                } else {
+                    showToast('❌ ' + (result.message || 'خطا در تایید کد'), 'error');
+                }
+            } catch (err) {
+                showToast('❌ ' + err.message, 'error');
+            }
+        }
+
+        // ─── TELEGRAM INTEGRATION ─────────────────────────────────────────────
+        function getTelegramUser() {
+            if (window.Telegram && window.Telegram.WebApp) {
+                try {
+                    const user = window.Telegram.WebApp.initDataUnsafe?.user;
+                    const initData = window.Telegram.WebApp.initData;
+                    if (user) {
+                        return { user, initData, isValid: true };
+                    }
+                } catch (e) {
+                    console.warn('Could not get Telegram user:', e);
+                }
+            }
+            return null;
+        }
+
+        function checkTelegramLogin() {
+            const telegramData = getTelegramUser();
+            if (telegramData && telegramData.user) {
+                validateTelegramUser(telegramData);
+                return true;
+            }
+            return false;
+        }
+
+        async function validateTelegramUser(telegramData) {
+            try {
+                const result = await api.telegramLogin(telegramData.initData, telegramData.user);
+                if (result.success) {
+                    localStorage.setItem(TOKEN_KEY, result.token);
+                    localStorage.setItem(USER_KEY, JSON.stringify(result.user));
+                    currentUser = result.user;
+                    updateProfileBtn();
+                    closeAuth();
+                    closeAllModals();
+                    const name = result.user.firstName || result.user.username || 'کاربر';
+                    showToast(`✅ خوش آمدید ${name}!`, 'success');
+                    checkPendingRequest();
+                    if (window.Telegram && window.Telegram.WebApp) {
+                        window.Telegram.WebApp.expand();
+                    }
+                } else {
+                    showToast('❌ ' + (result.message || 'خطا در ورود با تلگرام'), 'error');
+                }
+            } catch (err) {
+                console.error('Telegram login error:', err);
+                showToast('❌ ' + err.message, 'error');
+            }
+        }
+
+        // ─── TOKEN HANDLING ────────────────────────────────────────────────────
+        function getTokenFromUrl() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const token = urlParams.get('token');
+            const userData = urlParams.get('user_data');
+            if (token) return { token, userData };
+            return null;
+        }
+
+        function handleTokenLogin(tokenData) {
+            try {
+                let userInfo = null;
+                if (tokenData.userData) {
+                    try {
+                        userInfo = JSON.parse(decodeURIComponent(tokenData.userData));
+                    } catch (e) {}
+                }
+                if (!userInfo && tokenData.token) {
+                    try {
+                        const parts = tokenData.token.split('.');
+                        if (parts.length === 3) {
+                            const payload = JSON.parse(atob(parts[1]));
+                            userInfo = {
+                                id: payload.sub || payload.userId || payload.id,
+                                phone: payload.phone || payload.mobile,
+                                firstName: payload.firstName || payload.name,
+                                lastName: payload.lastName,
+                                username: payload.username,
+                                telegramId: payload.telegramId
+                            };
+                        }
+                    } catch (e) {}
+                }
+                if (!userInfo) {
+                    userInfo = { id: `user_${Date.now()}`, token: tokenData.token };
+                }
+                loginWithToken(tokenData.token, userInfo);
+            } catch (error) {
+                console.error('❌ Error handling token login:', error);
+                showToast('❌ خطا در ورود با توکن', 'error');
+            }
+        }
+
+        function loginWithToken(token, userInfo) {
+            currentUser = {
+                id: userInfo.id || `user_${Date.now()}`,
+                token: token,
+                phone: userInfo.phone || userInfo.mobile || 'شماره نامشخص',
+                firstName: userInfo.firstName || userInfo.name || '',
+                lastName: userInfo.lastName || '',
+                username: userInfo.username || '',
+                telegramId: userInfo.telegramId || userInfo.id || null,
+                app: sessionStorage.getItem('selected_app') || 'telegram',
+                loginMethod: 'app_deeplink',
+                loginAt: new Date().toISOString(),
+                requests: []
+            };
+            localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
+            const url = new URL(window.location);
+            url.searchParams.delete('token');
+            url.searchParams.delete('user_data');
+            window.history.replaceState({}, document.title, url.pathname + url.search);
+            updateProfileBtn();
+            closeAuth();
+            const name = currentUser.firstName || currentUser.username || 'کاربر';
+            showToast(`✅ خوش آمدید ${name}! ورود موفق ✓`, 'success');
+            sessionStorage.removeItem('selected_app');
+            checkPendingRequest();
+        }
+
+        function checkPendingRequest() {
+            const pending = sessionStorage.getItem('pendingRequest');
+            if (pending) {
+                try {
+                    const data = JSON.parse(pending);
+                    const service = state.allItems.find(s => s.Id === data.serviceId);
+                    if (service) {
+                        requestState = {
+                            service: service,
+                            docs: getDocs(service),
+                            values: {},
+                            step: data.step || 0,
+                            totalSteps: getDocs(service).length + 2
+                        };
+                        data.documents.forEach(doc => { requestState.values[doc.title] = doc.value; });
+                        if (data.receiptImage) requestState.receiptImage = data.receiptImage;
+                        renderRequestModal();
+                        document.getElementById('requestOverlay').classList.add('open');
+                        document.body.style.overflow = 'hidden';
+                        sessionStorage.removeItem('pendingRequest');
+                    }
+                } catch (e) { console.error('Error restoring request:', e); }
+            }
+        }
+
+        function loginSuccess(phone, data) {
+            currentUser = {
+                id: data.userId || `user_${Date.now()}`,
+                phone: phone || 'شماره نامشخص',
+                token: data.token || '',
+                user: data.user || null,
+                telegramId: data.telegramId || null,
+                telegramUsername: data.telegramUsername || null,
+                loginMethod: 'telegram_bot',
+                requests: data.requests || [],
+                loginAt: new Date().toISOString()
+            };
+            localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
+            updateProfileBtn();
+            closeAuth();
+            const name = data.user?.firstName || data.telegramUsername || 'کاربر';
+            showToast(`✅ خوش آمدید ${name}! ورود موفق ✓`, 'success');
+            checkPendingRequest();
+        }
+
+        // ─── PROFILE ────────────────────────────────────────────────────────────
+function openProfile() {
+    if (!currentUser) { openAuth(); return; }
+    api.getMyRequests()
+        .then(requests => {
+            currentUser.requests = requests || [];
+            localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
+            renderProfileModal();
+        })
+        .catch(() => renderProfileModal());
+    document.getElementById('profileOverlay').classList.add('open');
+    document.body.style.overflow = 'hidden';
+}
+        function closeProfile(e) {
+            if (e && e.target !== e.currentTarget) return;
+            document.getElementById('profileOverlay').classList.remove('open');
+            document.body.style.overflow = '';
+        }
+
+        function renderProfileModal() {
+            const modal = document.getElementById('profileModal');
+            if (!modal) return;
+
+            const requests = currentUser.requests || [];
+            const statusLabel = s => ({ pending: 'در انتظار بررسی', processing: 'در حال انجام', done: 'انجام شده' } [s] ||
+            s);
+            const statusClass = s => ({ pending: 'status-pending', processing: 'status-processing',
+                done: 'status-done' } [s] || 'status-pending');
+
+            const reqHTML = requests.length ?
+                requests.map(r =>
+                    `<div class="request-item">
+                                <div class="request-item-head">
+                                    <div class="request-item-title">${r.serviceTitle}</div>
+                                    <span class="request-status ${statusClass(r.status)}">${statusLabel(r.status)}</span>
+                                </div>
+                                <div class="request-item-meta">
+                                    <span>💰 ${formatPrice(r.price)} تومان</span>
+                                    <span>📅 ${r.submittedAt ? new Date(r.submittedAt).toLocaleDateString('fa-IR') : '—'}</span>
+                                </div>
+                            </div>`
+                ).join('') :
+                `<div class="empty-state" style="padding:32px 0"><div class="empty-icon">📋</div><h3>هنوز درخواستی ندارید</h3><p>پس از ثبت درخواست، اینجا نمایش داده می‌شود.</p></div>`;
+
+            const isTelegram = currentUser.loginMethod === 'telegram_mini_app';
+            const telegramUsername = currentUser.username ? `@${currentUser.username}` : '';
+            const premiumBadge = currentUser.isPremium ? '⭐' : '';
+
+            modal.innerHTML =
+                `<div class="modal-header"><div class="modal-header-info"><h2>👤 پروفایل من</h2></div><button class="modal-close" onclick="closeProfile()">✕</button></div>
+                    <div class="modal-body">
+                        <div class="profile-header-info">
+                            <div class="avatar">${isTelegram ? '✈️' : '👤'}</div>
+                            <div>
+                                <div class="profile-name">
+                                    ${currentUser.firstName || currentUser.username || 'کاربر'} ${currentUser.lastName || ''}
+                                    ${premiumBadge ? `<span style="font-size:14px;color:#FFD700;">${premiumBadge}</span>` : ''}
+                                </div>
+                                <div class="profile-phone">${currentUser.phone || 'شماره نامشخص'}</div>
+                                <div style="display:flex;align-items:center;gap:6px;margin-top:4px;">
+                                    ${isTelegram ? 
+                                        `<span style="font-size:14px;">✈️</span>
+                                         <span style="font-size:12px;color:var(--text3);">ورود با تلگرام</span>
+                                         ${telegramUsername ? `<span style="font-size:12px;color:var(--brand);">${telegramUsername}</span>` : ''}` 
+                                        : 
+                                        `<span style="font-size:12px;color:var(--text3);">${currentUser.loginMethod || 'ورود معمولی'}</span>`
+                                    }
+                                </div>
+                            </div>
+                            <button class="logout-btn" style="margin-right:auto" onclick="logout()">خروج</button>
+                        </div>
+                        <div style="font-size:14px;font-weight:700;color:var(--text2);margin-bottom:10px;margin-top:8px">📋 درخواست‌های من</div>
+                        <div class="request-list">${reqHTML}</div>
+                    </div>`;
+        }
+
+        // ─── LOGOUT ─────────────────────────────────────────────────────────────
+        async function logout() {
+            try { await api.logout(); } catch (err) { console.warn('Logout API error:', err); }
+            localStorage.removeItem(TOKEN_KEY);
+            localStorage.removeItem(USER_KEY);
+            currentUser = null;
+            updateProfileBtn();
+            closeProfile();
+            showToast('با موفقیت خارج شدید.', '');
+        }
+
+        // ─── LOAD USER FROM STORAGE ──────────────────────────────────────────
+        function loadUserFromStorage() {
+            const token = localStorage.getItem(TOKEN_KEY);
+            const userData = localStorage.getItem(USER_KEY);
+            if (token && userData) {
+                try {
+                    currentUser = JSON.parse(userData);
+                    api.getMe()
+                        .then(user => {
+                            currentUser = { ...currentUser, ...user };
+                            localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
+                            updateProfileBtn();
+                        })
+                        .catch(() => {
+                            localStorage.removeItem(TOKEN_KEY);
+                            localStorage.removeItem(USER_KEY);
+                            currentUser = null;
+                            updateProfileBtn();
+                        });
+                } catch {
+                    localStorage.removeItem(TOKEN_KEY);
+                    localStorage.removeItem(USER_KEY);
+                    currentUser = null;
+                }
+            }
+        }
+
+        function closeAllModals() {
+            document.getElementById('detailOverlay').classList.remove('open');
+            document.getElementById('requestOverlay').classList.remove('open');
+            document.getElementById('authOverlay').classList.remove('open');
+            document.getElementById('profileOverlay').classList.remove('open');
+            document.body.style.overflow = '';
+        }
+
+        // ─── APP LINKS ──────────────────────────────────────────────────────────
+        const APP_LINKS = {
+            telegram: { webLink: 'https://t.me/cofenett_bot?start=login', label: 'ایمیل', icon: '✈️' },
+            sorush: { webLink: 'https://sapp.ir/cofenett_bot', label: 'سروش', icon: '🔵' },
+            bale: { webLink: 'https://bale.ai/cofenett_bot', label: 'بله', icon: '🟣' },
+            eita: { webLink: 'https://eitaa.com/cofenett_bot', label: 'ایتا', icon: '🟢' },
+            rubika: { webLink: 'https://rubika.ir/cofenett_bot', label: 'روبیکا', icon: '🔶' },
+            whatsapp: { webLink: 'https://wa.me/1234567890?text=Hello%20I%20want%20to%20login%20to%20Cafenet',
+                label: 'واتساپ', icon: '💬' }
+        };
+
+        function openApp(appId) {
+            const appConfig = APP_LINKS[appId];
+            if (!appConfig) { showToast('❌ اپلیکیشن یافت نشد', 'error'); return; }
+            const link = appConfig.deepLink || appConfig.webLink || appConfig.link;
+            sessionStorage.setItem('selected_app', appId);
+            sessionStorage.setItem('app_open_time', Date.now().toString());
+            showToast(`📱 در حال باز کردن ${getAppName(appId)}...`, '');
+            if (appConfig.deepLink) {
+                window.location.href = appConfig.deepLink;
+                setTimeout(() => { window.open(appConfig.webLink || appConfig.link, '_blank'); }, 3000);
+            } else {
+                window.open(link, '_blank');
+            }
+            setTimeout(() => { showToast('✅ پس از ورود در اپلیکیشن، به این صفحه بازگردید', ''); }, 2000);
+            startAppReturnListener();
+        }
+
+        function getAppName(appId) {
+            const names = { telegram: 'تلگرام', sorush: 'سروش', bale: 'بله', eita: 'ایتا', rubika: 'روبیکا',
+                whatsapp: 'واتساپ' };
+            return names[appId] || appId;
+        }
+
+        function startAppReturnListener() {
+            if (window._appReturnInterval) clearInterval(window._appReturnInterval);
+            let attempts = 0;
+            window._appReturnInterval = setInterval(() => {
+                attempts++;
+                const token = getTokenFromUrl();
+                if (token) {
+                    clearInterval(window._appReturnInterval);
+                    handleTokenLogin(token);
+                    return;
+                }
+                if (attempts > 60) clearInterval(window._appReturnInterval);
+            }, 1000);
+        }
+
+        function openTelegramMiniApp() {
+            const botUsername = 'cofenett_bot';
+            const startParam = 'login';
+            const url = `https://t.me/${botUsername}?startapp=${startParam}`;
+            showToast('📱 در حال باز کردن تلگرام...', '');
+            window.open(url, '_blank');
+            setTimeout(() => { showToast('✅ پس از ورود در تلگرام، به این صفحه بازگردید', ''); }, 2000);
+            startAppReturnListener();
+        }
+
+        function selectApp(id) {
+            authState.app = id;
+            document.querySelectorAll('.app-btn').forEach(b => b.classList.remove('selected'));
+            const btn = document.getElementById('app-' + id);
+            if (btn) btn.classList.add('selected');
+            const err = document.getElementById('appError');
+            if (err) err.style.display = 'none';
+        }
+
+        // ─── INIT ──────────────────────────────────────────────────────────────
+        document.addEventListener('DOMContentLoaded', function() {
+            loadUserFromStorage();
+            loadInitialData();
+
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    if (document.getElementById('detailOverlay').classList.contains('open')) closeDetail();
+                    if (document.getElementById('requestOverlay').classList.contains('open')) closeRequest();
+                    if (document.getElementById('authOverlay').classList.contains('open')) closeAuth();
+                    if (document.getElementById('profileOverlay').classList.contains('open')) closeProfile();
+                }
+            });
+
+            document.getElementById('detailOverlay').addEventListener('click', closeDetail);
+            document.getElementById('requestOverlay').addEventListener('click', dontcloseRequest);
+            document.getElementById('authOverlay').addEventListener('click', closeAuth);
+            document.getElementById('profileOverlay').addEventListener('click', closeProfile);
+
+            if (checkTelegramLogin()) {
+                console.log('✅ Logged in via Telegram Mini App');
+            } else {
+                const token = getTokenFromUrl();
+                if (token) handleTokenLogin(token);
+            }
+        });
+
+        window.api = api;
+        window.loadInitialData = loadInitialData;
+    </script>
+  </body>
+</html>
