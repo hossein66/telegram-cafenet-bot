@@ -201,7 +201,7 @@
         .receipt-info h4 { font-size: 14px; font-weight: 700; color: #92400E; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
         .receipt-line { display: flex; gap: 10px; font-size: 13px; margin-bottom: 4px; align-items: center; flex-wrap: wrap; }
         .receipt-line .rk { color: #92400E; font-weight: 500; min-width: 100px; }
-        .receipt-line .rv { color: var(--text); font-weight: 700; font-family: monospace; direction: ltr; text-align: right; }
+        .receipt-line .rv { color: var(--text); font-weight: 700; font-family: monospace; direction: rtl; text-align: right; }
         .receipt-copy-btn { background: var(--brand); color: #fff; border: none; border-radius: 6px; padding: 2px 10px; font-family: var(--font); font-size: 11px; cursor: pointer; margin-right: 6px; }
         .receipt-copy-btn:hover { background: var(--brand-dark); }
 
@@ -358,7 +358,7 @@
 // ════════════════════════════════════════════════════════════════════
 //  CONFIG — point this at your running FastAPI backend (app.py)
 // ════════════════════════════════════════════════════════════════════
-const API_BASE = window.CAFENET_API_BASE || 'https://cofenet-online.ir';
+const API_BASE = window.CAFENET_API_BASE || 'http://127.0.0.1:8001';//https://cofenet-online.ir
 
 // ════════════════════════════════════════════════════════════════════
 //  NUMBER CONVERSION HELPERS
@@ -437,7 +437,11 @@ let state = {
     loading: false,
     total: 0
 };
-
+let PAYMENT_INFO = {
+    cardNumber: '5041-7210-0916-7876',
+    personName: 'محمد حسین نوابی',
+    bankName: 'بانک ملی'
+};
 let requestState = {};
 let authState = { step: 'phone', phone: '', seconds: 0, timer: null, callback: null };
 let currentUser = JSON.parse(localStorage.getItem('cafenet_user') || 'null');
@@ -451,7 +455,22 @@ function toPersianNum(n) {
     if (n === undefined || n === null) return '۰';
     return convertEnglishToPersian(String(n));
 }
-
+// ════════════════════════════════════════════════════════════════════
+//  FETCH PAYMENT INFO ON PAGE LOAD
+// ════════════════════════════════════════════════════════════════════
+async function fetchPaymentInfo() {
+    try {
+        const paymentInfo = await apiFetch('/api/payment/info');
+        if (paymentInfo) {
+            PAYMENT_INFO.cardNumber = paymentInfo.cardNumber || PAYMENT_INFO.cardNumber;
+            PAYMENT_INFO.personName = paymentInfo.accountHolder || PAYMENT_INFO.personName;
+            PAYMENT_INFO.bankName = paymentInfo.bankName || PAYMENT_INFO.bankName;
+            console.log('✅ Payment info loaded:', PAYMENT_INFO);
+        }
+    } catch (e) {
+        console.warn('Could not fetch payment info, using defaults:', e);
+    }
+}
 function formatPrice(p) {
     if (!p && p !== 0) return '۰';
     return convertEnglishToPersian(Number(p).toLocaleString('en'));
@@ -547,11 +566,37 @@ function showToast(msg, type = '') {
     container.appendChild(t);
     setTimeout(() => t.remove(), 3500);
 }
-    // ════════════════════════════════════════════════════════════════════
+
+// ════════════════════════════════════════════════════════════════════
+//  RANDOM NUMBER GENERATOR FOR PRICE
+// ════════════════════════════════════════════════════════════════════
+function generateRandomNumbers(count = 3) {
+    let numbers = [];
+    for (let i = 0; i < count; i++) {
+        numbers.push(Math.floor(Math.random() * 10)); // 0-9
+    }
+    return numbers;
+}
+
+function addRandomNumbersToPrice(price) {
+    // Generate a random number between 100 and 999
+    const randomValue = Math.floor(Math.random() * 900) + 100; // 100 to 999
+    
+    // Convert to array of digits for display
+    const randomNumbers = String(randomValue).split('').map(Number);
+    
+    return {
+        finalPrice: price + randomValue,
+        randomNumbers: randomNumbers,
+        addedAmount: randomValue
+    };
+}
+// ════════════════════════════════════════════════════════════════════
     //  BOOTSTRAP
     // ════════════════════════════════════════════════════════════════════
     async function init() {
         updateProfileBtn();
+          fetchPaymentInfo();
         try {
             const [cats, provinces, docTypes] = await Promise.all([
                 apiFetch('/api/categories'),
@@ -1273,7 +1318,10 @@ function setupScrollObserver() {
                     ${isImg && val && val !== '—' ? `<img src="${val}" class="summary-img">` : `<div class="summary-val">${val}</div>`}
                 </div>`;
     }).join('');
-    
+
+    const mobile = values['شماره موبایل'] || '0';
+    const nationalCode = values['کد ملی '] || '0';
+    console.log('nationalCode',nationalCode,values);
     // Add loan calculation rows if it's the specific service
     if (isDastadasLoanService) {
         // Get values directly from the values object using Persian keys
@@ -1334,7 +1382,15 @@ function setupScrollObserver() {
                 <div class="summary-key">کارمزد</div>
                 <div class="summary-val">${formatNumber(fee)}</div>
             </div>
-         <div style="font-size:12px;color:var(--text3);background:var(--surface2);padding:10px 14px;border-radius:8px;margin-top:4px;"> شما می بایستی مبلغ ${formatNumber(scorePrice)} را در حساب دستادس خود داشته باشد</div>
+                        <div class="summary-item">
+                <div class="summary-key">کد ملی</div>
+                <div class="summary-val">${nationalCode}</div>
+            </div>
+                        <div class="summary-item">
+                <div class="summary-key">شماره موبایل</div>
+                <div class="summary-val">${mobile}</div>
+            </div>
+         <div style="font-size:12px;font-weight: 700;color:var(--text3);background:var(--surface2);padding:10px 14px;border-radius:8px;margin-top:4px;"> شما می بایستی مبلغ ${formatNumber(scorePrice)} را در حساب دستادس خود داشته باشد</div>
 
         `;
         docsHTML = loanSummaryHTML ;
@@ -1400,7 +1456,15 @@ function setupScrollObserver() {
                 <div class="summary-key">کارمزد</div>
                 <div class="summary-val">${formatNumber(fee)}</div>
             </div>
-         <div style="font-size:12px;color:var(--text3);background:var(--surface2);padding:10px 14px;border-radius:8px;margin-top:4px;"> شما می بایستی مبلغ ${formatNumber(scorePrice)} را در زمان انتقال امتیاز به حساب فروشنده واریز نمایید</div>
+                                  <div class="summary-item">
+                <div class="summary-key">کد ملی</div>
+                <div class="summary-val">${nationalCode}</div>
+            </div>
+                        <div class="summary-item">
+                <div class="summary-key">شماره موبایل</div>
+                <div class="summary-val">${mobile}</div>
+            </div>
+         <div style="font-size:12px;font-weight: 700;color:var(--text3);background:var(--surface2);padding:10px 14px;border-radius:8px;margin-top:4px;"> شما می بایستی مبلغ ${formatNumber(scorePrice)} را در زمان انتقال امتیاز به حساب فروشنده واریز نمایید</div>
 
         `;
         docsHTML = loanSummaryHTML ;
@@ -1466,7 +1530,15 @@ function setupScrollObserver() {
                 <div class="summary-key">کارمزد</div>
                 <div class="summary-val">${formatNumber(fee)}</div>
             </div>
-         <div style="font-size:12px;color:var(--text3);background:var(--surface2);padding:10px 14px;border-radius:8px;margin-top:4px;"> شما می بایستی مبلغ ${formatNumber(scorePrice)} در زمان انتقال امتیاز به حساب فروشنده واریز نمایید</div>
+                                  <div class="summary-item">
+                <div class="summary-key">کد ملی</div>
+                <div class="summary-val">${nationalCode}</div>
+            </div>
+                        <div class="summary-item">
+                <div class="summary-key">شماره موبایل</div>
+                <div class="summary-val">${mobile}</div>
+            </div>
+         <div style="font-size:12px;font-weight: 700;color:var(--text3);background:var(--surface2);padding:10px 14px;border-radius:8px;margin-top:4px;"> شما می بایستی مبلغ ${formatNumber(scorePrice)} در زمان انتقال امتیاز به حساب فروشنده واریز نمایید</div>
 
         `;
         
@@ -1479,29 +1551,53 @@ function setupScrollObserver() {
             <div style="font-size:12px;color:var(--text3);background:var(--surface2);padding:10px 14px;border-radius:8px;margin-top:4px;">✅ اطلاعات را بررسی کنید، سپس برای رفتن به مرحله پرداخت کلیک کنید.</div>`;
 }
 
-    function renderPaymentStep() {
-        const { service } = requestState;
-        const cardNumber = '6037-9912-3456-7890';
-        return `<div class="receipt-info">
-                    <h4>💳 اطلاعات پرداخت</h4>
-                    <div class="receipt-line"><span class="rk">مبلغ قابل پرداخت:</span><span class="rv">${formatPrice(service.price)} تومان <button class="receipt-copy-btn" onclick="copyText('${formatPrice(service.price)}', 'مبلغ کپی شد')">کپی</button></span></div>
-                    <div class="receipt-line"><span class="rk">شماره کارت:</span><span class="rv">${cardNumber} <button class="receipt-copy-btn" onclick="copyText('${cardNumber}', 'شماره کارت کپی شد')">کپی</button></span></div>
-                    <div class="receipt-line"><span class="rk">به نام:</span><span class="rv">کافی‌نت آنلاین</span></div>
-                </div>
-                <div class="field-group">
-                    <div class="field-label">📎 تصویر رسید پرداخت</div>
-                    <div class="field-hint">پس از واریز، اسکرین‌شات یا عکس رسید را آپلود کنید.</div>
-                    <label class="field-upload" onclick="document.getElementById('receiptInput').click()">
-                        <input type="file" id="receiptInput" accept="image/*" onchange="handleReceiptUpload(this)">
-                        <div class="upload-icon">🧾</div>
-                        <div class="upload-text">کلیک کنید تا تصویر رسید را انتخاب کنید</div>
-                        <div id="receiptPreviewWrap">${requestState.receiptImage ? `<img src="${requestState.receiptImage}" class="upload-preview">` : ''}</div>
-                    </label>
-                    <div class="field-error" id="fieldError" style="display:none"></div>
-                </div>
-                <div style="font-size:12px;color:var(--text3);background:var(--surface2);padding:10px 14px;border-radius:8px;">⚠️ آپلود رسید پرداخت الزامی است. پس از بررسی، کارشناسان با شما تماس می‌گیرند.</div>`;
+ function renderPaymentStep() {
+    const { service } = requestState;
+    
+    // Check if user is logged in
+    if ((!currentUser || !localStorage.getItem('cafenet_token')) && 1==2) {
+        return `<div style="text-align:center;padding:30px 0;">
+                    <div style="font-size:48px;margin-bottom:16px;">🔐</div>
+                    <h3 style="font-size:18px;font-weight:700;color:var(--text);margin-bottom:12px;">برای پرداخت باید وارد شوید</h3>
+                    <p style="color:var(--text3);font-size:14px;margin-bottom:20px;">لطفاً ابتدا وارد حساب کاربری خود شوید تا بتوانید پرداخت را تکمیل کنید.</p>
+                    <button class="btn-primary" onclick="closeRequest();savePendingRequest();authState.callback='submitAfterLogin';openAuth();" 
+                            style="padding:12px 32px;font-size:16px;">
+                        🚪 ورود به حساب
+                    </button>
+                </div>`;
     }
+    
+    // Generate random numbers if not already generated for this request
+    if (!requestState.randomData) {
+        requestState.randomData = addRandomNumbersToPrice(service.price);
+    }
+    
+    const { finalPrice, randomNumbers, addedAmount } = requestState.randomData;
+    service.price = finalPrice;
+    
+    // Use the globally fetched payment info (no API call needed here)
+    const cardNumber = PAYMENT_INFO.cardNumber;
+    const personName = PAYMENT_INFO.personName;
 
+    return `<div class="receipt-info">
+                <h4>💳 اطلاعات پرداخت</h4>
+                <div class="receipt-line"><span class="rk">مبلغ قابل پرداخت:</span><span class="rv">${formatPrice(service.price)} تومان <button class="receipt-copy-btn" onclick="copyText('${formatPrice(service.price)}', 'مبلغ کپی شد')">کپی</button></span></div>
+                <div class="receipt-line"><span class="rk">شماره کارت:</span><span class="rv">${cardNumber} <button class="receipt-copy-btn" onclick="copyText('${cardNumber}', 'شماره کارت کپی شد')">کپی</button></span></div>
+                <div class="receipt-line"><span class="rk">به نام:</span><span class="rv">${personName} </span></div>
+            </div>
+            <div class="field-group">
+                <div class="field-label">📎 تصویر رسید پرداخت</div>
+                <div class="field-hint">پس از واریز، اسکرین‌شات یا عکس رسید را آپلود کنید.</div>
+                <label class="field-upload" onclick="document.getElementById('receiptInput').click()">
+                    <input type="file" id="receiptInput" accept="image/*" onchange="handleReceiptUpload(this)">
+                    <div class="upload-icon">🧾</div>
+                    <div class="upload-text">کلیک کنید تا تصویر رسید را انتخاب کنید</div>
+                    <div id="receiptPreviewWrap">${requestState.receiptImage ? `<img src="${requestState.receiptImage}" class="upload-preview">` : ''}</div>
+                </label>
+                <div class="field-error" id="fieldError" style="display:none"></div>
+            </div>
+            <div style="font-size:12px;color:var(--text3);background:var(--surface2);padding:10px 14px;border-radius:8px;">⚠️ آپلود رسید پرداخت الزامی است. پس از بررسی، کارشناسان با شما تماس می‌گیرند.</div>`;
+}
     function copyText(text, msg) {
         navigator.clipboard.writeText(text).then(() => showToast(msg, 'success')).catch(() => {});
     }

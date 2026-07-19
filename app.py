@@ -262,6 +262,15 @@ def init_db():
                 )
             """)
 
+            cur.execute("""
+    CREATE TABLE IF NOT EXISTS payment_config (
+        id INTEGER PRIMARY KEY DEFAULT 1,
+        card_number TEXT NOT NULL,
+        account_holder TEXT NOT NULL,
+        bank_name TEXT,
+        updated_at TEXT
+    )
+""")
             # ─── CREATE INDEXES ─────────────────────────────────────
             print("📊 Creating indexes...")
             
@@ -477,6 +486,68 @@ async def add_process_time_header(request, call_next):
     
     return response
 
+# ─────────────────────────────────────────────────────────────
+#  PAYMENT INFO ENDPOINT
+# ─────────────────────────────────────────────────────────────
+@app.get("/api/payment/info")
+def get_payment_info():
+    """Get payment information from database"""
+    try:
+        with get_db() as conn:
+            cur = conn.cursor()
+            cur.execute("""
+                SELECT card_number, account_holder, bank_name 
+                FROM payment_config 
+                WHERE id = 1
+            """)
+            row = cur.fetchone()
+            
+            if row:
+                return {
+                    "cardNumber": row["card_number"],
+                    "accountHolder": row["account_holder"],
+                    "bankName": row["bank_name"] or "بانک ملی"
+                }
+            else:
+                # Return defaults if no config exists
+                return {
+                    "cardNumber": "5041-7210-0916-7876",
+                    "accountHolder": "محمد حسین نوابی",
+                    "bankName": "بانک رسالت"
+                }
+    except Exception as e:
+        print(f"❌ Error in get_payment_info: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Admin endpoint to update payment info
+@app.put("/api/payment/info")
+def update_payment_info(
+    card_number: str,
+    account_holder: str,
+    bank_name: Optional[str] = None,
+    user: dict = Depends(get_current_user)
+):
+    """Update payment information (admin only)"""
+    if user["id"] != 'user_927b32ac7f9ef3ef' :
+      raise HTTPException(status_code=500, detail=str(e))
+
+    try:
+        # You might want to add admin check here
+        with get_db() as conn:
+            cur = conn.cursor()
+            cur.execute("""
+                INSERT OR REPLACE INTO payment_config (id, card_number, account_holder, bank_name, updated_at)
+                VALUES (1, ?, ?, ?, ?)
+            """, (card_number, account_holder, bank_name or "بانک ملی", datetime.utcnow().isoformat()))
+            conn.commit()
+            
+            # Clear cache if needed
+            cache.delete("/api/payment/info")
+            
+            return {"success": True, "message": "Payment info updated"}
+    except Exception as e:
+        print(f"❌ Error in update_payment_info: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 # ─────────────────────────────────────────────────────────────
 #  CATEGORY ENDPOINTS - FIXED
 # ─────────────────────────────────────────────────────────────
