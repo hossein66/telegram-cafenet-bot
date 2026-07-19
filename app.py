@@ -18,6 +18,7 @@ import threading
 from contextlib import contextmanager
 import math
 from functools import wraps
+from typing import Optional
 
 # ─────────────────────────────────────────────────────────────
 #  SIMPLE THREAD-SAFE CACHE (No Redis required)
@@ -314,7 +315,7 @@ def init_db():
 class Category(BaseModel):
     id: Optional[int] = None
     name: str
-    icon: str = "📂"
+    icon: Optional[str] = "📂"
     sort: int = 0
     isEnable: bool = True
     count: int = 0
