@@ -355,164 +355,198 @@
     <div id="scrollSentinel" style="height:1px"></div>
 
     <script>
-    // ════════════════════════════════════════════════════════════════════
-    //  CONFIG — point this at your running FastAPI backend (app.py)
-    // ════════════════════════════════════════════════════════════════════
-    const API_BASE = window.CAFENET_API_BASE || 'https://cofenet-online.ir';
+// ════════════════════════════════════════════════════════════════════
+//  CONFIG — point this at your running FastAPI backend (app.py)
+// ════════════════════════════════════════════════════════════════════
+const API_BASE = window.CAFENET_API_BASE || 'https://cofenet-online.ir';
 
-    // ════════════════════════════════════════════════════════════════════
-    //  API HELPER
-    // ════════════════════════════════════════════════════════════════════
-    async function apiFetch(path, options = {}) {
-        const token = localStorage.getItem('cafenet_token');
-        const headers = Object.assign({ 'Content-Type': 'application/json' }, options.headers || {});
-        if (token) headers['Authorization'] = `Bearer ${token}`;
-        let res;
+// ════════════════════════════════════════════════════════════════════
+//  NUMBER CONVERSION HELPERS
+// ════════════════════════════════════════════════════════════════════
+function convertPersianToEnglish(str) {
+    if (!str) return str;
+    const persianDigits = '۰۱۲۳۴۵۶۷۸۹';
+    const englishDigits = '0123456789';
+    return str.replace(/[۰-۹]/g, (char) => {
+        return englishDigits[persianDigits.indexOf(char)] || char;
+    });
+}
+
+function convertEnglishToPersian(str) {
+    if (!str) return str;
+    const persianDigits = '۰۱۲۳۴۵۶۷۸۹';
+    const englishDigits = '0123456789';
+    return str.replace(/[0-9]/g, (char) => {
+        return persianDigits[englishDigits.indexOf(char)] || char;
+    });
+}
+
+function convertInputToEnglish(input) {
+    if (!input) return;
+    const start = input.selectionStart;
+    const end = input.selectionEnd;
+    const converted = convertPersianToEnglish(input.value);
+    if (converted !== input.value) {
+        input.value = converted;
+        input.setSelectionRange(start, end);
+    }
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  API HELPER
+// ════════════════════════════════════════════════════════════════════
+async function apiFetch(path, options = {}) {
+    const token = localStorage.getItem('cafenet_token');
+    const headers = Object.assign({ 'Content-Type': 'application/json' }, options.headers || {});
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    let res;
+    try {
+        res = await fetch(API_BASE + path, { ...options, headers });
+    } catch (e) {
+        throw new Error('عدم دسترسی به سرور. آدرس API را بررسی کنید.');
+    }
+    if (!res.ok) {
+        let detail = `خطای سرور (${res.status})`;
         try {
-            res = await fetch(API_BASE + path, { ...options, headers });
-        } catch (e) {
-            throw new Error('عدم دسترسی به سرور. آدرس API را بررسی کنید.');
-        }
-        if (!res.ok) {
-            let detail = `خطای سرور (${res.status})`;
-            try {
-                const j = await res.json();
-                if (j && j.detail) detail = typeof j.detail === 'string' ? j.detail : JSON.stringify(j.detail);
-            } catch (e) {}
-            const err = new Error(detail);
-            err.status = res.status;
-            throw err;
-        }
-        if (res.status === 204) return null;
-        try { return await res.json(); } catch (e) { return null; }
+            const j = await res.json();
+            if (j && j.detail) detail = typeof j.detail === 'string' ? j.detail : JSON.stringify(j.detail);
+        } catch (e) {}
+        const err = new Error(detail);
+        err.status = res.status;
+        throw err;
     }
+    if (res.status === 204) return null;
+    try { return await res.json(); } catch (e) { return null; }
+}
 
-    // ════════════════════════════════════════════════════════════════════
-    //  GLOBAL STATE & CACHES
-    // ════════════════════════════════════════════════════════════════════
-    let CATEGORIES = [];              // raw list from /api/categories (includes synthetic "top"/"all" rows)
-    const CITY_CACHE = {};            // province -> [cities]
-    let PROVINCES = [];               // list of province names
-    let DOCTYPE_MAP = {};             // typeId -> {title, REx}
-    const serviceCache = {};          // serviceId -> detail payload (data object)
+// ════════════════════════════════════════════════════════════════════
+//  GLOBAL STATE & CACHES
+// ════════════════════════════════════════════════════════════════════
+let CATEGORIES = [];
+const CITY_CACHE = {};
+let PROVINCES = [];
+let DOCTYPE_MAP = {};
+const serviceCache = {};
 
-    let state = {
-        mode: 'top',        // 'all' | 'category' | 'search' | 'top'
-        catName: null,
-        searchTerm: '',
-        cursor: null,
-        hasMore: true,
-        loading: false,
-        total: 0
+let state = {
+    mode: 'top',
+    catName: null,
+    searchTerm: '',
+    cursor: null,
+    hasMore: true,
+    loading: false,
+    total: 0
+};
+
+let requestState = {};
+let authState = { step: 'phone', phone: '', seconds: 0, timer: null, callback: null };
+let currentUser = JSON.parse(localStorage.getItem('cafenet_user') || 'null');
+let currentServiceDetail = null;
+let scrollObserver = null;
+
+// ════════════════════════════════════════════════════════════════════
+//  HELPERS
+// ════════════════════════════════════════════════════════════════════
+function toPersianNum(n) {
+    if (n === undefined || n === null) return '۰';
+    return convertEnglishToPersian(String(n));
+}
+
+function formatPrice(p) {
+    if (!p && p !== 0) return '۰';
+    return convertEnglishToPersian(Number(p).toLocaleString('en'));
+}
+
+function typeIcon(type) {
+    const icons = {
+        'text': '📝', 'number': '🔢', 'nationalCode': '🆔', 'date': '📅',
+        'checkbox': '☑️', 'radio': '🔘', 'select': '📋', 'boolean': '✔️',
+        'province': '📍', 'city': '🏙️', 'file': '📎', 'textarea': '📄',
+        'licensePlate': '🚗', 'motorcycleLicensePlate': '🏍️'
     };
+    return icons[type] || '📄';
+}
 
-    let requestState = {};
-    let authState = { step: 'phone', phone: '', seconds: 0, timer: null, callback: null };
-    let currentUser = JSON.parse(localStorage.getItem('cafenet_user') || 'null');
-    let currentServiceDetail = null; // last opened service page detail (cache to avoid refetch on "start request")
+function mapFieldTypeToTypeId(type) {
+    if (type === 'nationalCode') return 6;
+    if (type === 'date') return 8;
+    if (type === 'file') return 3;
+    if (type === 'number') return 2;
+    return 1;
+}
 
-    // ════════════════════════════════════════════════════════════════════
-    //  HELPERS
-    // ════════════════════════════════════════════════════════════════════
-    function toPersianNum(n) {
-        if (n === undefined || n === null) return '۰';
-        return String(n).replace(/\d/g, d => '۰۱۲۳۴۵۶۷۸۹'[d]);
+function getDocInfo(doc) {
+    const dt = DOCTYPE_MAP[doc.typeId] || { title: 'متن', REx: '.*' };
+    return {
+        title: doc.title,
+        typeId: doc.typeId,
+        type: doc.type || 'text',
+        displayType: dt.title,
+        regex: dt.REx,
+        placeholder: doc.placeholder || '',
+        isRequired: doc.isRequired || false,
+        options: doc.options || [],
+        validationRules: doc.validationRules || {}
+    };
+}
+
+function buildDocsFromDetail(detailData) {
+    const forms = detailData.forms || [];
+    const form = forms.length ? forms[0] : null;
+    const rawDocs = (form && form.fields) ? form.fields.map(f => ({
+        title: f.label,
+        typeId: mapFieldTypeToTypeId(f.type),
+        type: f.type,
+        placeholder: f.placeholder || '',
+        isRequired: f.isRequired || false,
+        options: f.options || [],
+        key: f.key,
+        validationRules: f.validationRules || {}
+    })) : [];
+    if (!rawDocs.length) {
+        return [{ title: 'نیازی به مدارک نیست', typeId: 1, type: 'text', displayType: 'متن', regex: '.*', placeholder: '', isRequired: false, options: [], validationRules: {} }];
     }
+    return rawDocs.map(getDocInfo);
+}
 
-    function formatPrice(p) {
-        if (!p && p !== 0) return '۰';
-        return toPersianNum(Number(p).toLocaleString('en'));
+function validateDoc(value, doc) {
+    // Convert Persian numbers to English for validation
+    const englishValue = convertPersianToEnglish(value);
+    
+    if (doc.type === 'nationalCode' && !/^[0-9]{10}$/.test(englishValue)) {
+        return { ok: false, msg: 'کد ملی باید ۱۰ رقم باشد.' };
     }
-
-    function typeIcon(type) {
-        const icons = {
-            'text': '📝', 'number': '🔢', 'nationalCode': '🆔', 'date': '📅',
-            'checkbox': '☑️', 'radio': '🔘', 'select': '📋', 'boolean': '✔️',
-            'province': '📍', 'city': '🏙️', 'file': '📎', 'textarea': '📄',
-            'licensePlate': '🚗', 'motorcycleLicensePlate': '🏍️'
-        };
-        return icons[type] || '📄';
+    if (doc.type === 'number' && isNaN(englishValue)) {
+        return { ok: false, msg: 'لطفاً یک عدد معتبر وارد کنید.' };
     }
-
-    function mapFieldTypeToTypeId(type) {
-        if (type === 'nationalCode') return 6;
-        if (type === 'date') return 8;
-        if (type === 'file') return 3;
-        if (type === 'number') return 2;
-        return 1; // text, textarea, select, radio, boolean, checkbox, province, city, licensePlate, ...
+    if (doc.type === 'date' && value) {
+        const dateObj = new Date(value);
+        if (isNaN(dateObj.getTime())) return { ok: false, msg: 'تاریخ وارد شده معتبر نیست.' };
     }
-
-    function getDocInfo(doc) {
-        const dt = DOCTYPE_MAP[doc.typeId] || { title: 'متن', REx: '.*' };
-        return {
-            title: doc.title,
-            typeId: doc.typeId,
-            type: doc.type || 'text',
-            displayType: dt.title,
-            regex: dt.REx,
-            placeholder: doc.placeholder || '',
-            isRequired: doc.isRequired || false,
-            options: doc.options || [],
-            validationRules: doc.validationRules || {}
-        };
+    if (doc.validationRules?.min && englishValue.length < doc.validationRules.min) {
+        return { ok: false, msg: `حداقل ${doc.validationRules.min} کاراکتر وارد کنید.` };
     }
-
-    // Build the "docs" array (form fields) from a service detail payload's forms[0]
-    function buildDocsFromDetail(detailData) {
-        const forms = detailData.forms || [];
-        const form = forms.length ? forms[0] : null;
-        const rawDocs = (form && form.fields) ? form.fields.map(f => ({
-            title: f.label,
-            typeId: mapFieldTypeToTypeId(f.type),
-            type: f.type,
-            placeholder: f.placeholder || '',
-            isRequired: f.isRequired || false,
-            options: f.options || [],
-            key: f.key,
-            validationRules: f.validationRules || {}
-        })) : [];
-        if (!rawDocs.length) {
-            return [{ title: 'نیازی به مدارک نیست', typeId: 1, type: 'text', displayType: 'متن', regex: '.*', placeholder: '', isRequired: false, options: [], validationRules: {} }];
-        }
-        return rawDocs.map(getDocInfo);
+    if (doc.validationRules?.max && englishValue.length > doc.validationRules.max) {
+        return { ok: false, msg: `حداکثر ${doc.validationRules.max} کاراکتر مجاز است.` };
     }
-
-    function validateDoc(value, doc) {
-        if (doc.type === 'nationalCode' && !/^[0-9]{10}$/.test(value)) {
-            return { ok: false, msg: 'کد ملی باید ۱۰ رقم باشد.' };
-        }
-        if (doc.type === 'number' && isNaN(value)) {
-            return { ok: false, msg: 'لطفاً یک عدد معتبر وارد کنید.' };
-        }
-        if (doc.type === 'date' && value) {
-            const dateObj = new Date(value);
-            if (isNaN(dateObj.getTime())) return { ok: false, msg: 'تاریخ وارد شده معتبر نیست.' };
-        }
-        if (doc.validationRules?.min && value.length < doc.validationRules.min) {
-            return { ok: false, msg: `حداقل ${doc.validationRules.min} کاراکتر وارد کنید.` };
-        }
-        if (doc.validationRules?.max && value.length > doc.validationRules.max) {
-            return { ok: false, msg: `حداکثر ${doc.validationRules.max} کاراکتر مجاز است.` };
-        }
-        if (doc.validationRules?.pattern) {
-            try {
-                const regex = new RegExp(doc.validationRules.pattern);
-                if (!regex.test(value)) return { ok: false, msg: 'فرمت وارد شده معتبر نیست.' };
-            } catch (e) {}
-        }
-        return { ok: true };
+    if (doc.validationRules?.pattern) {
+        try {
+            const regex = new RegExp(doc.validationRules.pattern);
+            if (!regex.test(englishValue)) return { ok: false, msg: 'فرمت وارد شده معتبر نیست.' };
+        } catch (e) {}
     }
+    return { ok: true };
+}
 
-    function showToast(msg, type = '') {
-        const container = document.getElementById('toastContainer');
-        if (!container) return;
-        const t = document.createElement('div');
-        t.className = 'toast ' + type;
-        t.textContent = msg;
-        container.appendChild(t);
-        setTimeout(() => t.remove(), 3500);
-    }
-
+function showToast(msg, type = '') {
+    const container = document.getElementById('toastContainer');
+    if (!container) return;
+    const t = document.createElement('div');
+    t.className = 'toast ' + type;
+    t.textContent = msg;
+    container.appendChild(t);
+    setTimeout(() => t.remove(), 3500);
+}
     // ════════════════════════════════════════════════════════════════════
     //  BOOTSTRAP
     // ════════════════════════════════════════════════════════════════════

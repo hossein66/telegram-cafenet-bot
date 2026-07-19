@@ -1,17 +1,12 @@
-# Byte-compiled / optimized / DLL files
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
-
-# C extensions
 *.so
-
-# Distribution / packaging
 .Python
-build/
-develop-eggs/
+*.egg-info/
 dist/
-downloads/
+build/
 eggs/
 .eggs/
 lib/
@@ -20,170 +15,124 @@ parts/
 sdist/
 var/
 wheels/
-share/python-wheels/
-*.egg-info/
-.installed.cfg
 *.egg
 MANIFEST
-
-# PyInstaller
-*.manifest
-*.spec
-
-# Installer logs
 pip-log.txt
 pip-delete-this-directory.txt
 
-# Unit test / coverage reports
-htmlcov/
-.tox/
-.nox/
-.coverage
-.coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-*.py,cover
-.hypothesis/
-.pytest_cache/
-cover/
-
-# Translations
-*.mo
-*.pot
-
-# Django stuff:
-*.log
-local_settings.py
-db.sqlite3
-db.sqlite3-journal
-
-# Flask stuff:
-instance/
-.webassets-cache
-
-# Scrapy stuff:
-.scrapy
-
-# Sphinx documentation
-docs/_build/
-
-# PyBuilder
-.pybuilder/
-target/
-
-# Jupyter Notebooks
-.ipynb_checkpoints
-
-# IPython
-profile_default/
-ipython_config.py
-
-# pyenv
-.python-version
-
-# pipenv
-Pipfile.lock
-
-# poetry
-poetry.lock
-
-# pdm
-.pdm.toml
-
-# PEP 582
-__pypackages__/
-
-# Celery stuff
-celerybeat-schedule
-celerybeat.pid
-
-# SageMath parsed files
-*.sage.py
-
-# Environments
+# Virtual Environment
+venv/
+env/
 .env
 .venv
-env/
-venv/
 ENV/
 env.bak/
 venv.bak/
 
-# Spyder project settings
-.spyderproject
-.spyproject
+# Database files
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+*.sqlite-journal
 
-# Rope project settings
-.ropeproject
-
-# mkdocs documentation
-/site
-
-# mypy
-.mypy_cache/
-.dmypy.json
-dmypy.json
-
-# Pyre type checker
-.pyre/
-
-# pytype static type analyzer
-.pytype/
-
-# Cython debug symbols
-cython_debug/
-
-# IDEs
+# IDE
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
 .DS_Store
+.vscode/
+.idea/
+*.iml
 
-# Project specific
-# Database files (if any)
-*.db
-*.sqlite
-*.sqlite3
+# Environment Variables
+.env
+.env.local
+.env.*.local
+.env.production
+.env.development
 
-# Log files
+# Logs
 *.log
 logs/
 debug.log
+error.log
+access.log
 
-# Uploaded files / media
-media/
-uploads/
-staticfiles/
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+*.cover
+*.py,cover
+coverage.xml
 
-# Secret files
-.secrets
-secrets.yaml
-config.yaml
-config.yml
-*.secret
-*.key
-*.pem
-*.crt
+# MyPy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pytype/
 
-# Environment variables
-.env.local
-.env.*.local
+# Pyre
+.pyre/
 
-# PID file
+# Distribution
 *.pid
+*.seed
+*.pid.lock
+
+# Server specific
+gunicorn.pid
+gunicorn.conf.pyc
+
+# Backup files
+*.bak
+*.tmp
+*.temp
+*.swp
+
+# Uploads/Media (if your bot handles files)
+uploads/
+media/
+staticfiles/
+files/
+
+# Telegram bot specific
+*.session
+*.session-journal
+*.token
+
+# Jupyter Notebooks
+.ipynb_checkpoints
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
 
 # Docker
 .dockerignore
 docker-compose.override.yml
 
-# Terraform
-*.tfstate
-*.tfstate.*
-.terraform/
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Linux
+*~
+.directory
+*.orig
+*.rej
 
 # Node modules (if you have frontend)
 node_modules/
@@ -191,10 +140,7 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Temporary files
-tmp/
-temp/
-*.tmp
-
-# Coverage reports
+# Coverage
 coverage/
+coverage.*
+*.coverage
