@@ -792,7 +792,7 @@ def get_services(
             "hasMore": False,
             "total": 0
         }
-@app.get("/api/services-all", response_model=PaginatedResponse)
+@app.get("/api/services/all", response_model=PaginatedResponse)
 def get_services(
     cursor: Optional[str] = Query(None),
     limit: int = Query(300, ge=1, le=400),
