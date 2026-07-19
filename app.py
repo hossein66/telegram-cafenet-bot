@@ -792,6 +792,117 @@ def get_services(
             "hasMore": False,
             "total": 0
         }
+@app.get("/api/services-all", response_model=PaginatedResponse)
+def get_services(
+    cursor: Optional[str] = Query(None),
+    limit: int = Query(300, ge=1, le=400),
+    category: Optional[str] = None,
+    search: Optional[str] = None,
+    sort: Literal["default", "price_asc", "price_desc"] = "default",
+    page: Optional[int] = None,
+):
+    try:
+        with get_db() as conn:
+            cur = conn.cursor()
+            
+            # Use more efficient query - select only needed columns
+            query = """
+                SELECT s.id as serviceId, s.title as serviceTitle, c.name as category,
+                       s.sort, s.price, s.duration, s.is_special as isSpecial,
+                       s.is_enabled as isEnabled, s.description
+                FROM services s
+                LEFT JOIN categories c ON s.category_id = c.id
+                
+            """
+            params = []
+            where_clauses = []
+
+            if category:
+                where_clauses.append("c.name = ?")
+                params.append(category)
+
+            if search:
+                where_clauses.append("(s.title LIKE ? OR c.name LIKE ?)")
+                params.extend([f"%{search}%", f"%{search}%"])
+
+            if where_clauses:
+                query += " AND " + " AND ".join(where_clauses)
+
+            # More efficient cursor pagination
+            if cursor:
+                try:
+                    sort_val, last_id = cursor.split("|")
+                    if sort == "default":
+                        query += " AND (s.sort > ? OR (s.sort = ? AND s.id > ?))"
+                        params.extend([int(sort_val), int(sort_val), last_id])
+                    elif sort == "price_asc":
+                        query += " AND (s.price > ? OR (s.price = ? AND s.id > ?))"
+                        params.extend([int(sort_val), int(sort_val), last_id])
+                    else:
+                        query += " AND (s.price < ? OR (s.price = ? AND s.id > ?))"
+                        params.extend([int(sort_val), int(sort_val), last_id])
+                except:
+                    pass
+
+            # Use indexed order by
+            if sort == "price_asc":
+                query += " ORDER BY s.price ASC, s.id ASC"
+            elif sort == "price_desc":
+                query += " ORDER BY s.price DESC, s.id ASC"
+            else:
+                query += " ORDER BY s.sort ASC, s.id ASC"
+
+            query += f" LIMIT {limit + 1}"
+            
+            cur.execute(query, params)
+            rows = cur.fetchall()
+            items = [dict(row) for row in rows]
+
+            # Optimized count query
+            count_query = """
+                SELECT COUNT(*) as total
+                FROM services s
+                LEFT JOIN categories c ON s.category_id = c.id
+                WHERE s.is_enabled = 1
+            """
+            count_params = []
+            if category:
+                count_query += " AND c.name = ?"
+                count_params.append(category)
+            if search:
+                count_query += " AND (s.title LIKE ? OR c.name LIKE ?)"
+                count_params.extend([f"%{search}%", f"%{search}%"])
+            
+            cur.execute(count_query, count_params)
+            total = cur.fetchone()["total"]
+
+            has_more = len(items) > limit
+            items_page = items[:limit]
+
+            next_cursor = None
+            if has_more and items_page:
+                last = items_page[-1]
+                if sort == "default":
+                    next_cursor = f"{last.get('sort', 0)}|{last['serviceId']}"
+                elif sort == "price_asc":
+                    next_cursor = f"{last.get('price', 0)}|{last['serviceId']}"
+                else:
+                    next_cursor = f"{last.get('price', 0)}|{last['serviceId']}"
+
+            return {
+                "items": items_page,
+                "nextCursor": next_cursor,
+                "hasMore": has_more,
+                "total": total
+            }
+    except Exception as e:
+        print(f"❌ Error in get_services: {e}")
+        return {
+            "items": [],
+            "nextCursor": None,
+            "hasMore": False,
+            "total": 0
+        }
 
 @app.get("/api/services/featured")
 def get_featured_services():
@@ -813,7 +924,217 @@ def get_featured_services():
     except Exception as e:
         print(f"❌ Error in get_featured_services: {e}")
         return []
+# ─────────────────────────────────────────────────────────────
+#  SERVICE DELETE ENDPOINT
+# ─────────────────────────────────────────────────────────────
+@app.delete("/api/services/{service_id}")
+def delete_service(
+    service_id: str,
+    user: dict = Depends(get_current_user)
+):
+    """
+    Delete a service by ID.
+    Only admin users can delete services.
+    """
+    try:
+        # Check if user is admin (you can modify this check)
+        if user["id"] != 'user_927b32ac7f9ef3ef':
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only admin users can delete services"
+            )
+        
+        with get_db() as conn:
+            cur = conn.cursor()
+            
+            # Check if service exists
+            cur.execute("SELECT id FROM services WHERE id = ?", (service_id,))
+            existing = cur.fetchone()
+            if not existing:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Service not found"
+                )
+            
+            # Delete the service
+            cur.execute("DELETE FROM services WHERE id = ?", (service_id,))
+            conn.commit()
+            
+            # Clear cache
+            cache.clear()
+            
+            return {
+                "success": True,
+                "message": f"Service {service_id} deleted successfully"
+            }
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Error in delete_service: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
 
+
+# ─────────────────────────────────────────────────────────────
+#  CATEGORY UPDATE ENDPOINT
+# ─────────────────────────────────────────────────────────────
+@app.put("/api/categories/{category_id}")
+def update_category(
+    category_id: int,
+    cat: Category,
+    user: dict = Depends(get_current_user)
+):
+    """
+    Update a category by ID.
+    Only admin users can update categories.
+    """
+    try:
+        # Check if user is admin
+        if user["id"] != 'user_927b32ac7f9ef3ef':
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only admin users can update categories"
+            )
+        
+        with get_db() as conn:
+            cur = conn.cursor()
+            
+            # Check if category exists
+            cur.execute("SELECT id FROM categories WHERE id = ?", (category_id,))
+            existing = cur.fetchone()
+            if not existing:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Category not found"
+                )
+            
+            # Check if new name already exists (if name is being changed)
+            cur.execute(
+                "SELECT id FROM categories WHERE name = ? AND id != ?",
+                (cat.name, category_id)
+            )
+            if cur.fetchone():
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Category name already exists"
+                )
+            
+            # Update category
+            cur.execute("""
+                UPDATE categories 
+                SET name = ?, 
+                    icon = ?, 
+                    sort = ?, 
+                    is_enable = ?,
+                    updated_at = ?
+                WHERE id = ?
+            """, (
+                cat.name,
+                cat.icon,
+                cat.sort,
+                1 if cat.isEnable else 0,
+                datetime.utcnow().isoformat(),
+                category_id
+            ))
+            conn.commit()
+            
+            # Clear cache
+            cache.clear()
+            
+            return {
+                "success": True,
+                "message": f"Category {category_id} updated successfully",
+                "category": {
+                    "id": category_id,
+                    "name": cat.name,
+                    "icon": cat.icon,
+                    "sort": cat.sort,
+                    "isEnable": cat.isEnable
+                }
+            }
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Error in update_category: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+
+
+# ─────────────────────────────────────────────────────────────
+#  CATEGORY DELETE ENDPOINT
+# ─────────────────────────────────────────────────────────────
+@app.delete("/api/categories/{category_id}")
+def delete_category(
+    category_id: int,
+    user: dict = Depends(get_current_user)
+):
+    """
+    Delete a category by ID.
+    Only admin users can delete categories.
+    """
+    try:
+        # Check if user is admin
+        if user["id"] != 'user_927b32ac7f9ef3ef':
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only admin users can delete categories"
+            )
+        
+        with get_db() as conn:
+            cur = conn.cursor()
+            
+            # Check if category exists
+            cur.execute("SELECT id, name FROM categories WHERE id = ?", (category_id,))
+            existing = cur.fetchone()
+            if not existing:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Category not found"
+                )
+            
+            # Check if category has services
+            cur.execute(
+                "SELECT COUNT(*) as count FROM services WHERE category_id = ?",
+                (category_id,)
+            )
+            service_count = cur.fetchone()["count"]
+            
+            if service_count > 0:
+                # Option 1: Prevent deletion if category has services
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Cannot delete category with {service_count} services. Please reassign or delete services first."
+                )
+                # Option 2: Reassign services to a default category
+                # Or set category_id to NULL for services
+            
+            # Delete the category
+            cur.execute("DELETE FROM categories WHERE id = ?", (category_id,))
+            conn.commit()
+            
+            # Clear cache
+            cache.clear()
+            
+            return {
+                "success": True,
+                "message": f"Category '{existing['name']}' deleted successfully"
+            }
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Error in delete_category: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+        
 @app.get("/api/services/{service_id}", response_model=ServiceDetailResponse)
 def get_service(service_id: str):
     try:
@@ -826,6 +1147,69 @@ def get_service(service_id: str):
                 JOIN categories c ON s.category_id = c.id
                 WHERE s.id = ?
             """, (service_id,))
+            row = cur.fetchone()
+
+            if not row:
+                raise HTTPException(status_code=404, detail="Service not found")
+
+            row_dict = dict(row)
+
+            # Parse JSON fields
+            images = json.loads(row_dict.get("images", "[]"))
+            forms = json.loads(row_dict.get("forms", "[]"))
+
+            data = {
+                "sort": row_dict.get("sort", 0),
+                "price": row_dict.get("price", 0),
+                "cost": row_dict.get("cost", 0),
+                "benefit": row_dict.get("benefit", 0),
+                "duration": row_dict.get("duration", ""),
+                "isSpecial": bool(row_dict.get("is_special", 0)),
+                "isEnabled": bool(row_dict.get("is_enabled", 1)),
+                "type": row_dict.get("type", "selectable"),
+                "description": row_dict.get("description", ""),
+                "isPaymentRequired": bool(row_dict.get("is_payment_required", 1)),
+                "isLocationBased": bool(row_dict.get("is_location_based", 1)),
+                "autoInvoiceEnabled": bool(row_dict.get("auto_invoice_enabled", 1)),
+                "isNoticeEnabled": bool(row_dict.get("is_notice_enabled", 0)),
+                "noticeText": row_dict.get("notice_text"),
+                "noticeImage": row_dict.get("notice_image"),
+                "images": images,
+                "forms": forms,
+                "id": row_dict.get("id"),
+                "title": row_dict.get("title"),
+                "createdAt": row_dict.get("created_at"),
+                "updatedAt": row_dict.get("updated_at"),
+                "category": {
+                    "title": row_dict.get("category_name"),
+                    "type": "service",
+                    "is_enabled": True
+                }
+            }
+
+            return {
+                "serviceId": row_dict.get("id"),
+                "serviceTitle": row_dict.get("title"),
+                "category": row_dict.get("category_name"),
+                "sort": row_dict.get("sort", 0),
+                "data": data
+            }
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Error in get_service: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+@app.get("/api/services/full", response_model=ServiceDetailResponse)
+def get_serviceFull():
+    try:
+        with get_db() as conn:
+            cur = conn.cursor()
+
+            cur.execute("""
+                SELECT s.*
+                FROM services s
+
+            """)
             row = cur.fetchone()
 
             if not row:
