@@ -1,8 +1,9 @@
-# app.py
+# app.py - Complete Optimized Version
 from fastapi import FastAPI, HTTPException, Depends, status, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field
 from typing import List, Optional, Any, Dict, Literal
 from datetime import datetime, timedelta
 import uuid
@@ -11,8 +12,112 @@ import hashlib
 import sqlite3
 import json
 import os
+import time
+import threading
 from contextlib import contextmanager
 import math
+from functools import wraps
+
+# ─────────────────────────────────────────────────────────────
+#  SIMPLE THREAD-SAFE CACHE (No Redis required)
+# ─────────────────────────────────────────────────────────────
+class SimpleCache:
+    """Thread-safe in-memory cache with TTL"""
+    
+    def __init__(self, default_ttl=300):
+        self.cache = {}
+        self.ttl = {}
+        self.lock = threading.Lock()
+        self.default_ttl = default_ttl
+        
+    def get(self, key):
+        """Get value from cache if not expired"""
+        with self.lock:
+            if key in self.cache:
+                if key in self.ttl and time.time() > self.ttl[key]:
+                    # Expired, remove it
+                    del self.cache[key]
+                    del self.ttl[key]
+                    return None
+                return self.cache[key]
+            return None
+    
+    def set(self, key, value, ttl=None):
+        """Set cache value with TTL in seconds"""
+        with self.lock:
+            self.cache[key] = value
+            if ttl is None:
+                ttl = self.default_ttl
+            self.ttl[key] = time.time() + ttl
+    
+    def delete(self, key):
+        """Remove key from cache"""
+        with self.lock:
+            self.cache.pop(key, None)
+            self.ttl.pop(key, None)
+    
+    def clear(self):
+        """Clear entire cache"""
+        with self.lock:
+            self.cache.clear()
+            self.ttl.clear()
+    
+    def cleanup(self):
+        """Remove expired items"""
+        with self.lock:
+            now = time.time()
+            expired_keys = [k for k, exp in self.ttl.items() if exp <= now]
+            for k in expired_keys:
+                self.cache.pop(k, None)
+                self.ttl.pop(k, None)
+
+# Global cache instance
+cache = SimpleCache(default_ttl=300)
+
+# Cache decorator
+def cached(ttl=None):
+    """Decorator to cache function results"""
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            # Create cache key from function name and arguments
+            key_parts = [func.__name__]
+            for arg in args:
+                if isinstance(arg, (str, int, float, bool)):
+                    key_parts.append(str(arg))
+                elif arg is not None:
+                    key_parts.append(str(id(arg)))
+            for k, v in sorted(kwargs.items()):
+                if isinstance(v, (str, int, float, bool)):
+                    key_parts.append(f"{k}:{v}")
+                elif v is not None:
+                    key_parts.append(f"{k}:{id(v)}")
+            
+            cache_key = hashlib.md5('|'.join(key_parts).encode()).hexdigest()
+            
+            # Try to get from cache
+            cached_result = cache.get(cache_key)
+            if cached_result is not None:
+                try:
+                    return json.loads(cached_result)
+                except (json.JSONDecodeError, TypeError):
+                    return cached_result
+            
+            # Execute function
+            result = func(*args, **kwargs)
+            
+            # Store in cache
+            try:
+                # Convert to JSON for storage
+                serializable = json.dumps(result, default=str, ensure_ascii=False)
+                cache.set(cache_key, serializable, ttl)
+            except (TypeError, ValueError):
+                # If can't serialize, store as-is with shorter TTL
+                cache.set(cache_key, result, 60)
+            
+            return result
+        return wrapper
+    return decorator
 
 # ─────────────────────────────────────────────────────────────
 #  CONFIG
@@ -23,19 +128,36 @@ TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
 DB_PATH = "cafenet.db"
 
 # ─────────────────────────────────────────────────────────────
-#  DATABASE HELPERS
+#  DATABASE HELPERS with Connection Pooling
 # ─────────────────────────────────────────────────────────────
+import threading
+_db_local = threading.local()
+
+def get_db_connection():
+    """Get database connection from thread-local storage"""
+    if not hasattr(_db_local, 'conn') or _db_local.conn is None:
+        _db_local.conn = sqlite3.connect(DB_PATH, check_same_thread=False)
+        _db_local.conn.row_factory = sqlite3.Row
+        _db_local.conn.execute("PRAGMA foreign_keys = ON")
+        _db_local.conn.execute("PRAGMA journal_mode = WAL")
+        _db_local.conn.execute("PRAGMA synchronous = NORMAL")
+        _db_local.conn.execute("PRAGMA cache_size = -10000")  # 10MB cache
+        _db_local.conn.execute("PRAGMA temp_store = MEMORY")
+    return _db_local.conn
+
 @contextmanager
 def get_db():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA foreign_keys = ON")
+    """Context manager for database connections"""
+    conn = get_db_connection()
     try:
         yield conn
-    finally:
-        conn.close()
+    except Exception as e:
+        conn.rollback()
+        raise e
 
-
+# ─────────────────────────────────────────────────────────────
+#  INIT DATABASE WITH INDEXES
+# ─────────────────────────────────────────────────────────────
 def init_db():
     with get_db() as conn:
         cur = conn.cursor()
@@ -53,7 +175,7 @@ def init_db():
             )
         """)
 
-        # Services (full schema matching your JSON)
+        # Services
         cur.execute("""
             CREATE TABLE IF NOT EXISTS services (
                 id TEXT PRIMARY KEY,
@@ -74,8 +196,8 @@ def init_db():
                 is_notice_enabled INTEGER DEFAULT 0,
                 notice_text TEXT,
                 notice_image TEXT,
-                images TEXT,          -- JSON array
-                forms TEXT,            -- JSON array
+                images TEXT,
+                forms TEXT,
                 created_at TEXT,
                 updated_at TEXT,
                 FOREIGN KEY (category_id) REFERENCES categories(id)
@@ -106,8 +228,8 @@ def init_db():
                 service_id TEXT NOT NULL,
                 service_title TEXT,
                 price INTEGER DEFAULT 0,
-                documents TEXT,        -- JSON array
-                receipt_image TEXT,    -- base64 or URL
+                documents TEXT,
+                receipt_image TEXT,
                 status TEXT DEFAULT 'pending',
                 submitted_at TEXT,
                 updated_at TEXT,
@@ -125,7 +247,7 @@ def init_db():
             )
         """)
 
-        # Cursor for pagination (infinite scroll)
+        # Pagination cursors
         cur.execute("""
             CREATE TABLE IF NOT EXISTS pagination_cursors (
                 cursor_id TEXT PRIMARY KEY,
@@ -135,9 +257,39 @@ def init_db():
             )
         """)
 
+        # ─── CREATE INDEXES ─────────────────────────────────────
+        print("📊 Creating indexes...")
+        
+        # Service indexes
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_services_category ON services(category_id)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_services_enabled ON services(is_enabled)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_services_sort ON services(sort)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_services_title ON services(title)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_services_special ON services(is_special)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_services_price ON services(price)")
+        
+        # Request indexes
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_requests_user ON requests(user_id)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_requests_status ON requests(status)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_requests_submitted ON requests(submitted_at)")
+        
+        # User indexes
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_users_phone ON users(phone)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_users_telegram ON users(telegram_id)")
+        
+        # Category indexes
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_categories_enable ON categories(is_enable)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_categories_sort ON categories(sort)")
+        
+        # OTP indexes
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_otp_expires ON otp_codes(expires_at)")
+        
+        # Composite indexes for common queries
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_services_category_enabled ON services(category_id, is_enabled)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_services_sort_enabled ON services(sort, is_enabled)")
+        
         conn.commit()
-        print("✅ Database initialized")
-
+        print("✅ Database initialized with indexes")
 
 # ─────────────────────────────────────────────────────────────
 #  MODELS
@@ -153,23 +305,20 @@ class Category(BaseModel):
     class Config:
         from_attributes = True
 
-
 class FieldOption(BaseModel):
     label: str
     value: str
-
 
 class Field(BaseModel):
     id: str
     label: str
     key: str
-    type: str  # text, number, nationalCode, date, checkbox, radio, select, boolean, province, city, file, textarea, licensePlate
+    type: str
     isRequired: bool = False
     placeholder: Optional[str] = ""
     options: List[str] = []
     hasOther: bool = False
     validationRules: Dict[str, Any] = {}
-
 
 class Form(BaseModel):
     id: str
@@ -177,14 +326,12 @@ class Form(BaseModel):
     description: str
     fields: List[Field]
 
-
 class ServiceCreate(BaseModel):
     serviceId: str
     serviceTitle: str
-    category: str  # category name
+    category: str
     sort: int = 0
-    data: Dict[str, Any]  # full data object from JSON
-
+    data: Dict[str, Any]
 
 class ServiceResponse(BaseModel):
     serviceId: str
@@ -197,7 +344,6 @@ class ServiceResponse(BaseModel):
     isEnabled: bool = True
     description: str = ""
 
-
 class ServiceDetailResponse(BaseModel):
     serviceId: str
     serviceTitle: str
@@ -205,13 +351,11 @@ class ServiceDetailResponse(BaseModel):
     sort: int = 0
     data: Dict[str, Any]
 
-
 class PaginatedResponse(BaseModel):
     items: List[ServiceResponse]
     nextCursor: Optional[str] = None
     hasMore: bool
     total: int
-
 
 class User(BaseModel):
     id: str
@@ -223,14 +367,12 @@ class User(BaseModel):
     isPremium: bool = False
     token: Optional[str] = None
 
-
 class RequestCreate(BaseModel):
     serviceId: str
     serviceTitle: str
     price: int
     documents: List[Dict[str, str]]
     receiptImage: Optional[str] = None
-
 
 class RequestResponse(BaseModel):
     id: str
@@ -243,21 +385,17 @@ class RequestResponse(BaseModel):
     status: str
     submittedAt: str
 
-
 class OTPRequest(BaseModel):
     phone: str
     app: Optional[str] = None
-
 
 class OTPVerify(BaseModel):
     phone: str
     otp: str
 
-
 class TelegramLogin(BaseModel):
     initData: str
     user: Dict[str, Any]
-
 
 class LoginResponse(BaseModel):
     success: bool
@@ -265,19 +403,16 @@ class LoginResponse(BaseModel):
     token: Optional[str] = None
     message: Optional[str] = None
 
-
 class BulkImportResult(BaseModel):
     imported: int
     updated: int
     failed: int
     errors: List[str]
 
-
 # ─────────────────────────────────────────────────────────────
 #  AUTH HELPERS
 # ─────────────────────────────────────────────────────────────
 security = HTTPBearer()
-
 
 def create_token(user_id: str, phone: str) -> str:
     payload = {
@@ -287,13 +422,11 @@ def create_token(user_id: str, phone: str) -> str:
     }
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
-
 def decode_token(token: str) -> dict:
     try:
         return jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
     except jwt.PyJWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
-
 
 def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> dict:
     payload = decode_token(credentials.credentials)
@@ -305,12 +438,15 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
             raise HTTPException(status_code=401, detail="User not found")
         return dict(row)
 
-
 # ─────────────────────────────────────────────────────────────
 #  APP INIT
 # ─────────────────────────────────────────────────────────────
 app = FastAPI(title="Cafenet Online API", version="2.0.0")
 
+# Add compression middleware
+app.add_middleware(GZipMiddleware, minimum_size=1000, compresslevel=6)
+
+# Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -319,26 +455,70 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Add performance monitoring middleware
+@app.middleware("http")
+async def add_process_time_header(request, call_next):
+    start_time = time.time()
+    response = await call_next(request)
+    process_time = time.time() - start_time
+    response.headers["X-Process-Time"] = str(process_time)
+    
+    # Log slow requests
+    if process_time > 0.5:
+        print(f"⚠️ Slow request: {request.url.path} - {process_time:.2f}s")
+    
+    return response
 
 # ─────────────────────────────────────────────────────────────
 #  CATEGORY ENDPOINTS
 # ─────────────────────────────────────────────────────────────
 @app.get("/api/categories", response_model=List[Category])
+@cached(ttl=3600)  # Cache for 1 hour
 def get_categories():
     with get_db() as conn:
         cur = conn.cursor()
-        cur.execute(
-            """SELECT categories.id, name, icon, categories.sort, is_enable as isEnable,count(services.id) as count FROM categories
-inner join services on categories.id = services.category_id
-GROUP BY categories.id,name, icon, categories.sort, is_enable
-UNION ALL
-select -1,'پرکاربرد' name,'⭐' icon,-5 sort,true  as isEnable,count(services.id) as count from services where is_special=1 and is_enabled=1
-UNION ALL
-select 0,'همه خدمات' name,'🔍' icon,-4 sort,true  as isEnable,count(services.id) as count from services where is_enabled=1"""
-        )
+        # Optimized query with proper joins
+        cur.execute("""
+            WITH category_counts AS (
+                SELECT category_id, COUNT(*) as cnt
+                FROM services
+                WHERE is_enabled = 1
+                GROUP BY category_id
+            )
+            SELECT 
+                c.id, 
+                c.name, 
+                c.icon, 
+                c.sort, 
+                c.is_enable as isEnable,
+                COALESCE(cc.cnt, 0) as count
+            FROM categories c
+            LEFT JOIN category_counts cc ON c.id = cc.category_id
+            WHERE c.is_enable = 1
+            UNION ALL
+            SELECT 
+                -1 as id,
+                'پرکاربرد' as name,
+                '⭐' as icon,
+                -5 as sort,
+                1 as isEnable,
+                COUNT(*) as count
+            FROM services
+            WHERE is_special = 1 AND is_enabled = 1
+            UNION ALL
+            SELECT 
+                0 as id,
+                'همه خدمات' as name,
+                '🔍' as icon,
+                -4 as sort,
+                1 as isEnable,
+                COUNT(*) as count
+            FROM services
+            WHERE is_enabled = 1
+            ORDER BY sort ASC, name ASC
+        """)
         rows = cur.fetchall()
         return [dict(row) for row in rows]
-
 
 @app.post("/api/categories")
 def create_category(cat: Category):
@@ -350,30 +530,31 @@ def create_category(cat: Category):
         """, (cat.name, cat.icon, cat.sort, 1 if cat.isEnable else 0,
               datetime.utcnow().isoformat(), datetime.utcnow().isoformat()))
         conn.commit()
+        # Clear cache
+        cache.delete(hashlib.md5('get_categories'.encode()).hexdigest())
         return {"success": True, "id": cur.lastrowid}
-
 
 # ─────────────────────────────────────────────────────────────
 #  SERVICE ENDPOINTS WITH INFINITE SCROLL
 # ─────────────────────────────────────────────────────────────
-# ... (بقیه imports و مدل‌ها) ...
-
 @app.get("/api/services", response_model=PaginatedResponse)
+@cached(ttl=120)  # Cache for 2 minutes
 def get_services(
     cursor: Optional[str] = Query(None),
-    limit: int = Query(12, ge=1, le=1000),
+    limit: int = Query(12, ge=1, le=100),
     category: Optional[str] = None,
     search: Optional[str] = None,
     sort: Literal["default", "price_asc", "price_desc"] = "default",
-    page: Optional[int] = None,  # ignored
+    page: Optional[int] = None,
 ):
     with get_db() as conn:
         cur = conn.cursor()
+        
+        # Use more efficient query - select only needed columns
         query = """
             SELECT s.id as serviceId, s.title as serviceTitle, c.name as category,
                    s.sort, s.price, s.duration, s.is_special as isSpecial,
-                   s.is_enabled as isEnabled, s.description,
-                   s.created_at
+                   s.is_enabled as isEnabled, s.description
             FROM services s
             LEFT JOIN categories c ON s.category_id = c.id
             WHERE s.is_enabled = 1
@@ -392,14 +573,23 @@ def get_services(
         if where_clauses:
             query += " AND " + " AND ".join(where_clauses)
 
+        # More efficient cursor pagination
         if cursor:
             try:
                 sort_val, last_id = cursor.split("|")
-                query += " AND (s.sort > ? OR (s.sort = ? AND s.id > ?))"
-                params.extend([int(sort_val), int(sort_val), last_id])
+                if sort == "default":
+                    query += " AND (s.sort > ? OR (s.sort = ? AND s.id > ?))"
+                    params.extend([int(sort_val), int(sort_val), last_id])
+                elif sort == "price_asc":
+                    query += " AND (s.price > ? OR (s.price = ? AND s.id > ?))"
+                    params.extend([int(sort_val), int(sort_val), last_id])
+                else:
+                    query += " AND (s.price < ? OR (s.price = ? AND s.id > ?))"
+                    params.extend([int(sort_val), int(sort_val), last_id])
             except:
                 pass
 
+        # Use indexed order by
         if sort == "price_asc":
             query += " ORDER BY s.price ASC, s.id ASC"
         elif sort == "price_desc":
@@ -408,10 +598,12 @@ def get_services(
             query += " ORDER BY s.sort ASC, s.id ASC"
 
         query += f" LIMIT {limit + 1}"
+        
         cur.execute(query, params)
         rows = cur.fetchall()
         items = [dict(row) for row in rows]
 
+        # Optimized count query - use covering index
         count_query = """
             SELECT COUNT(*) as total
             FROM services s
@@ -425,6 +617,7 @@ def get_services(
         if search:
             count_query += " AND (s.title LIKE ? OR c.name LIKE ?)"
             count_params.extend([f"%{search}%", f"%{search}%"])
+        
         cur.execute(count_query, count_params)
         total = cur.fetchone()["total"]
 
@@ -434,7 +627,12 @@ def get_services(
         next_cursor = None
         if has_more and items_page:
             last = items_page[-1]
-            next_cursor = f"{last.get('sort', 0)}|{last['serviceId']}"
+            if sort == "default":
+                next_cursor = f"{last.get('sort', 0)}|{last['serviceId']}"
+            elif sort == "price_asc":
+                next_cursor = f"{last.get('price', 0)}|{last['serviceId']}"
+            else:
+                next_cursor = f"{last.get('price', 0)}|{last['serviceId']}"
 
         return {
             "items": items_page,
@@ -443,9 +641,8 @@ def get_services(
             "total": total
         }
 
-# ... (بقیه کد) ...
-
 @app.get("/api/services/featured")
+@cached(ttl=300)  # Cache for 5 minutes
 def get_featured_services():
     with get_db() as conn:
         cur = conn.cursor()
@@ -462,8 +659,8 @@ def get_featured_services():
         rows = cur.fetchall()
         return [dict(row) for row in rows]
 
-
 @app.get("/api/services/{service_id}", response_model=ServiceDetailResponse)
+@cached(ttl=300)  # Cache for 5 minutes
 def get_service(service_id: str):
     with get_db() as conn:
         cur = conn.cursor()
@@ -522,16 +719,11 @@ def get_service(service_id: str):
             "data": data
         }
 
-
 # ─────────────────────────────────────────────────────────────
-#  BULK DATA IMPORT (Save your JSON data to database)
+#  BULK DATA IMPORT
 # ─────────────────────────────────────────────────────────────
 @app.post("/api/services/import")
 def import_services(services: List[ServiceCreate]):
-    """
-    Import multiple services from JSON data.
-    Saves categories and services to database.
-    """
     results = {"imported": 0, "updated": 0, "failed": 0, "errors": []}
 
     with get_db() as conn:
@@ -553,12 +745,11 @@ def import_services(services: List[ServiceCreate]):
                 else:
                     cat_id = cat_row["id"]
 
-                # 2. Prepare service data from the nested structure
+                # 2. Prepare service data
                 data = svc.data
                 service_id = svc.serviceId
                 title = svc.serviceTitle
 
-                # Extract fields from data
                 price = data.get("price", 0)
                 cost = data.get("cost", 0)
                 benefit = data.get("benefit", 0)
@@ -594,7 +785,6 @@ def import_services(services: List[ServiceCreate]):
                     datetime.utcnow().isoformat()
                 ))
 
-                # Check if it was an update or insert
                 if cur.rowcount > 0:
                     results["updated"] += 1
                 else:
@@ -605,9 +795,10 @@ def import_services(services: List[ServiceCreate]):
                 results["errors"].append(f"Service {svc.serviceId}: {str(e)}")
 
         conn.commit()
-
+    
+    # Clear cache after import
+    cache.clear()
     return results
-
 
 # ─────────────────────────────────────────────────────────────
 #  PROVINCE & CITY ENDPOINTS
@@ -646,16 +837,15 @@ PROVINCE_CITY_DATA = {
     "یزد": ["یزد", "میبد", "اردکان", "بافق", "مهریز", "ابرکوه", "تفت", "اشکذر", "خاتم", "بهاباد", "زارچ", "مرودشت", "نیر"]
 }
 
-
 @app.get("/api/provinces")
+@cached(ttl=86400)  # Cache for 24 hours
 def get_provinces():
     return list(PROVINCE_CITY_DATA.keys())
 
-
 @app.get("/api/cities/{province}")
+@cached(ttl=86400)  # Cache for 24 hours
 def get_cities(province: str):
     return PROVINCE_CITY_DATA.get(province, [])
-
 
 # ─────────────────────────────────────────────────────────────
 #  DOC TYPES
@@ -671,11 +861,10 @@ DOC_TYPES = [
     {"Id": 8, "title": "تاریخ", "REx": "^\\d{4}-(0?[1-9]|1[0-2])-(0?[1-9]|[12]\\d|3[01])$"}
 ]
 
-
 @app.get("/api/doc-types")
+@cached(ttl=86400)  # Cache for 24 hours
 def get_doc_types():
     return DOC_TYPES
-
 
 # ─────────────────────────────────────────────────────────────
 #  AUTH ENDPOINTS
@@ -695,7 +884,6 @@ def send_otp(req: OTPRequest):
 
     print(f"📱 OTP for {req.phone}: {code}")
     return {"success": True, "message": "کد ارسال شد"}
-
 
 @app.post("/api/auth/otp/verify")
 def verify_otp(req: OTPVerify):
@@ -760,7 +948,6 @@ def verify_otp(req: OTPVerify):
         "token": token
     }
 
-
 @app.post("/api/auth/telegram-login")
 def telegram_login(req: TelegramLogin):
     user_data = req.user
@@ -815,7 +1002,6 @@ def telegram_login(req: TelegramLogin):
         "token": token
     }
 
-
 @app.get("/api/auth/me")
 def get_me(user: dict = Depends(get_current_user)):
     return {
@@ -828,7 +1014,6 @@ def get_me(user: dict = Depends(get_current_user)):
         "isPremium": bool(user["is_premium"])
     }
 
-
 @app.post("/api/auth/logout")
 def logout(user: dict = Depends(get_current_user)):
     with get_db() as conn:
@@ -836,7 +1021,6 @@ def logout(user: dict = Depends(get_current_user)):
         cur.execute("UPDATE users SET token = NULL WHERE id = ?", (user["id"],))
         conn.commit()
     return {"success": True}
-
 
 # ─────────────────────────────────────────────────────────────
 #  REQUEST ENDPOINTS
@@ -866,11 +1050,21 @@ def create_request(req: RequestCreate, user: dict = Depends(get_current_user)):
         ))
         conn.commit()
 
+    # Clear user requests cache
+    cache.delete(f"user_requests_{user['id']}")
     return {"success": True, "requestId": req_id}
-
 
 @app.get("/api/requests")
 def get_requests(user: dict = Depends(get_current_user)):
+    # Check cache first
+    cache_key = f"user_requests_{user['id']}"
+    cached_result = cache.get(cache_key)
+    if cached_result is not None:
+        try:
+            return json.loads(cached_result)
+        except:
+            pass
+
     with get_db() as conn:
         cur = conn.cursor()
         cur.execute("""
@@ -892,8 +1086,10 @@ def get_requests(user: dict = Depends(get_current_user)):
                 "status": r["status"],
                 "submittedAt": r["submitted_at"]
             })
+        
+        # Cache for 30 seconds
+        cache.set(cache_key, json.dumps(result, ensure_ascii=False), 30)
         return result
-
 
 @app.put("/api/requests/{request_id}/status")
 def update_request_status(
@@ -913,8 +1109,9 @@ def update_request_status(
         if cur.rowcount == 0:
             raise HTTPException(status_code=404, detail="Request not found")
 
+    # Clear cache
+    cache.delete(f"user_requests_{user['id']}")
     return {"success": True, "status": status}
-
 
 # ─────────────────────────────────────────────────────────────
 #  SEED DATA
@@ -973,10 +1170,7 @@ def seed_data():
             """, (cat[0], cat[1], cat[2], cat[3], cat[4],
                   datetime.utcnow().isoformat(), datetime.utcnow().isoformat()))
 
-        # Import sample services from your JSON
-        # This would be done via the /api/services/import endpoint
-        # For now, we'll just add a couple sample services
-
+        # Sample services
         sample_services = [
             (
                 "svc_001", "استعلام وضعیت درخواست پلیس اماکن",
@@ -1022,7 +1216,6 @@ def seed_data():
         conn.commit()
         print("✅ Seed complete!")
 
-
 # ─────────────────────────────────────────────────────────────
 #  STARTUP
 # ─────────────────────────────────────────────────────────────
@@ -1030,11 +1223,25 @@ def seed_data():
 def on_startup():
     init_db()
     seed_data()
-
+    # Start cache cleanup thread
+    def clean_cache():
+        while True:
+            time.sleep(60)
+            cache.cleanup()
+    threading.Thread(target=clean_cache, daemon=True).start()
+    print("🚀 Server started with caching and optimized database")
 
 # ─────────────────────────────────────────────────────────────
 #  RUN
 # ─────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run(
+        "app:app", 
+        host="0.0.0.0", 
+        port=8000, 
+        reload=True,
+        workers=4,
+        limit_concurrency=100,
+        backlog=2048
+    )

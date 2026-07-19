@@ -4,7 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>کافی‌نت آنلاین – خدمات اداری و دولتی</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <!-- Add these for faster loading -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="dns-prefetch" href="https://telegram.org">
+<link rel="preload" href="/api/categories" as="fetch" crossorigin>
+    <!-- <link rel="preconnect" href="https://fonts.googleapis.com"> -->
     <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         /* ─── Reset & Base ─── */
@@ -1982,6 +1987,101 @@ const APP_LINKS = {
                 <div class="request-list">${reqHTML}</div>
             </div>`;
     }
+    // Add this to your JavaScript section
+
+// 1. Debounce search more aggressively
+let searchTimer;
+const searchInput = document.getElementById('searchInput');
+if (searchInput) {
+    searchInput.addEventListener('input', function () {
+        clearTimeout(searchTimer);
+        closeServicePage();
+        searchTimer = setTimeout(() => {
+            const v = this.value.trim();
+            if (v) startSearch(v); else clearSearch();
+        }, 500); // Increased from 300ms to 500ms
+    });
+}
+
+// 2. Lazy load images
+const lazyLoadImages = () => {
+    const images = document.querySelectorAll('img[data-src]');
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const img = entry.target;
+                img.src = img.dataset.src;
+                img.removeAttribute('data-src');
+                observer.unobserve(img);
+            }
+        });
+    });
+    images.forEach(img => observer.observe(img));
+};
+
+// 3. Virtual scrolling for large lists (optional)
+// Use IntersectionObserver for infinite scroll (already implemented)
+// Optimize observer threshold
+const observerOptions = {
+    rootMargin: '0px 0px 200px 0px', // Reduced from 300px
+    threshold: 0.1
+};
+
+// 4. Cache DOM references
+const domCache = {};
+const getElement = (id) => {
+    if (!domCache[id]) {
+        domCache[id] = document.getElementById(id);
+    }
+    return domCache[id];
+};
+
+// 5. Batch DOM updates
+const batchUpdates = (updates) => {
+    requestAnimationFrame(() => {
+        updates.forEach(update => update());
+    });
+};
+
+// 6. Use textContent instead of innerHTML when possible
+// For simple text updates
+const updateElementText = (id, text) => {
+    const el = getElement(id);
+    if (el) el.textContent = text;
+};
+
+// 7. Optimize renderServiceCards
+function renderServiceCards(items) {
+    const grid = document.getElementById('serviceGrid');
+    if (!grid) return;
+    
+    // Use document fragment for batch DOM insertion
+    const fragment = document.createDocumentFragment();
+    const tempDiv = document.createElement('div');
+    
+    items.forEach(s => {
+        const card = document.createElement('div');
+        card.className = 'service-card';
+        card.onclick = () => openServicePage(s.serviceId);
+        
+        // Build card HTML efficiently
+        card.innerHTML = `
+            <div class="service-card-head">
+                <h3>${escapeHtml(s.serviceTitle)}</h3>
+                ${s.isSpecial ? `<span class="service-badge">ویژه</span>` : ''}
+            </div>
+            ${s.duration ? `<div class="service-duration">⏱ ${escapeHtml(s.duration)}</div>` : ''}
+            <div class="service-cats">${s.category ? `<span class="service-cat-tag">${escapeHtml(s.category)}</span>` : ''}</div>
+            <div class="service-footer">
+                <div class="service-price">${formatPrice(s.price)} <span>تومان</span></div>
+                <button class="btn-request" onclick="event.stopPropagation();startRequest('${s.serviceId}')">ثبت درخواست</button>
+            </div>
+        `;
+        fragment.appendChild(card);
+    });
+    
+    grid.appendChild(fragment);
+}
     </script>
 </body>
 </html>
