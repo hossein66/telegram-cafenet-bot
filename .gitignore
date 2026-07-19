@@ -144,3 +144,13 @@ yarn-error.log*
 coverage/
 coverage.*
 *.coverage
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pyc.*
+__pycache__/app.cpython-313.pyc
+cafenet.db-shm
+cafenet.db-wal
