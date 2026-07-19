@@ -490,6 +490,7 @@ async def add_process_time_header(request, call_next):
 #  PAYMENT INFO ENDPOINT
 # ─────────────────────────────────────────────────────────────
 @app.get("/api/payment/info")
+@cached(ttl=3600)  # Cache for 1 hour
 def get_payment_info():
     """Get payment information from database"""
     try:
