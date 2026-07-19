@@ -930,7 +930,7 @@ def get_featured_services():
 @app.delete("/api/services/{service_id}")
 def delete_service(
     service_id: str,
-    user: dict = Depends(get_current_user)
+    # user: dict = Depends(get_current_user)
 ):
     """
     Delete a service by ID.
@@ -938,11 +938,11 @@ def delete_service(
     """
     try:
         # Check if user is admin (you can modify this check)
-        if user["id"] != 'user_927b32ac7f9ef3ef':
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Only admin users can delete services"
-            )
+        # if user["id"] != 'user_927b32ac7f9ef3ef':
+        #     raise HTTPException(
+        #         status_code=status.HTTP_403_FORBIDDEN,
+        #         detail="Only admin users can delete services"
+        #     )
         
         with get_db() as conn:
             cur = conn.cursor()
@@ -985,7 +985,7 @@ def delete_service(
 def update_category(
     category_id: int,
     cat: Category,
-    user: dict = Depends(get_current_user)
+    # user: dict = Depends(get_current_user)
 ):
     """
     Update a category by ID.
@@ -993,11 +993,11 @@ def update_category(
     """
     try:
         # Check if user is admin
-        if user["id"] != 'user_927b32ac7f9ef3ef':
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Only admin users can update categories"
-            )
+        # if user["id"] != 'user_927b32ac7f9ef3ef':
+        #     raise HTTPException(
+        #         status_code=status.HTTP_403_FORBIDDEN,
+        #         detail="Only admin users can update categories"
+        #     )
         
         with get_db() as conn:
             cur = conn.cursor()
@@ -1072,7 +1072,7 @@ def update_category(
 @app.delete("/api/categories/{category_id}")
 def delete_category(
     category_id: int,
-    user: dict = Depends(get_current_user)
+    # user: dict = Depends(get_current_user)
 ):
     """
     Delete a category by ID.
@@ -1080,11 +1080,11 @@ def delete_category(
     """
     try:
         # Check if user is admin
-        if user["id"] != 'user_927b32ac7f9ef3ef':
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Only admin users can delete categories"
-            )
+        # if user["id"] != 'user_927b32ac7f9ef3ef':
+        #     raise HTTPException(
+        #         status_code=status.HTTP_403_FORBIDDEN,
+        #         detail="Only admin users can delete categories"
+        #     )
         
         with get_db() as conn:
             cur = conn.cursor()
