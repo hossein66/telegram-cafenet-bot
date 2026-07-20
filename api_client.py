@@ -126,10 +126,10 @@ class CofenetDataStore:
     automatically stay in sync.
     """
 
-    CATEGORIES_TTL = 600        # 10 minutes
-    SERVICES_TTL = 180          # 3 minutes
-    DOC_TYPES_TTL = 3600        # 1 hour
-    SERVICE_DETAIL_TTL = 1800   # 30 minutes - per-service documents/forms
+    CATEGORIES_TTL =68400 #600        # 10 minutes
+    SERVICES_TTL =68400 #180          # 3 minutes
+    DOC_TYPES_TTL =68400 #3600        # 1 hour
+    SERVICE_DETAIL_TTL = 68400 #  1800   # 30 minutes - per-service documents/forms
 
     def __init__(self, base_url: str = API_BASE):
         self.base_url = base_url.rstrip("/")
