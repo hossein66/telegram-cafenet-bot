@@ -1,0 +1,1 @@
+[{"title": "شماره موبایل ", "placeholder": "شماره موبایل وارد شده باید متعلق به مالک خودرو باشه", "typeId": 1, "type": "Text", "regex": ".*"}, {"title": "کدملی مالک ماشین", "placeholder": "کدملی مالک خودرو رو وارد کنید", "typeId": 6, "type": "NationalCode", "regex": "^[0-9]{10}$"}, {"title": "پلاک ماشین", "placeholder": "", "typeId": 1, "type": "Text", "regex": ".*"}]

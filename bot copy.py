@@ -1,7 +1,6 @@
 # bot.py
 import json
 import logging
-import os
 import sys
 import traceback
 import re
@@ -19,34 +18,12 @@ from telegram.ext import (
 )
 from telegram.constants import ParseMode
 from telegram.error import TelegramError, NetworkError, TimedOut, RetryAfter
-import base64
-import httpx
-from api_client import API_BASE, data_store
-try:
-    from PIL import Image
-    import io
-    PIL_AVAILABLE = True
-except ImportError:
-    PIL_AVAILABLE = False
-    logging.warning("Pillow not installed, image compression disabled")
+
 # Import config
 try:
     from config import BOT_TOKEN
 except ImportError:
-    BOT_TOKEN = os.environ.get("BOT_TOKEN")
-
-if not BOT_TOKEN:
-    raise RuntimeError(
-        "No bot token found. Create a config.py with BOT_TOKEN = '...' "
-        "(and keep it out of version control), or set the BOT_TOKEN "
-        "environment variable."
-    )
-
-# How often the bot refreshes its cached data from the API, in seconds.
-# Each resource (categories/services/doc-types) has its own TTL inside
-# api_client.py, so calling refresh_all() this often is cheap - it's a
-# no-op for anything that isn't due yet.
-REFRESH_INTERVAL_SECONDS = int(os.environ.get("COFENET_REFRESH_INTERVAL", "600"))
+    BOT_TOKEN = "8824483780:AAH7CES3hG69Kf0q_wA6D0oe1-tE0Lxz7pI"
 
 # Enable logging
 logging.basicConfig(
@@ -56,19 +33,53 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 logging.getLogger("httpx").setLevel(logging.WARNING)
 
-# ─────────────────────────────────────────────────────────────
-#  LIVE DATA (fetched from the Cafenet Online API, cached client-side)
-# ─────────────────────────────────────────────────────────────
-# These names are kept so the rest of the bot's logic doesn't need to
-# change - they're bound to the SAME list/dict objects that data_store
-# mutates in place on every refresh, so they always reflect the latest
-# cached data without needing to be reassigned.
-CATEGORIES = data_store.categories
-SERVICES = data_store.services
-DOC_TYPES = data_store.doc_types
-CATEGORY_NAMES = data_store.category_names
-CATEGORY_SORT = data_store.category_sort
-DOC_TYPE_MAP = data_store.doc_type_map
+# Load category data
+def load_categories():
+    try:
+        with open("categoury.json", "r", encoding="utf-8") as f:
+            return json.load(f)
+    except FileNotFoundError:
+        logger.error("categoury.json file not found!")
+        return []
+    except json.JSONDecodeError as e:
+        logger.error(f"Error parsing categories JSON: {e}")
+        return []
+
+# Load service data
+def load_services():
+    try:
+        with open("cofenet-items.json", "r", encoding="utf-8") as f:
+            return json.load(f)
+    except FileNotFoundError:
+        logger.error("cofenet-items.json file not found!")
+        sys.exit(1)
+    except json.JSONDecodeError as e:
+        logger.error(f"Error parsing services JSON: {e}")
+        sys.exit(1)
+
+# Load document types
+def load_document_types():
+    try:
+        with open("docType.json", "r", encoding="utf-8") as f:
+            return json.load(f)
+    except FileNotFoundError:
+        logger.error("docType.json file not found!")
+        return []
+    except json.JSONDecodeError as e:
+        logger.error(f"Error parsing document types JSON: {e}")
+        return []
+
+# Load data
+CATEGORIES = load_categories()
+SERVICES = load_services()
+DOC_TYPES = load_document_types()
+
+# Build category mapping from categories file
+CATEGORY_NAMES = {cat["id"]: cat["name"] for cat in CATEGORIES}
+CATEGORY_SORT = {cat["id"]: cat.get("sort", 999) for cat in CATEGORIES}
+
+# Build document type mapping
+DOC_TYPE_MAP = {doc["Id"]: doc for doc in DOC_TYPES}
 
 # Helper functions
 def format_price(price: int) -> str:
@@ -81,18 +92,6 @@ def format_price(price: int) -> str:
 def get_category_name(category_id: int) -> str:
     """Get category name from ID"""
     return CATEGORY_NAMES.get(category_id, f"دسته {category_id}")
-
-def get_category_icon(category_id: int) -> str:
-    """Get category icon from ID, fallback to default if not available"""
-    try:
-        for cat in CATEGORIES:
-            if cat.get("id") == category_id:
-                icon = cat.get("icon")
-                if icon:
-                    return icon
-        return "📂"  # fallback icon
-    except:
-        return "📂"
 
 def get_service_categories(service: Dict) -> List[str]:
     """Get category names for a service"""
@@ -123,25 +122,31 @@ def paginate_items(items: List[Dict], page: int = 0, page_size: int = 10) -> Lis
     except:
         return []
 
-async def get_documents_with_types(service: Dict) -> List[Dict]:
-    """Get documents with their types for a service.
-
-    The lightweight service list from /api/services/all doesn't include the
-    per-service form/documents definition, so this fetches it lazily (once,
-    then cached with a TTL) the first time a service is opened - mirroring
-    how index.html calls buildDocsFromDetail() only when a service card is
-    clicked.
-    """
+def get_documents_with_types(service: Dict) -> List[Dict]:
+    """Get documents with their types from service"""
     try:
-        docs = await data_store.get_service_documents(service)
-        return docs if docs else [{"title": "نیازی به مدارک نیست", "typeId": 1, "type": "Text", "regex": ".*"}]
-    except Exception as e:
-        logger.error(f"Error getting documents for service {service.get('Id')}: {e}")
+        docs = service.get("Documents", [])
+        if not docs:
+            return [{"title": "نیازی به مدارک نیست", "typeId": 1, "type": "Text", "regex": ".*"}]
+        
+        result = []
+        for doc in docs:
+            doc_title = doc.get("title", "").strip()
+            type_id = doc.get("typeId", 1)
+            doc_type = DOC_TYPE_MAP.get(type_id, {"title": "Text", "REx": ".*"})
+            result.append({
+                "title": doc_title,
+                "typeId": type_id,
+                "type": doc_type.get("title", "Text"),
+                "regex": doc_type.get("REx", ".*")
+            })
+        return result
+    except:
         return [{"title": "نیازی به مدارک نیست", "typeId": 1, "type": "Text", "regex": ".*"}]
 
-async def get_documents_list(service: Dict) -> List[str]:
+def get_documents_list(service: Dict) -> List[str]:
     """Parse documents from service (backward compatibility)"""
-    docs = await get_documents_with_types(service)
+    docs = get_documents_with_types(service)
     return [doc["title"] for doc in docs]
 
 def validate_document(value: str, doc_info: Dict) -> Tuple[bool, str]:
@@ -239,105 +244,6 @@ def handle_errors(func):
                 break
     return wrapper
 
-# ─────────────────────────────────────────────────────────────
-#  AUTHENTICATION WITH SERVER
-# ─────────────────────────────────────────────────────────────
-async def authenticateUserWithServer(
-    telegram_user: Any, 
-    init_data: Optional[str] = None,
-    context: Optional[ContextTypes.DEFAULT_TYPE] = None
-) -> Optional[Dict[str, Any]]:
-    """
-    Authenticate user with the server using Telegram data.
-    
-    Called when a user interacts with the bot to validate/store their
-    credentials. Returns the authenticated user object and token if successful.
-    
-    Args:
-        telegram_user: Telegram User object or dict with id, first_name, last_name, username, etc.
-        init_data: Optional initData string from Telegram Mini App
-        context: Optional ContextTypes for storing in user_data
-    
-    Returns:
-        Dict with 'user' and 'token' if successful, None if failed
-    """
-    try:
-        # Convert Telegram User object to dict if needed
-        user_dict = telegram_user.to_dict() if hasattr(telegram_user, 'to_dict') else telegram_user
-        
-        logger.info(f"Authenticating Telegram user: {user_dict.get('username', user_dict.get('id'))}")
-        
-        # Prepare the authentication payload
-        auth_payload = {
-            "initData": init_data or "",
-            "user": user_dict
-        }
-        
-        # Call the authentication API
-        try:
-            response = await data_store._get_json(
-                "/api/auth/telegram-login",
-                params=None  # POST request, so we'll handle it manually
-            )
-        except:
-            # Fallback: make the request directly
-            import httpx
-            async with httpx.AsyncClient(timeout=10.0) as client:
-                try:
-                    res = await client.post(
-                        f"{API_BASE.rstrip('/')}/api/auth/telegram-login",
-                        json=auth_payload,
-                        headers={"Content-Type": "application/json"}
-                    )
-                    res.raise_for_status()
-                    response = res.json()
-                except Exception as e:
-                    logger.error(f"Error calling telegram-login API: {e}")
-                    return None
-        
-        # Validate response
-        if not response or not response.get("success"):
-            logger.warning(f"Authentication failed: {response}")
-            return None
-        
-        auth_data = response.get("user")
-        token = response.get("token")
-        
-        if not auth_data or not token:
-            logger.warning("Missing user or token in auth response")
-            return None
-        
-        # Store in context if provided
-        if context:
-            context.user_data["auth_token"] = token
-            context.user_data["authenticated_user"] = auth_data
-            context.user_data["telegram_id"] = user_dict.get("id")
-            logger.info(f"User {auth_data.get('id')} stored in context")
-        
-        logger.info(f"✅ User authentication successful: {auth_data.get('username')} (ID: {auth_data.get('id')})")
-        
-        return {
-            "user": auth_data,
-            "token": token
-        }
-        
-    except Exception as e:
-        logger.error(f"Error in authenticateUserWithServer: {e}")
-        logger.error(traceback.format_exc())
-        return None
-
-def get_user_token(context: ContextTypes.DEFAULT_TYPE) -> Optional[str]:
-    """Get the stored authentication token for the current user"""
-    return context.user_data.get("auth_token")
-
-def get_authenticated_user(context: ContextTypes.DEFAULT_TYPE) -> Optional[Dict[str, Any]]:
-    """Get the stored authenticated user info for the current user"""
-    return context.user_data.get("authenticated_user")
-
-def is_user_authenticated(context: ContextTypes.DEFAULT_TYPE) -> bool:
-    """Check if the current user is authenticated"""
-    return bool(context.user_data.get("auth_token")) and bool(context.user_data.get("authenticated_user"))
-
 async def set_menu_button(application: Application) -> None:
     """Set the menu button for the bot - only show start and menu"""
     try:
@@ -358,9 +264,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         context.user_data.clear()
         
         user = update.effective_user
-        # Authenticate user with server and store token/user info in context
-        await authenticateUserWithServer(user, context=context)
-        
         welcome_text = (
             f"به ربات کافی نت خوش آمدید {user.first_name}! 👋\n"
             "چه کمکی می توان به شما بکنم؟\n\n"
@@ -384,9 +287,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         row = []
         for cat_id in sorted_cats[:10]:
             cat_name = get_category_name(cat_id)
-            cat_icon = get_category_icon(cat_id)
             row.append(InlineKeyboardButton(
-                f"{cat_icon} {cat_name}", 
+                f"📂 {cat_name}", 
                 callback_data=f"cat_{cat_id}"
             ))
             if len(row) == 2:
@@ -402,9 +304,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
                 InlineKeyboardButton("📂 بیشتر...", callback_data="categories_page_1")
             ])
         
-        keyboard.append([
-            InlineKeyboardButton("📥 درخواست‌های من", callback_data="my_requests"),
-        ])
         keyboard.append([
             InlineKeyboardButton("📊 همه خدمات", callback_data="all_services")
         ])
@@ -468,10 +367,6 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             await show_top_services(query)
         elif data == "all_services":
             await show_all_services(query)
-        elif data == "retry_submit":
-            await retry_submit(query, context)    
-        elif data == "my_requests":
-            await show_my_requests(query, context)
         elif data.startswith("categories_page_"):
             page = int(data.split("_")[2])
             await show_categories_page(query, page)
@@ -479,7 +374,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             category_id = int(data[4:])
             await show_category_services(query, category_id)
         elif data.startswith("service_"):
-            service_id = data[8:]
+            service_id = int(data[8:])
             await show_service_detail(query, service_id, context)
         elif data.startswith("page_top_"):
             page = int(data[9:])
@@ -493,7 +388,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             category_id = int(parts[3])
             await show_category_services(query, category_id, page)
         elif data.startswith("request_"):
-            service_id = data[8:]
+            service_id = int(data[8:])
             await handle_request(query, service_id, context)
         elif data == "back_to_menu":
             await back_to_menu(query, context)
@@ -520,107 +415,6 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         except:
             pass
 
-def get_request_status_label(status: str) -> str:
-    """Get Persian label for request status"""
-    status_labels = {
-        "pending": "در انتظار بررسی",
-        "processing": "در حال انجام",
-        "done": "انجام شده",
-        "rejected": "رد شده"
-    }
-    return status_labels.get(status, status)
-
-def get_request_status_emoji(status: str) -> str:
-    """Get emoji for request status"""
-    status_emojis = {
-        "pending": "⏳",
-        "processing": "⚙️",
-        "done": "✅",
-        "rejected": "❌"
-    }
-    return status_emojis.get(status, "📋")
-
-async def ensure_authenticated(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
-    """Ensure the user is authenticated. If not, try to re-authenticate."""
-    if is_user_authenticated(context):
-        return True
-    
-    # Try to re-authenticate
-    user = update.effective_user
-    if not user:
-        return False
-    
-    result = await authenticateUserWithServer(user, context=context)
-    if result:
-        logger.info(f"Re-authenticated user {user.id}")
-        return True
-    
-    return False
-
-@handle_errors
-async def show_my_requests(query, context: Optional[ContextTypes.DEFAULT_TYPE] = None):
-    try:
-        await query.answer()
-        
-        # Ensure user is authenticated
-        if context and not await ensure_authenticated(query, context):
-            await query.edit_message_text(
-                "❌ *خطا در احراز هویت*\n\n"
-                "لطفا مجددا /start را بزنید.",
-                parse_mode=ParseMode.MARKDOWN
-            )
-            return
-        
-        await query.edit_message_text(
-            "📋 *درخواست‌های من*\n\n⏳ در حال بارگذاری...",
-            parse_mode=ParseMode.MARKDOWN
-        )
-        
-        token = get_user_token(context) if context else None
-        headers = {"Content-Type": "application/json"}
-        if token:
-            headers["Authorization"] = f"Bearer {token}"
-        
-        import httpx
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            try:
-                res = await client.get(
-                    f"{API_BASE.rstrip('/')}/api/requests",
-                    headers=headers
-                )
-                
-                # If 401, try to re-authenticate once and retry
-                if res.status_code == 401 and context:
-                    logger.info("Token expired, re-authenticating...")
-                    user = query.from_user
-                    if await authenticateUserWithServer(user, context=context):
-                        new_token = get_user_token(context)
-                        if new_token:
-                            headers["Authorization"] = f"Bearer {new_token}"
-                            res = await client.get(
-                                f"{API_BASE.rstrip('/')}/api/requests",
-                                headers=headers
-                            )
-                
-                res.raise_for_status()
-                requests = res.json()
-                requests = requests if isinstance(requests, list) else [requests] if requests else []
-                
-            except httpx.HTTPStatusError as e:
-                if e.response.status_code == 401:
-                    await query.edit_message_text(
-                        "❌ *نشست شما منقضی شده است*\n\n"
-                        "لطفا /start را بزنید تا دوباره وارد شوید.",
-                        parse_mode=ParseMode.MARKDOWN
-                    )
-                    return
-                raise
-        
-        # ... rest of your existing code to display requests ...
-        
-    except Exception as e:
-        logger.error(f"Error in show_my_requests: {e}")
-        await query.edit_message_text("❌ خطا در نمایش درخواست‌ها. لطفا مجددا تلاش کنید.")
 @handle_errors
 async def show_categories_page(query, page: int = 0):
     """Show a specific page of categories"""
@@ -642,9 +436,8 @@ async def show_categories_page(query, page: int = 0):
         row = []
         for cat_id in categories_page:
             cat_name = get_category_name(cat_id)
-            cat_icon = get_category_icon(cat_id)
             row.append(InlineKeyboardButton(
-                f"{cat_icon} {cat_name}", 
+                f"📂 {cat_name}", 
                 callback_data=f"cat_{cat_id}"
             ))
             if len(row) == 2:
@@ -988,7 +781,7 @@ async def show_search_more(query, context: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_text("❌ خطا در نمایش نتایج بیشتر.")
 
 @handle_errors
-async def show_service_detail(query, service_id: str, context: ContextTypes.DEFAULT_TYPE):
+async def show_service_detail(query, service_id: int, context: ContextTypes.DEFAULT_TYPE):
     """Show detailed information about a service"""
     try:
         service = next((s for s in SERVICES if s.get("Id") == service_id), None)
@@ -1002,20 +795,19 @@ async def show_service_detail(query, service_id: str, context: ContextTypes.DEFA
         discount_price = format_price(discount)
         categories = "، ".join(get_service_categories(service))
         
-        docs = await get_documents_with_types(service)
-        
         text = f"📋 *{service['Title']}*\n\n"
         text += f"💰 قیمت: {price} تومان\n"
         if discount > 0:
             text += f"🎯 تخفیف: {discount_price} تومان\n"
         text += f"📂 دسته‌بندی: {categories}\n"
-        text += f"📄 تعداد مدارک: {len(docs)}\n"
-        text += f"🔗 [مشاهده در سایت]({API_BASE +'?service=' + service['Id'] })\n\n"
+        text += f"📄 تعداد مدارک: {len(service.get('Documents', []))}\n"
+        text += f"🔗 [مشاهده در سایت]({service.get('URL', '#')})\n\n"
         
+        docs = get_documents_with_types(service)
         text += "*مدارک مورد نیاز:*\n"
         for idx, doc in enumerate(docs, 1):
             doc_type = doc.get('type', 'Text')
-            text += f"{idx}. {doc['title']} \n"
+            text += f"{idx}. {doc['title']} ({doc_type})\n"
         
         keyboard = [
             [InlineKeyboardButton("📝 ثبت درخواست این سرویس", callback_data=f"request_{service_id}")],
@@ -1059,8 +851,7 @@ async def back_to_menu(query, context: ContextTypes.DEFAULT_TYPE) -> None:
         row = []
         for cat_id in sorted_cats[:10]:
             cat_name = get_category_name(cat_id)
-            cat_icon = get_category_icon(cat_id)
-            row.append(InlineKeyboardButton(f"{cat_icon} {cat_name}", callback_data=f"cat_{cat_id}"))
+            row.append(InlineKeyboardButton(f"📂 {cat_name}", callback_data=f"cat_{cat_id}"))
             if len(row) == 2:
                 keyboard.append(row)
                 row = []
@@ -1074,8 +865,7 @@ async def back_to_menu(query, context: ContextTypes.DEFAULT_TYPE) -> None:
             ])
         
         keyboard.append([InlineKeyboardButton("📊 همه خدمات", callback_data="all_services")])
-        keyboard.append([InlineKeyboardButton("📥 درخواست های من ", callback_data="my_requests")])
-
+        
         reply_markup = InlineKeyboardMarkup(keyboard)
         await query.edit_message_text(
             welcome_text,
@@ -1088,7 +878,7 @@ async def back_to_menu(query, context: ContextTypes.DEFAULT_TYPE) -> None:
         await query.edit_message_text("❌ خطا در بازگشت به منو. لطفا /start را بزنید.")
 
 @handle_errors
-async def handle_request(query, service_id: str, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def handle_request(query, service_id: int, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle service request initiation"""
     try:
         await query.answer()
@@ -1106,7 +896,7 @@ async def handle_request(query, service_id: str, context: ContextTypes.DEFAULT_T
         context.user_data['collecting_docs'] = True
         context.user_data['awaiting_image'] = False
         
-        docs = await get_documents_with_types(service)
+        docs = get_documents_with_types(service)
         if len(docs) == 1 and docs[0]['title'] == "نیازی به مدارک نیست":
             await query.edit_message_text(
                 f"✅ این سرویس نیازی به مدارک ندارد.\n"
@@ -1132,7 +922,7 @@ async def collect_next_document(query, doc_index: int, context: ContextTypes.DEF
             await query.edit_message_text("❌ خطا در دریافت اطلاعات سرویس.")
             return
         
-        docs = await get_documents_with_types(service)
+        docs = get_documents_with_types(service)
         
         if doc_index >= len(docs):
             await show_document_summary_and_payment(query, context)
@@ -1173,12 +963,12 @@ async def collect_next_document(query, doc_index: int, context: ContextTypes.DEF
         
         text = f"📄 *مدرک {doc_index + 1} از {total}*\n\n"
         text += f"🔹 {current_doc['title']}\n"
-        # text += f"📌 نوع: {doc_type}\n\n"
-        # text += f"{instruction}\n\n"
+        text += f"📌 نوع: {doc_type}\n\n"
+        text += f"{instruction}\n\n"
         if previous_value:
             text += f"📌 مقدار قبلی: {previous_value}\n\n"
         if doc_type != "Image":
-            text += f"🔹 {current_doc['placeholder']}"
+            text += "❗️ لطفا دقیق و کامل وارد کنید."
         
         keyboard = []
         if doc_index > 0:
@@ -1212,7 +1002,7 @@ async def go_to_previous_document(query, doc_index: int, context: ContextTypes.D
             await query.edit_message_text("❌ شما در اولین مرحله هستید.")
             return
         
-        docs = await get_documents_with_types(service)
+        docs = get_documents_with_types(service)
         if prev_index >= len(docs):
             await query.edit_message_text("❌ خطا در بازگشت به مرحله قبل.")
             return
@@ -1275,7 +1065,7 @@ async def show_document_summary_and_payment(query, context: ContextTypes.DEFAULT
         summary += f"💰 *مبلغ قابل پرداخت: {format_price(service.get('Price', 0))} تومان*\n\n"
         summary += "✅ آیا اطلاعات وارد شده صحیح است؟"
         
-        docs = await get_documents_with_types(service)
+        docs = get_documents_with_types(service)
         last_index = len(docs) - 1
         
         keyboard = [
@@ -1403,7 +1193,7 @@ async def handle_document_input(update: Update, context: ContextTypes.DEFAULT_TY
         context.user_data.pop('validation_error', None)
         
         service = context.user_data.get('current_service')
-        docs = await get_documents_with_types(service)
+        docs = get_documents_with_types(service)
         
         next_index = doc_index + 1
         
@@ -1472,16 +1262,6 @@ async def handle_image_input(update: Update, context: ContextTypes.DEFAULT_TYPE)
         
         # Get the photo file ID
         photo_file_id = photo[-1].file_id
-
-# Download and encode
-        try:
-         bot = context.bot
-         base64_image = await download_and_encode_photo(photo_file_id, bot)
-         context.user_data['documents_collected'][doc_label] = base64_image
-        except Exception as e:
-         logger.error(f"Failed to encode document image: {e}")
-         await update.message.reply_text("❌ خطا در دریافت تصویر. لطفا مجددا تلاش کنید.")
-         return
         
         # Store the image as file_id
         if 'documents_collected' not in context.user_data:
@@ -1499,7 +1279,7 @@ async def handle_image_input(update: Update, context: ContextTypes.DEFAULT_TYPE)
         )
         
         service = context.user_data.get('current_service')
-        docs = await get_documents_with_types(service)
+        docs = get_documents_with_types(service)
         
         next_index = doc_index + 1
         
@@ -1585,183 +1365,42 @@ async def handle_payment_done(query, context: ContextTypes.DEFAULT_TYPE) -> None
         await query.edit_message_text("❌ خطا در تایید پرداخت. لطفا مجددا تلاش کنید.")
 
 @handle_errors
-async def retry_submit(query, context: ContextTypes.DEFAULT_TYPE):
-    """Retry submitting the request."""
-    await query.answer()
-    await query.edit_message_text("⏳ در حال ثبت مجدد درخواست...")
-    success = await sendRequestDataToServer(context)
-    if success:
-        await query.edit_message_text(
-            "✅ *درخواست شما با موفقیت ثبت شد!*\n\n"
-            "📞 به زودی کارشناسان ما با شما تماس خواهند گرفت.\n\n"
-            "🙏 از اعتماد شما سپاسگزاریم!",
-            parse_mode=ParseMode.MARKDOWN
-        )
-        context.user_data.clear()
-        keyboard = [[InlineKeyboardButton("🏠 بازگشت به صفحه اصلی", callback_data="back_to_menu")]]
-        await query.message.reply_text(
-            "🔹 برای مشاهده سایر خدمات، روی دکمه زیر کلیک کنید:",
-            reply_markup=InlineKeyboardMarkup(keyboard)
-        )
-    else:
-        # Still failed – show error again with retry option
-        keyboard = [
-            [InlineKeyboardButton("🔄 تلاش مجدد", callback_data="retry_submit")],
-            [InlineKeyboardButton("❌ لغو و بازگشت به منو", callback_data="back_to_menu")]
-        ]
-        await query.edit_message_text(
-            "❌ *خطا در ثبت درخواست*\n\n"
-            "متاسفانه درخواست شما ثبت نشد.\n"
-            "لطفا مجددا تلاش کنید یا با پشتیبانی تماس بگیرید.",
-            reply_markup=InlineKeyboardMarkup(keyboard),
-            parse_mode=ParseMode.MARKDOWN
-        )
-
-@handle_errors
 async def handle_payment_receipt(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Handle payment receipt image and submit the request."""
+    """Handle payment receipt image"""
     try:
         if not context.user_data.get('awaiting_payment_receipt', False):
             return
-
+        
         photo = update.message.photo
         if not photo:
-            await update.message.reply_text("❌ لطفا یک تصویر از رسید پرداخت ارسال کنید.")
-            return
-
-        # Download and encode receipt image
-        try:
-            bot = context.bot
-            photo_file_id = photo[-1].file_id
-            receipt_base64 = await download_and_encode_photo(photo_file_id, bot)
-            context.user_data['receipt_image'] = receipt_base64
-        except Exception as e:
-            logger.error(f"Failed to encode receipt image: {e}")
-            await update.message.reply_text("❌ خطا در دریافت تصویر رسید. لطفا مجددا تلاش کنید.")
-            return
-
-        # Submit the request
-        status_msg = await update.message.reply_text("⏳ در حال ثبت درخواست...")
-        success = await sendRequestDataToServer(context)
-
-        if success:
-            await status_msg.edit_text(
-                "✅ *درخواست شما با موفقیت ثبت شد!*\n\n"
-                "📞 به زودی کارشناسان ما با شما تماس خواهند گرفت.\n\n"
-                "🙏 از اعتماد شما سپاسگزاریم!",
-                parse_mode=ParseMode.MARKDOWN
-            )
-            context.user_data.clear()
-            keyboard = [[InlineKeyboardButton("🏠 بازگشت به صفحه اصلی", callback_data="back_to_menu")]]
             await update.message.reply_text(
-                "🔹 برای مشاهده سایر خدمات، روی دکمه زیر کلیک کنید:",
-                reply_markup=InlineKeyboardMarkup(keyboard)
+                "❌ لطفا یک تصویر از رسید پرداخت ارسال کنید."
             )
-        else:
-            # Failure – show retry buttons
-            keyboard = [
-                [InlineKeyboardButton("🔄 تلاش مجدد", callback_data="retry_submit")],
-                [InlineKeyboardButton("❌ لغو و بازگشت به منو", callback_data="back_to_menu")]
-            ]
-            await status_msg.edit_text(
-                "❌ *خطا در ثبت درخواست*\n\n"
-                "متاسفانه درخواست شما ثبت نشد.\n"
-                "لطفا مجددا تلاش کنید یا با پشتیبانی تماس بگیرید.",
-                reply_markup=InlineKeyboardMarkup(keyboard),
-                parse_mode=ParseMode.MARKDOWN
-            )
-            # Do NOT clear context – keep data for retry
+            return
+        
+        await update.message.reply_text(
+            "✅ *رسید پرداخت شما دریافت شد!*\n\n"
+            "🎉 درخواست شما با موفقیت ثبت شد.\n"
+            "📞 به زودی کارشناسان ما با شما تماس خواهند گرفت.\n\n"
+            "🙏 از اعتماد شما سپاسگزاریم!"
+        )
+        
+        # Show button to return to main page
+        keyboard = [
+            [InlineKeyboardButton("🏠 بازگشت به صفحه اصلی", callback_data="back_to_menu")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await update.message.reply_text(
+            "🔹 برای مشاهده سایر خدمات، روی دکمه زیر کلیک کنید:",
+            reply_markup=reply_markup
+        )
+        
+        context.user_data.clear()
     except Exception as e:
         logger.error(f"Error in handle_payment_receipt: {e}")
         logger.error(traceback.format_exc())
-        await update.message.reply_text("❌ خطا در دریافت رسید. لطفا مجددا تلاش کنید.")    
-async def sendRequestDataToServer(context: ContextTypes.DEFAULT_TYPE) -> bool:
-    """Send the collected request data to the /api/requests endpoint."""
-    try:
-        service = context.user_data.get('current_service')
-        if not service:
-            logger.error("No service in context")
-            return False
-
-        token = get_user_token(context)
-        if not token:
-            logger.error("No auth token found")
-            return False
-
-        # Build documents list from collected data
-        docs_collected = context.user_data.get('documents_collected', {})
-        documents = [{"title": title, "value": value} for title, value in docs_collected.items()]
-
-        receipt_image = context.user_data.get('receipt_image', '')
-
-        payload = {
-            "serviceId": service['Id'],
-            "serviceTitle": service['Title'],
-            "price": service.get('Price', 0),
-            "documents": documents,
-            "receiptImage": receipt_image
-        }
-
-        async with httpx.AsyncClient(timeout=15.0) as client:
-            headers = {
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {token}"
-            }
-            resp = await client.post(
-                f"{API_BASE.rstrip('/')}/api/requests",
-                json=payload,
-                headers=headers
-            )
-            resp.raise_for_status()
-            result = resp.json()
-            logger.info(f"Request submitted successfully: {result}")
-            return True
-    except Exception as e:
-        logger.error(f"Error submitting request: {e}")
-        logger.error(traceback.format_exc())
-        return False
-
-async def download_and_encode_photo(file_id: str, bot, max_size: int = 1024, quality: int = 85) -> str:
-    """Download a photo from Telegram, compress/resize, and return as base64 data URL."""
-    try:
-        file = await bot.get_file(file_id)
-        file_bytes = await file.download_as_bytearray()
-
-        if PIL_AVAILABLE:
-            # Open image with PIL
-            image = Image.open(io.BytesIO(file_bytes))
-
-            # Convert to RGB (handle transparency)
-            if image.mode in ('RGBA', 'LA', 'P'):
-                background = Image.new('RGB', image.size, (255, 255, 255))
-                if image.mode == 'P':
-                    image = image.convert('RGBA')
-                background.paste(image, mask=image.split()[-1] if image.mode == 'RGBA' else None)
-                image = background
-            elif image.mode != 'RGB':
-                image = image.convert('RGB')
-
-            # Resize if needed
-            width, height = image.size
-            if width > max_size or height > max_size:
-                ratio = min(max_size / width, max_size / height)
-                new_size = (int(width * ratio), int(height * ratio))
-                image = image.resize(new_size, Image.Resampling.LANCZOS)
-
-            # Save as JPEG with compression
-            output = io.BytesIO()
-            image.save(output, format='JPEG', quality=quality, optimize=True)
-            encoded = base64.b64encode(output.getvalue()).decode('utf-8')
-            return f"data:image/jpeg;base64,{encoded}"
-        else:
-            # Fallback: encode original file
-            encoded = base64.b64encode(file_bytes).decode('utf-8')
-            ext = file.file_path.split('.')[-1].lower() if file.file_path else 'png'
-            mime = f"image/{ext}" if ext in ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'] else "image/png"
-            return f"data:{mime};base64,{encoded}"
-    except Exception as e:
-        logger.error(f"Error downloading/encoding photo: {e}")
-        raise
+        await update.message.reply_text("❌ خطا در دریافت رسید. لطفا مجددا تلاش کنید.")
 
 @handle_errors
 async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -1825,46 +1464,6 @@ async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     except Exception as e:
         logger.error(f"Failed to send error message: {e}")
 
-_refresh_task: Optional[asyncio.Task] = None
-
-async def _background_refresh_loop() -> None:
-    """Periodically refresh CATEGORIES/SERVICES/DOC_TYPES from the API.
-
-    Each resource has its own TTL in api_client.py, so this just needs to
-    run more often than the shortest TTL - the refresh calls are cheap
-    no-ops when nothing is due yet.
-    """
-    while True:
-        await asyncio.sleep(REFRESH_INTERVAL_SECONDS)
-        try:
-            await data_store.refresh_all(force=False)
-            logger.info(
-                f"Data refreshed: {len(SERVICES)} services, "
-                f"{len(CATEGORIES)} categories, {len(DOC_TYPES)} doc types"
-            )
-        except Exception as e:
-            logger.error(f"Background refresh failed: {e}")
-            logger.error(traceback.format_exc())
-
-async def post_init(application: Application) -> None:
-    """Runs once, inside the bot's own event loop, before polling starts."""
-    logger.info("Loading initial data from the Cafenet Online API...")
-    await data_store.refresh_all(force=True)
-    logger.info(
-        f"Loaded {len(SERVICES)} services, {len(CATEGORIES)} categories, "
-        f"{len(DOC_TYPES)} document types"
-    )
-
-    global _refresh_task
-    _refresh_task = asyncio.create_task(_background_refresh_loop())
-
-    await set_menu_button(application)
-
-async def post_shutdown(application: Application) -> None:
-    if _refresh_task:
-        _refresh_task.cancel()
-    await data_store.close()
-
 def run_bot():
     """Run the bot with infinite retry on connection errors"""
     max_retries = 5
@@ -1874,13 +1473,12 @@ def run_bot():
         try:
             logger.info(f"Starting bot (attempt {attempt + 1}/{max_retries})...")
             
-            application = (
-                Application.builder()
-                .token(BOT_TOKEN)
-                .post_init(post_init)
-                .post_shutdown(post_shutdown)
-                .build()
-            )
+            application = Application.builder().token(BOT_TOKEN).build()
+            
+            # Set menu button
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            loop.run_until_complete(set_menu_button(application))
             
             # Add error handler
             application.add_error_handler(error_handler)

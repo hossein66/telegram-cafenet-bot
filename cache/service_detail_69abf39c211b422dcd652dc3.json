@@ -1,0 +1,1 @@
+[{"title": "شماره تلفن", "placeholder": "شماره موبایل خودتون رو وارد کنید", "typeId": 1, "type": "Text", "regex": ".*"}, {"title": "کدملی", "placeholder": "کد ملیتون رو وارد کنید", "typeId": 6, "type": "NationalCode", "regex": "^[0-9]{10}$"}, {"title": "پلاک ماشین", "placeholder": "", "typeId": 1, "type": "Text", "regex": ".*"}]
