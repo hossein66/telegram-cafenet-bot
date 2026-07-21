@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 # ─────────────────────────────────────────────────────────────
 #  CONFIG
 # ─────────────────────────────────────────────────────────────
-API_BASE = os.environ.get("COFENET_API_BASE", "https://cofenet-online.ir")
+API_BASE = os.environ.get("COFENET_API_BASE", "http://127.0.0.1:8001")
 CACHE_DIR = Path(os.environ.get("COFENET_CACHE_DIR", "cache"))
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -116,40 +116,31 @@ class _TTLValue:
 #  MAIN DATA STORE
 # ─────────────────────────────────────────────────────────────
 class CofenetDataStore:
-    """
-    Holds CATEGORIES / SERVICES / DOC_TYPES for the bot, refreshed from the
-    live API on a TTL, with disk + stale-memory fallback.
-
-    Other modules can import `data_store` and read `data_store.categories`
-    etc. directly - these lists/dicts are mutated in place on refresh, so
-    references taken elsewhere (e.g. `SERVICES = data_store.services`)
-    automatically stay in sync.
-    """
-
-    CATEGORIES_TTL =68400 #600        # 10 minutes
-    SERVICES_TTL =68400 #180          # 3 minutes
-    DOC_TYPES_TTL =68400 #3600        # 1 hour
-    SERVICE_DETAIL_TTL = 68400 #  1800   # 30 minutes - per-service documents/forms
+    CATEGORIES_TTL = 68400
+    SERVICES_TTL = 68400
+    DOC_TYPES_TTL = 68400
+    SERVICE_DETAIL_TTL = 68400
+    PAYMENT_INFO_TTL = 86400  # 24 hours
 
     def __init__(self, base_url: str = API_BASE):
         self.base_url = base_url.rstrip("/")
         self._client = httpx.AsyncClient(base_url=self.base_url, timeout=DEFAULT_TIMEOUT)
 
-        # Public containers - mutated in place, safe to hold references to.
         self.categories: List[Dict] = []
         self.services: List[Dict] = []
         self.doc_types: List[Dict] = []
         self.category_names: Dict[int, str] = {}
         self.category_sort: Dict[int, int] = {}
         self.doc_type_map: Dict[int, Dict] = {}
+        self.payment_info: Optional[Dict] = None  # <-- 新增
 
         self._cat_ttl = _TTLValue()
         self._svc_ttl = _TTLValue()
         self._doc_ttl = _TTLValue()
+        self._payment_ttl = _TTLValue()  # <-- 新增
         self._detail_cache: Dict[str, _TTLValue] = {}
         self._category_id_by_name: Dict[str, int] = {}
         self._refresh_lock = asyncio.Lock()
-
     async def close(self):
         await self._client.aclose()
 
@@ -285,12 +276,53 @@ class CofenetDataStore:
     # ---------------------------------------------------------
     #  Full refresh (categories must load before services, for name->id map)
     # ---------------------------------------------------------
+    async def refresh_payment_info(self, force: bool = False) -> bool:
+        if not force and self._payment_ttl.is_fresh():
+            return True
+        
+        data = None
+        try:
+            fetched = await self._get_json("/api/payment/info")
+            if fetched and isinstance(fetched, dict):
+                data = fetched
+                _write_disk_cache("payment_info", data)
+        except Exception as e:
+            logger.warning(f"Could not fetch /api/payment/info: {e}")
+        
+        if data is None:
+            if self._payment_ttl.value is not None:
+                logger.info("Serving stale in-memory payment info (API unreachable)")
+                return False
+            data = _read_disk_cache("payment_info") or {}
+            if data:
+                logger.info("Loaded payment info from disk cache fallback")
+            else:
+                logger.error("No payment info available: API down and no disk cache")
+                data = {
+                    "cardNumber": "5041-7210-0916-7876",
+                    "accountHolder": "محمد حسین نوابی",
+                    "bankName": "بانک رسالت"
+                }
+        
+        self._payment_ttl.set(data, self.PAYMENT_INFO_TTL)
+        self.payment_info = data
+        return True
+
+    def get_payment_info(self) -> Dict:
+        if self.payment_info:
+            return self.payment_info
+        return {
+            "cardNumber": "5041-7210-0916-7876",
+            "accountHolder": "محمد حسین نوابی",
+            "bankName": "بانک رسالت"
+        }
+
     async def refresh_all(self, force: bool = False) -> None:
         async with self._refresh_lock:
             await self.refresh_categories(force=force)
             await self.refresh_doc_types(force=force)
             await self.refresh_services(force=force)
-
+            await self.refresh_payment_info(force=force)  # <-- 新增
     # ---------------------------------------------------------
     #  Per-service documents (lazy - mirrors index.html's serviceCache /
     #  buildDocsFromDetail, fetched only when a user opens a service)
@@ -336,6 +368,7 @@ class CofenetDataStore:
                 docs.append({
                     "title": f.get("label", ""),
                     "placeholder": f.get("placeholder", ""),
+                    "options": f.get("options", []),
                     "typeId": type_id,
                     "type": DOC_TYPE_ID_TO_KEY.get(type_id, "Text"),
                     "regex": dt.get("REx", ".*"),

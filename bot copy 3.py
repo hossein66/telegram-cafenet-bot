@@ -22,7 +22,6 @@ from telegram.error import TelegramError, NetworkError, TimedOut, RetryAfter
 import base64
 import httpx
 from api_client import API_BASE, data_store
-import random
 # try:
 #     from PIL import Image
 #     import io
@@ -47,7 +46,7 @@ if not BOT_TOKEN:
 # Each resource (categories/services/doc-types) has its own TTL inside
 # api_client.py, so calling refresh_all() this often is cheap - it's a
 # no-op for anything that isn't due yet.
-REFRESH_INTERVAL_SECONDS = int(os.environ.get("COFENET_REFRESH_INTERVAL", "86400"))  # default: 24 hours
+REFRESH_INTERVAL_SECONDS = int(os.environ.get("COFENET_REFRESH_INTERVAL", "600"))
 
 # Enable logging
 logging.basicConfig(
@@ -496,10 +495,6 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         elif data.startswith("request_"):
             service_id = data[8:]
             await handle_request(query, service_id, context)
-        elif data == "copy_card":
-            await copy_card_number(query, context)
-        elif data == "copy_amount":
-            await copy_amount(query, context)    
         elif data == "back_to_menu":
             await back_to_menu(query, context)
         elif data == "pay_now":
@@ -510,25 +505,8 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             doc_index = int(data[9:])
             await go_to_previous_document(query, doc_index, context)
         elif data.startswith("opti_doc_"):
-           parts = data[len("opti_doc_"):].split('|', 1)
-           if len(parts) == 2:
-               doc_index = int(parts[0])
-               selected_option = parts[1]
-               doc_label = context.user_data.get('doc_label')
-               if doc_label:
-                  context.user_data['documents_collected'][doc_label] = selected_option
-                  context.user_data['awaiting_option'] = False
-                  service = context.user_data.get('current_service')
-                  docs = await get_documents_with_types(service)
-                  next_index = doc_index + 1
-                  if next_index >= len(docs):
-                   await show_document_summary_and_payment(query, context)
-                  else:
-                   await collect_next_document(query, next_index, context)
-               else:
-                 await query.edit_message_text("❌ خطا در شناسایی مدرک.")
-           else:
-              await query.edit_message_text("❌ خطا در پردازش انتخاب.")        
+            doc_index = int(data[9:])
+            await collect_next_document(query, doc_index, context)            
         elif data == "start_over":
             await start_over(query, context)
         elif data == "dummy":
@@ -614,7 +592,7 @@ async def show_my_requests(query, context: Optional[ContextTypes.DEFAULT_TYPE] =
         )
         
         token = get_user_token(context) if context else None
-        # logger.info(f"Fetching requests for user with token: {token}")
+        logger.info(f"Fetching requests for user with token: {token}")
         headers = {"Content-Type": "application/json"}
         if token:
             headers["Authorization"] = f"Bearer {token}"
@@ -805,8 +783,8 @@ async def show_top_services(query, page: int = 0):
         keyboard = []
         for service in services_page:
             price = format_price(service.get("Price", 0))
-            button_text = f"📋 {service['Title'][:25]}"
-            if len(service['Title']) > 25:
+            button_text = f"📋 {service['Title'][:35]}"
+            if len(service['Title']) > 35:
                 button_text += "..."
             button_text += f" - {price}ت"
             keyboard.append([
@@ -867,8 +845,8 @@ async def show_all_services(query, page: int = 0):
         keyboard = []
         for service in services_page:
             price = format_price(service.get("Price", 0))
-            button_text = f"📋 {service['Title'][:25]}"
-            if len(service['Title']) > 25:
+            button_text = f"📋 {service['Title'][:35]}"
+            if len(service['Title']) > 35:
                 button_text += "..."
             button_text += f" - {price}ت"
             keyboard.append([
@@ -925,8 +903,8 @@ async def show_category_services(query, category_id: int, page: int = 0):
         keyboard = []
         for service in services_page:
             price = format_price(service.get("Price", 0))
-            button_text = f"📋 {service['Title'][:25]}"
-            if len(service['Title']) > 25:
+            button_text = f"📋 {service['Title'][:35]}"
+            if len(service['Title']) > 35:
                 button_text += "..."
             button_text += f" - {price}ت"
             keyboard.append([
@@ -1004,8 +982,8 @@ async def handle_search(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         keyboard = []
         for service in results[:10]:
             price = format_price(service.get("Price", 0))
-            button_text = f"📋 {service['Title'][:25]}"
-            if len(service['Title']) > 25:
+            button_text = f"📋 {service['Title'][:35]}"
+            if len(service['Title']) > 35:
                 button_text += "..."
             button_text += f" - {price}ت"
             keyboard.append([
@@ -1061,8 +1039,8 @@ async def show_search_more(query, context: ContextTypes.DEFAULT_TYPE):
         keyboard = []
         for service in results[start_idx:end_idx]:
             price = format_price(service.get("Price", 0))
-            button_text = f"📋 {service['Title'][:25]}"
-            if len(service['Title']) > 25:
+            button_text = f"📋 {service['Title'][:35]}"
+            if len(service['Title']) > 35:
                 button_text += "..."
             button_text += f" - {price}ت"
             keyboard.append([
@@ -1223,13 +1201,6 @@ async def handle_request(query, service_id: str, context: ContextTypes.DEFAULT_T
         logger.error(f"Error in handle_request: {e}")
         logger.error(traceback.format_exc())
         await query.edit_message_text("❌ خطا در ثبت درخواست. لطفا مجددا تلاش کنید.")
-def persian_to_english(s: str) -> str:
-    persian_digits = '۰۱۲۳۴۵۶۷۸۹'
-    english_digits = '0123456789'
-    arabic_digits = '٠١٢٣٤٥٦٧٨٩'
-    trans = str.maketrans(persian_digits, english_digits)
-    trans_arabic = str.maketrans(arabic_digits, english_digits)
-    return s.translate(trans).translate(trans_arabic)
 
 @handle_errors
 async def collect_next_document(query, doc_index: int, context: ContextTypes.DEFAULT_TYPE):
@@ -1289,30 +1260,13 @@ async def collect_next_document(query, doc_index: int, context: ContextTypes.DEF
         if doc_type != "Image":
             text += f"🔹 {current_doc['placeholder']}"
         
-        options = current_doc.get('options', [])
-
-# Build keyboard
         keyboard = []
         for option in options:
-           keyboard.append([InlineKeyboardButton(option, callback_data=f"opti_doc_{doc_index}|{option}")])
-
+            keyboard.append([InlineKeyboardButton(option, callback_data=f"opti_doc_{doc_index +1}")])
         if doc_index > 0:
-           keyboard.append([InlineKeyboardButton("🔙 مرحله قبل", callback_data=f"prev_doc_{doc_index}")])
-           keyboard.append([InlineKeyboardButton("❌ لغو و بازگشت به منو", callback_data="back_to_menu")])
-
-# Set state flags
-        if options:
-             context.user_data['awaiting_option'] = True
-             context.user_data['collecting_docs'] = False
-             context.user_data['awaiting_image'] = False
-        else:
-             context.user_data['awaiting_option'] = False
-        if is_image_document(current_doc):
-            context.user_data['awaiting_image'] = True
-            context.user_data['collecting_docs'] = False
-        else:
-           context.user_data['awaiting_image'] = False
-           context.user_data['collecting_docs'] = True 
+            keyboard.append([InlineKeyboardButton("🔙 مرحله قبل", callback_data=f"prev_doc_{doc_index}")])
+        keyboard.append([InlineKeyboardButton("❌ لغو و بازگشت به منو", callback_data="back_to_menu")])
+        
         reply_markup = InlineKeyboardMarkup(keyboard)
         await query.edit_message_text(
             text,
@@ -1386,144 +1340,47 @@ async def retry_document(query, context: ContextTypes.DEFAULT_TYPE):
 
 @handle_errors
 async def show_document_summary_and_payment(query, context: ContextTypes.DEFAULT_TYPE):
-    """Show document summary and proceed to payment, with loan-specific calculations and random fee."""
+    """Show document summary and proceed to payment"""
     try:
         service = context.user_data.get('current_service')
         if not service:
             await query.edit_message_text("❌ خطا در دریافت اطلاعات سرویس.")
             return
-
-        docs_collected = context.user_data.get('documents_collected', {})
-        service_id = service.get('Id', '')
-
-        # Generate or retrieve random fee
-        if 'random_fee' not in context.user_data:
-            context.user_data['random_fee'] = random.randint(100, 500)
-        random_fee = context.user_data['random_fee']
-
-        # Detect loan services
-        is_dastadas = service_id == "svc_1784058536818"
-        is_resalat  = service_id == "svc_1784058536819"
-        is_mehr     = service_id == "svc_1784058536820"
-
-        def fmt(num):
-            return format_price(int(round(num)))
-
-        # If it's a loan service, compute loan-specific summary
-        if is_dastadas or is_resalat or is_mehr:
-            # Extract loan amount and duration
-            loan_amount_str = docs_collected.get('مقدار وام', '0')
-            duration_str    = docs_collected.get('مدت وام', '0')
-
-            try:
-                loan_amount = int(loan_amount_str)
-            except ValueError:
-                loan_amount = 0
-            try:
-                refund_duration = int(duration_str)
-            except ValueError:
-                refund_duration = 0
-
-            national_code = docs_collected.get('کد ملی ', '—')
-            mobile = docs_collected.get('شماره موبایل', '—')
-
-            if is_dastadas:
-                if refund_duration == 12:
-                    ratio = 32
-                elif refund_duration == 24:
-                    ratio = 16
-                elif refund_duration == 36:
-                    ratio = 11
-                elif refund_duration == 48:
-                    ratio = 8
-                else:
-                    ratio = 320
-
-                loan_amount_rials = loan_amount * 1_000_000
-                score = loan_amount_rials / ratio
-                score_price = score * 30 / 10
-                fee = score * 2.1 / 10
-                instruction = f"شما می‌بایستی مبلغ {fmt(score_price)} را در حساب دستادس خود داشته باشد"
-
-            elif is_resalat:
-                score = loan_amount * refund_duration / 10
-                score_price = score * 135000
-                fee = score * 3000
-                instruction = f"شما می‌بایستی مبلغ {fmt(score_price)} را در زمان انتقال امتیاز به حساب فروشنده واریز نمایید"
-
-            else:  # is_mehr
-                score = loan_amount
-                score_price = score * 340000
-                fee = score * 10000
-                instruction = f"شما می‌بایستی مبلغ {fmt(score_price)} در زمان انتقال امتیاز به حساب فروشنده واریز نمایید"
-
-            # Add random fee to total price
-            total_price = int(round(fee)) + random_fee
-            service['Price'] = total_price
-
-            summary_lines = [
-                "📋 *خلاصه مدارک و محاسبات وام*",
-                "",
-                f"🔹 **مبلغ وام**: {fmt(loan_amount_rials)} تومان",
-                f"🔹 **مدت وام (ماه)**: {refund_duration}",
-                f"🔹 **مقدار امتیاز مورد نیاز**: {fmt(score)}",
-                f"🔹 **قیمت امتیاز**: {fmt(score_price)} تومان",
-                f"🔹 **کارمزد**: {fmt(fee)} تومان",
-                f"🔹 **کد ملی**: {national_code}",
-                f"🔹 **شماره موبایل**: {mobile}",
-                "",
-                f"💰 *مبلغ قابل پرداخت (کارمزد کل): {fmt(total_price)} تومان*",
-                "",
-                instruction,
-                "",
-                "✅ آیا اطلاعات وارد شده صحیح است؟"
-            ]
-            summary = "\n".join(summary_lines)
-
-        else:
-            # Generic summary for non‑loan services
-            base_price = service.get('Price', 0)
-            total_price = base_price + random_fee
-            service['Price'] = total_price
-
-            summary = "📋 *خلاصه مدارک*\n\n"
-            for key, value in docs_collected.items():
-                summary += f"🔹 {key}\n   {value}\n\n"
-
-            if not docs_collected:
-                summary += "⚠️ هیچ مدرکی وارد نشده است.\n\n"
-
-            summary += f"💰 *مبلغ پایه: {fmt(base_price)} تومان*\n"
-            summary += f"💰 *مبلغ قابل پرداخت: {fmt(total_price)} تومان*\n\n"
-            summary += "✅ آیا اطلاعات وارد شده صحیح است؟"
-
-        # Get the list of documents for navigation
+        
+        summary = "📋 *خلاصه مدارک*\n\n"
+        for key, value in context.user_data['documents_collected'].items():
+            summary += f"🔹 {key}\n   {value}\n\n"
+        
+        if not context.user_data['documents_collected']:
+            summary += "⚠️ هیچ مدرکی وارد نشده است.\n\n"
+        
+        summary += f"💰 *مبلغ قابل پرداخت: {format_price(service.get('Price', 0))} تومان*\n\n"
+        summary += "✅ آیا اطلاعات وارد شده صحیح است؟"
+        
         docs = await get_documents_with_types(service)
         last_index = len(docs) - 1
-
+        
         keyboard = [
             [InlineKeyboardButton("✅ بله، صحیح است - پرداخت", callback_data="pay_now")],
             [InlineKeyboardButton("🔙 بازگشت به مرحله قبل", callback_data=f"prev_doc_{last_index}")],
             [InlineKeyboardButton("🔄 شروع مجدد", callback_data="start_over")],
             [InlineKeyboardButton("❌ لغو و بازگشت به منو", callback_data="back_to_menu")]
         ]
-
+        
         reply_markup = InlineKeyboardMarkup(keyboard)
         await query.edit_message_text(
             summary,
             reply_markup=reply_markup,
             parse_mode=ParseMode.MARKDOWN
         )
-
+        
         context.user_data['collecting_docs'] = False
         context.user_data['awaiting_payment'] = True
         context.user_data['awaiting_image'] = False
-
     except Exception as e:
         logger.error(f"Error in show_document_summary_and_payment: {e}")
         logger.error(traceback.format_exc())
-        await query.edit_message_text("❌ خطا در نمایش خلاصه مدارک. لطفا مجددا تلاش کنید.")
-             
+
 @handle_errors
 async def start_over(query, context: ContextTypes.DEFAULT_TYPE):
     """Start over the document collection process"""
@@ -1550,13 +1407,6 @@ async def start_over(query, context: ContextTypes.DEFAULT_TYPE):
 async def handle_document_input(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle document input from user with validation"""
     try:
-        
-                # Check if we are waiting for an option selection
-        if context.user_data.get('awaiting_option', False):
-            await update.message.reply_text(
-                "❌ لطفاً از دکمه‌های زیر برای انتخاب گزینه استفاده کنید."
-            )
-            return
         # Check if we're waiting for an image
         if context.user_data.get('awaiting_image', False):
             # User sent text but we're expecting an image
@@ -1584,9 +1434,7 @@ async def handle_document_input(update: Update, context: ContextTypes.DEFAULT_TY
             )
             return
         
-
         doc_value = update.message.text.strip()
-        doc_value = persian_to_english(doc_value) 
         doc_label = context.user_data.get('doc_label', '')
         doc_index = context.user_data.get('doc_index', 0)
         doc_info = context.user_data.get('current_doc_info', {})
@@ -1764,27 +1612,7 @@ async def handle_image_input(update: Update, context: ContextTypes.DEFAULT_TYPE)
         logger.error(f"Error in handle_image_input: {e}")
         logger.error(traceback.format_exc())
         await update.message.reply_text("❌ خطا در دریافت تصویر. لطفا مجددا تلاش کنید.")
-@handle_errors
-async def copy_card_number(query, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Send card number in a copyable message."""
-    await query.answer()
-    payment_info = data_store.get_payment_info()
-    card_number = payment_info.get("cardNumber", "5041-7210-0916-7876")
-    text = f"📋 *شماره کارت:*\n`{card_number}`\n\n(برای کپی، روی عدد ضربه بزنید و نگه دارید)"
-    await query.message.reply_text(text, parse_mode=ParseMode.MARKDOWN)
 
-@handle_errors
-async def copy_amount(query, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Send the amount in a copyable message."""
-    await query.answer()
-    service = context.user_data.get('current_service')
-    if not service:
-        await query.message.reply_text("❌ خطا: سرویس یافت نشد.")
-        return
-    amount = format_price(service.get('Price', 0))
-    text = f"📋 *مبلغ قابل پرداخت:*\n`{amount}`\n\n(برای کپی، روی عدد ضربه بزنید و نگه دارید)"
-    await query.message.reply_text(text, parse_mode=ParseMode.MARKDOWN)
-    
 @handle_errors
 async def handle_payment(query, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle payment processing"""
@@ -1796,25 +1624,15 @@ async def handle_payment(query, context: ContextTypes.DEFAULT_TYPE) -> None:
             await query.edit_message_text("❌ خطا در دریافت اطلاعات سرویس.")
             return
         
-        payment_info = data_store.get_payment_info()
-        card_number = payment_info.get("cardNumber", "5041-7210-0916-7876")
-        account_holder = payment_info.get("accountHolder", "محمد حسین نوابی")
-        bank_name = payment_info.get("bankName", "بانک رسالت")
-        amount = format_price(service.get('Price', 0))
-        
         text = f"💰 *پرداخت*\n\n"
         text += f"سرویس: {service.get('Title', '')}\n"
-        text += f"مبلغ: {amount} تومان\n\n"
+        text += f"مبلغ: {format_price(service.get('Price', 0))} تومان\n\n"
         text += "✅ لطفا مبلغ را به شماره کارت زیر واریز کنید:\n"
-        text += f"🔹 شماره کارت: `{card_number}`\n"
-        text += f"🔹 به نام: {account_holder}\n"
-        text += f"🔹 بانک: {bank_name}\n\n"
+        text += "🔹 شماره کارت: `6037-9912-3456-7890`\n"
+        text += "🔹 به نام: کافی نت آنلاین\n\n"
         text += "❗️ پس از پرداخت، تصویر رسید را ارسال کنید."
         
         keyboard = [
-            [InlineKeyboardButton("📋 کپی شماره کارت", callback_data="copy_card"),
-             InlineKeyboardButton("📋 کپی مبلغ", callback_data="copy_amount"),],
-            [],
             [InlineKeyboardButton("✅ پرداخت انجام شد", callback_data="payment_done")],
             [InlineKeyboardButton("🔙 بازگشت به خلاصه مدارک", callback_data="start_over")],
             [InlineKeyboardButton("❌ لغو و بازگشت به منو", callback_data="back_to_menu")]
@@ -1830,6 +1648,7 @@ async def handle_payment(query, context: ContextTypes.DEFAULT_TYPE) -> None:
         logger.error(f"Error in handle_payment: {e}")
         logger.error(traceback.format_exc())
         await query.edit_message_text("❌ خطا در پردازش پرداخت. لطفا مجددا تلاش کنید.")
+
 @handle_errors
 async def handle_payment_done(query, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle payment confirmation"""
@@ -1849,20 +1668,9 @@ async def handle_payment_done(query, context: ContextTypes.DEFAULT_TYPE) -> None
 
 @handle_errors
 async def retry_submit(query, context: ContextTypes.DEFAULT_TYPE):
-    """Retry submitting the request, re-authenticating if necessary."""
+    """Retry submitting the request."""
     await query.answer()
     await query.edit_message_text("⏳ در حال ثبت مجدد درخواست...")
-
-    # Ensure we have a valid token; re‑authenticate if needed
-    if not is_user_authenticated(context):
-        user = query.from_user
-        if not await authenticateUserWithServer(user, context=context):
-            await query.edit_message_text(
-                "❌ *خطا در احراز هویت*\n\nلطفا /start را بزنید و دوباره تلاش کنید.",
-                parse_mode=ParseMode.MARKDOWN
-            )
-            return
-
     success = await sendRequestDataToServer(context)
     if success:
         await query.edit_message_text(
@@ -1890,7 +1698,7 @@ async def retry_submit(query, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=InlineKeyboardMarkup(keyboard),
             parse_mode=ParseMode.MARKDOWN
         )
-        
+
 @handle_errors
 async def handle_payment_receipt(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle payment receipt image and submit the request."""
@@ -1914,16 +1722,7 @@ async def handle_payment_receipt(update: Update, context: ContextTypes.DEFAULT_T
             await update.message.reply_text("❌ خطا در دریافت تصویر رسید. لطفا مجددا تلاش کنید.")
             return
 
-        # Ensure we have a valid token; re‑authenticate if needed
-        if not is_user_authenticated(context):
-            user = update.effective_user
-            if not await authenticateUserWithServer(user, context=context):
-                await update.message.reply_text(
-                    "❌ *خطا در احراز هویت*\n\nلطفا /start را بزنید و دوباره تلاش کنید.",
-                    parse_mode=ParseMode.MARKDOWN
-                )
-                return
-
+        # Submit the request
         status_msg = await update.message.reply_text("⏳ در حال ثبت درخواست...")
         success = await sendRequestDataToServer(context)
 
@@ -1941,6 +1740,7 @@ async def handle_payment_receipt(update: Update, context: ContextTypes.DEFAULT_T
                 reply_markup=InlineKeyboardMarkup(keyboard)
             )
         else:
+            # Failure – show retry buttons
             keyboard = [
                 [InlineKeyboardButton("🔄 تلاش مجدد", callback_data="retry_submit")],
                 [InlineKeyboardButton("❌ لغو و بازگشت به منو", callback_data="back_to_menu")]
@@ -1956,8 +1756,7 @@ async def handle_payment_receipt(update: Update, context: ContextTypes.DEFAULT_T
     except Exception as e:
         logger.error(f"Error in handle_payment_receipt: {e}")
         logger.error(traceback.format_exc())
-        await update.message.reply_text("❌ خطا در دریافت رسید. لطفا مجددا تلاش کنید.")
-
+        await update.message.reply_text("❌ خطا در دریافت رسید. لطفا مجددا تلاش کنید.")    
 async def sendRequestDataToServer(context: ContextTypes.DEFAULT_TYPE) -> bool:
     """Send the collected request data to the /api/requests endpoint."""
     try:

@@ -22,6 +22,7 @@ pip-delete-this-directory.txt
 
 # Virtual Environment
 venv/
+cache/
 env/
 .env
 .venv
@@ -154,3 +155,4 @@ __pycache__/
 __pycache__/app.cpython-313.pyc
 cafenet.db-shm
 cafenet.db-wal
+cache

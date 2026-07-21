@@ -19,6 +19,9 @@ from contextlib import contextmanager
 import math
 from functools import wraps
 from typing import Optional
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+
 
 # ─────────────────────────────────────────────────────────────
 #  SIMPLE THREAD-SAFE CACHE (No Redis required)
@@ -1626,15 +1629,34 @@ def create_request(req: RequestCreate, user: dict = Depends(get_current_user)):
     except Exception as e:
         print(f"❌ Error in create_request: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+security = HTTPBearer()
+
+def get_user_id_from_token(credentials: HTTPAuthorizationCredentials = Depends(security)) -> str:
+    """
+    Decode JWT and return the user ID (sub claim).
+    """
+    try:
+        payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id = payload.get("sub")
+        if not user_id:
+            raise HTTPException(status_code=401, detail="Invalid token: missing user ID")
+        return user_id
+    except jwt.PyJWTError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
 
 @app.get("/api/requests")
-def get_requests(user: dict = Depends(get_current_user)):
+def get_requests(user_id: str = Depends(get_user_id_from_token)):
+    """
+    Get all requests for the authenticated user.
+    """
     try:
+        print(f"Decoded JWT for user_id:: {user_id}")
         with get_db() as conn:
             cur = conn.cursor()
             cur.execute("""
                 SELECT * FROM requests WHERE user_id = ? ORDER BY submitted_at DESC
-            """, (user["id"],))
+            """, (user_id,))
             rows = cur.fetchall()
 
             result = []
@@ -1654,8 +1676,8 @@ def get_requests(user: dict = Depends(get_current_user)):
             return result
     except Exception as e:
         print(f"❌ Error in get_requests: {e}")
-        return []
-
+        raise HTTPException(status_code=500, detail=str(e))
+    
 @app.put("/api/requests/{request_id}/status")
 def update_request_status(
     request_id: str,
