@@ -8,7 +8,7 @@ import re
 import asyncio
 import time
 from typing import List, Dict, Optional, Any, Tuple
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, BotCommand
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, BotCommand, CopyTextButton
 from telegram.ext import (
     Application,
     CommandHandler,
@@ -21,7 +21,7 @@ from telegram.constants import ParseMode
 from telegram.error import TelegramError, NetworkError, TimedOut, RetryAfter
 import base64
 import httpx
-from api_client import API_BASE, data_store
+from api_client import API_BASE, COFENET_Server_URL, data_store
 import random
 # try:
 #     from PIL import Image
@@ -75,7 +75,7 @@ DOC_TYPE_MAP = data_store.doc_type_map
 def format_price(price: int) -> str:
     """Format price with Persian commas"""
     try:
-        return f"{price:,}".replace(",", "٬")
+        return f"{price:,}" #.replace(",", "٬")
     except:
         return str(price)
 
@@ -363,7 +363,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await authenticateUserWithServer(user, context=context)
         
         welcome_text = (
-            f"به ربات کافی نت خوش آمدید {user.first_name}! 👋\n"
+            f"به ربات کافی‌نت آنلاین نت خوش آمدید {user.first_name}! 👋\n"
             "چه کمکی می توان به شما بکنم؟\n\n"
             "🔹 با کلیک روی هر دکمه می‌توانید خدمات مربوطه را مشاهده کنید.\n"
             "🔹 همچنین می‌توانید عبارت مورد نظر را تایپ کرده و جستجو کنید.\n"
@@ -404,9 +404,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             ])
         
         keyboard.append([
-            InlineKeyboardButton("📥 درخواست‌های من", callback_data="my_requests"),
+            InlineKeyboardButton("👨🏻 پروفایل من", callback_data="my_profile"),
+            InlineKeyboardButton("👨‍💻 پشتیبانی", callback_data="support"),
             InlineKeyboardButton("📊 همه خدمات", callback_data="all_services"),
-
         ])
 
         
@@ -473,6 +473,10 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             await retry_submit(query, context)    
         elif data == "my_requests":
             await show_my_requests(query, context)
+        elif data == "my_profile":
+            await show_my_profile(query, context)    
+        elif data == "support":
+            await show_support(query, context)
         elif data.startswith("categories_page_"):
             page = int(data.split("_")[2])
             await show_categories_page(query, page)
@@ -719,6 +723,38 @@ async def show_my_requests(query, context: Optional[ContextTypes.DEFAULT_TYPE] =
         await query.edit_message_text(
             "❌ خطا در نمایش درخواست‌ها. لطفا مجددا تلاش کنید."
         )
+
+
+@handle_errors
+async def show_support(query, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Show support information with contact button"""
+    try:
+        await query.answer()
+        
+        text = (
+            "📱 *پشتیبانی کافی نت*\n\n"
+            "سلام! 👋\n"
+            "ما اینجا هستیم تا کمک کنیم.\n\n"
+            "برای تماس با تیم پشتیبانی:\n"
+            "💬 @Cofenet_online_support\n\n"
+            "لطفا سؤالات یا مشکلاتتان را بنویسید تا در کمترین زمان پاسخ داده شود."
+        )
+        
+        keyboard = [
+            [InlineKeyboardButton("💬 تماس با پشتیبانی", url="https://t.me/Cofenet_online_support")],
+            [InlineKeyboardButton("🔙 بازگشت به منو", callback_data="back_to_menu")]
+        ]
+        
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.edit_message_text(
+            text,
+            reply_markup=reply_markup,
+            parse_mode=None
+        )
+    except Exception as e:
+        logger.error(f"Error in show_support: {e}")
+        logger.error(traceback.format_exc())
+        await query.edit_message_text("❌ خطا در نمایش پشتیبانی. لطفا مجددا تلاش کنید.")
 
 
 @handle_errors
@@ -1099,18 +1135,27 @@ async def show_service_detail(query, service_id: str, context: ContextTypes.DEFA
         
         price = format_price(service.get("Price", 0))
         discount = service.get("Discount", 0)
+        noticeText = service.get("Description", "")
+        duration = service.get("Duration", "")
         discount_price = format_price(discount)
         categories = "، ".join(get_service_categories(service))
         
         docs = await get_documents_with_types(service)
         
         text = f"📋 *{service['Title']}*\n\n"
+        if noticeText:
+            text += f"📢  {noticeText}\n\n"
+        if discount > 0:
+            text += f"🎯 تخفیف: {discount_price} تومان\n"
+        text += f"📂 دسته‌بندی: {categories}\n"
         text += f"💰 قیمت: {price} تومان\n"
         if discount > 0:
             text += f"🎯 تخفیف: {discount_price} تومان\n"
         text += f"📂 دسته‌بندی: {categories}\n"
         text += f"📄 تعداد مدارک: {len(docs)}\n"
-        text += f"🔗 [مشاهده در سایت]({API_BASE +'?service=' + service['Id'] })\n\n"
+        text += f"⏱️ زمان لازم: {duration} \n"
+
+        text += f"🔗 [مشاهده در سایت]({COFENET_Server_URL +'?service=' + service['Id'] })\n\n"
         
         text += "*مدارک مورد نیاز:*\n"
         for idx, doc in enumerate(docs, 1):
@@ -1133,7 +1178,66 @@ async def show_service_detail(query, service_id: str, context: ContextTypes.DEFA
         logger.error(f"Error in show_service_detail: {e}")
         logger.error(traceback.format_exc())
         await query.edit_message_text("❌ خطا در نمایش جزئیات سرویس. لطفا مجددا تلاش کنید.")
-
+@handle_errors
+async def show_my_profile(query, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Show user profile information and actions."""
+    try:
+        await query.answer()
+        
+        # Ensure user is authenticated
+        if not await ensure_authenticated(query, context):
+            await query.edit_message_text(
+                "❌ *خطا در احراز هویت*\n\n"
+                "لطفا مجددا /start را بزنید.",
+                parse_mode=ParseMode.MARKDOWN
+            )
+            return
+        
+        user_data = get_authenticated_user(context)
+        if not user_data:
+            await query.edit_message_text(
+                "❌ اطلاعات کاربر یافت نشد. لطفا مجددا /start را بزنید.",
+                parse_mode=ParseMode.MARKDOWN
+            )
+            return
+        
+        # Extract and clean fields
+        user_id = user_data.get('id', 'نامشخص')
+        if isinstance(user_id, str) and user_id.startswith("tg_"):
+            user_id = user_id[3:]  # remove "tg_" prefix
+        
+        first_name = user_data.get('first_name', '')
+        last_name = user_data.get('last_name', '')
+        username = user_data.get('username')
+        phone = user_data.get('phone')
+        
+        # Build profile text (using plain text, no Markdown backticks)
+        text = "👤 *پروفایل من*\n\n"
+        text += f"🆔 شناسه: {user_id}\n"
+        # text += f"👤 نام: {first_name} {last_name}\n"
+        if username:
+            text += f"👤 نام کاربری: @{username}\n"
+        # if phone:
+        #     text += f"📞 تلفن: {phone}\n"
+        # else:
+        # text += "📞 تلفن: تکمیل نشده\n"
+        text += "\n🔹"
+        
+        keyboard = [
+            [InlineKeyboardButton("📋 درخواست‌های من", callback_data="my_requests")],
+            [InlineKeyboardButton("🔙 بازگشت به منو", callback_data="back_to_menu")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await query.edit_message_text(
+            text,
+            reply_markup=reply_markup,
+            parse_mode=None
+        )
+    except Exception as e:
+        logger.error(f"Error in show_my_profile: {e}")
+        logger.error(traceback.format_exc())
+        await query.edit_message_text("❌ خطا در نمایش پروفایل.")    
 @handle_errors
 async def back_to_menu(query, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Return to main menu"""
@@ -1172,10 +1276,11 @@ async def back_to_menu(query, context: ContextTypes.DEFAULT_TYPE) -> None:
             keyboard.append([
                 InlineKeyboardButton("📂 بیشتر...", callback_data="categories_page_1")
             ])
-            keyboard.append([
-            InlineKeyboardButton("📥 درخواست‌های من", callback_data="my_requests"),
+        
+        keyboard.append([
+            InlineKeyboardButton("👨🏻 پروفایل من", callback_data="my_profile"),
+            InlineKeyboardButton("👨‍💻 پشتیبانی", callback_data="support"),
             InlineKeyboardButton("📊 همه خدمات", callback_data="all_services"),
-
         ])
         reply_markup = InlineKeyboardMarkup(keyboard)
         await query.edit_message_text(
@@ -1208,10 +1313,12 @@ async def handle_request(query, service_id: str, context: ContextTypes.DEFAULT_T
         context.user_data['awaiting_image'] = False
         
         docs = await get_documents_with_types(service)
+        final_price = context.user_data.get('final_price', service.get('Price', 0))
+        amount = format_price(final_price)
         if len(docs) == 1 and docs[0]['title'] == "نیازی به مدارک نیست":
             await query.edit_message_text(
                 f"✅ این سرویس نیازی به مدارک ندارد.\n"
-                f"💰 مبلغ قابل پرداخت: {format_price(service.get('Price', 0))} تومان\n\n"
+                f"💰 مبلغ قابل پرداخت: {amount} تومان\n\n"
                 "لطفا تصویر رسید پرداخت را ارسال کنید."
             )
             context.user_data['awaiting_payment'] = True
@@ -1398,7 +1505,7 @@ async def show_document_summary_and_payment(query, context: ContextTypes.DEFAULT
 
         # Generate or retrieve random fee
         if 'random_fee' not in context.user_data:
-            context.user_data['random_fee'] = random.randint(100, 500)
+            context.user_data['random_fee'] = 0 #random.randint(100, 500)
         random_fee = context.user_data['random_fee']
 
         # Detect loan services
@@ -1426,6 +1533,7 @@ async def show_document_summary_and_payment(query, context: ContextTypes.DEFAULT
 
             national_code = docs_collected.get('کد ملی ', '—')
             mobile = docs_collected.get('شماره موبایل', '—')
+            loan_amount_rials = loan_amount * 1_000_000
 
             if is_dastadas:
                 if refund_duration == 12:
@@ -1439,7 +1547,6 @@ async def show_document_summary_and_payment(query, context: ContextTypes.DEFAULT
                 else:
                     ratio = 320
 
-                loan_amount_rials = loan_amount * 1_000_000
                 score = loan_amount_rials / ratio
                 score_price = score * 30 / 10
                 fee = score * 2.1 / 10
@@ -1453,13 +1560,13 @@ async def show_document_summary_and_payment(query, context: ContextTypes.DEFAULT
 
             else:  # is_mehr
                 score = loan_amount
-                score_price = score * 340000
+                score_price = score * 350000
                 fee = score * 10000
                 instruction = f"شما می‌بایستی مبلغ {fmt(score_price)} در زمان انتقال امتیاز به حساب فروشنده واریز نمایید"
 
             # Add random fee to total price
             total_price = int(round(fee)) + random_fee
-            service['Price'] = total_price
+            context.user_data['final_price'] = total_price
 
             summary_lines = [
                 "📋 *خلاصه مدارک و محاسبات وام*",
@@ -1472,7 +1579,7 @@ async def show_document_summary_and_payment(query, context: ContextTypes.DEFAULT
                 f"🔹 **کد ملی**: {national_code}",
                 f"🔹 **شماره موبایل**: {mobile}",
                 "",
-                f"💰 *مبلغ قابل پرداخت (کارمزد کل): {fmt(total_price)} تومان*",
+                f"💰 *مبلغ قابل پرداخت : {fmt(total_price)} تومان*",
                 "",
                 instruction,
                 "",
@@ -1484,8 +1591,7 @@ async def show_document_summary_and_payment(query, context: ContextTypes.DEFAULT
             # Generic summary for non‑loan services
             base_price = service.get('Price', 0)
             total_price = base_price + random_fee
-            service['Price'] = total_price
-
+            context.user_data['final_price'] = total_price
             summary = "📋 *خلاصه مدارک*\n\n"
             for key, value in docs_collected.items():
                 summary += f"🔹 {key}\n   {value}\n\n"
@@ -1493,7 +1599,6 @@ async def show_document_summary_and_payment(query, context: ContextTypes.DEFAULT
             if not docs_collected:
                 summary += "⚠️ هیچ مدرکی وارد نشده است.\n\n"
 
-            summary += f"💰 *مبلغ پایه: {fmt(base_price)} تومان*\n"
             summary += f"💰 *مبلغ قابل پرداخت: {fmt(total_price)} تومان*\n\n"
             summary += "✅ آیا اطلاعات وارد شده صحیح است؟"
 
@@ -1770,8 +1875,8 @@ async def copy_card_number(query, context: ContextTypes.DEFAULT_TYPE) -> None:
     await query.answer()
     payment_info = data_store.get_payment_info()
     card_number = payment_info.get("cardNumber", "5041-7210-0916-7876")
-    text = f"📋 *شماره کارت:*\n`{card_number}`\n\n(برای کپی، روی عدد ضربه بزنید و نگه دارید)"
-    await query.message.reply_text(text, parse_mode=ParseMode.MARKDOWN)
+    # Send only the card number in a code block for easy copy
+    await query.message.reply_text(f"`{card_number}`", parse_mode=ParseMode.MARKDOWN)
 
 @handle_errors
 async def copy_amount(query, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -1781,10 +1886,10 @@ async def copy_amount(query, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not service:
         await query.message.reply_text("❌ خطا: سرویس یافت نشد.")
         return
-    amount = format_price(service.get('Price', 0))
-    text = f"📋 *مبلغ قابل پرداخت:*\n`{amount}`\n\n(برای کپی، روی عدد ضربه بزنید و نگه دارید)"
-    await query.message.reply_text(text, parse_mode=ParseMode.MARKDOWN)
-    
+    final_price = context.user_data.get('final_price', service.get('Price', 0))
+    amount = format_price(final_price)
+    # Send only the amount in a code block for easy copy
+    await query.message.reply_text(f"`{amount}`", parse_mode=ParseMode.MARKDOWN)  
 @handle_errors
 async def handle_payment(query, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle payment processing"""
@@ -1798,22 +1903,23 @@ async def handle_payment(query, context: ContextTypes.DEFAULT_TYPE) -> None:
         
         payment_info = data_store.get_payment_info()
         card_number = payment_info.get("cardNumber", "5041-7210-0916-7876")
+        logger.info('card_number',card_number);
         account_holder = payment_info.get("accountHolder", "محمد حسین نوابی")
         bank_name = payment_info.get("bankName", "بانک رسالت")
-        amount = format_price(service.get('Price', 0))
-        
+        final_price = context.user_data.get('final_price', service.get('Price', 0))
+        amount = format_price(final_price)        
         text = f"💰 *پرداخت*\n\n"
         text += f"سرویس: {service.get('Title', '')}\n"
         text += f"مبلغ: {amount} تومان\n\n"
         text += "✅ لطفا مبلغ را به شماره کارت زیر واریز کنید:\n"
-        text += f"🔹 شماره کارت: `{card_number}`\n"
+        text += f"🔹 شماره کارت: {card_number}\n"
         text += f"🔹 به نام: {account_holder}\n"
         text += f"🔹 بانک: {bank_name}\n\n"
         text += "❗️ پس از پرداخت، تصویر رسید را ارسال کنید."
         
         keyboard = [
-            [InlineKeyboardButton("📋 کپی شماره کارت", callback_data="copy_card"),
-             InlineKeyboardButton("📋 کپی مبلغ", callback_data="copy_amount"),],
+            [InlineKeyboardButton(" کپی شماره کارت", copy_text=CopyTextButton(card_number)),
+             InlineKeyboardButton(" کپی مبلغ", copy_text=CopyTextButton(final_price))],
             [],
             [InlineKeyboardButton("✅ پرداخت انجام شد", callback_data="payment_done")],
             [InlineKeyboardButton("🔙 بازگشت به خلاصه مدارک", callback_data="start_over")],
@@ -1976,11 +2082,12 @@ async def sendRequestDataToServer(context: ContextTypes.DEFAULT_TYPE) -> bool:
         documents = [{"title": title, "value": value} for title, value in docs_collected.items()]
 
         receipt_image = context.user_data.get('receipt_image', '')
+        final_price = context.user_data.get('final_price', service.get('Price', 0))
 
         payload = {
             "serviceId": service['Id'],
             "serviceTitle": service['Title'],
-            "price": service.get('Price', 0),
+            "price": final_price,
             "documents": documents,
             "receiptImage": receipt_image
         }

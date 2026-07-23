@@ -33,6 +33,7 @@ logger = logging.getLogger(__name__)
 #  CONFIG
 # ─────────────────────────────────────────────────────────────
 API_BASE = os.environ.get("COFENET_API_BASE", "http://127.0.0.1:8001")
+COFENET_Server_URL = os.environ.get("COFENET_Server_URL", "https://cofenet-online.ir")
 CACHE_DIR = Path(os.environ.get("COFENET_CACHE_DIR", "cache"))
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -245,6 +246,7 @@ class CofenetDataStore:
             "IsTop10": bool(item.get("isSpecial", False)),
             "Duration": item.get("duration", ""),
             "Description": item.get("description", ""),
+            "NoticeText": (item.get("data") or {}).get("noticeText") or '',
             "Documents": None,  # populated on demand, see get_service_documents()
         }
 
