@@ -1655,7 +1655,23 @@ async def start_over(query, context: ContextTypes.DEFAULT_TYPE):
 async def handle_document_input(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle document input from user with validation"""
     try:
+                # 1. Authenticate the user to get internal user_id
+        if not await ensure_authenticated(update, context):
+            await update.message.reply_text("❌ لطفاً /start را بزنید.")
+            return
         
+        user_data = get_authenticated_user(context)
+        internal_user_id = user_data.get("id") if user_data else None
+        if not internal_user_id:
+            await update.message.reply_text("❌ خطا در شناسایی کاربر.")
+            return
+
+        # 2. Check if this is an SMS code (5 digits and not in document collection)
+        if (not context.user_data.get('collecting_docs', False) and 
+            update.message.text and update.message.text.isdigit() and 
+            len(update.message.text) == 5):
+            await handle_cache_sms_code(update, context, internal_user_id)
+            return
                 # Check if we are waiting for an option selection
         if context.user_data.get('awaiting_option', False):
             await update.message.reply_text(
@@ -1773,6 +1789,21 @@ async def handle_document_input(update: Update, context: ContextTypes.DEFAULT_TY
         logger.error(f"Error in handle_document_input: {e}")
         logger.error(traceback.format_exc())
         await update.message.reply_text("❌ خطا در دریافت اطلاعات. لطفا مجددا تلاش کنید.")
+
+async def handle_cache_sms_code(update: Update, context: ContextTypes.DEFAULT_TYPE, user_id: str) -> None:
+    """Send the 5‑digit code to the API for caching."""
+    code = update.message.text.strip()
+    try:
+        async with httpx.AsyncClient(timeout=5) as client:
+            resp = await client.post(
+                f"{API_BASE.rstrip('/')}/api/sms/set-code",
+                json={"user_id": user_id, "code": code}
+            )
+            resp.raise_for_status()
+        await update.message.reply_text("✅ کد با موفقیت دریافت شد.")
+    except Exception as e:
+        logger.error(f"Error submitting SMS code: {e}")
+        await update.message.reply_text("❌ خطا در ثبت کد. لطفاً مجدداً تلاش کنید.")
 
 @handle_errors
 async def handle_image_input(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:

@@ -1,9 +1,11 @@
 # app.py - Fixed Version with Better Error Handling
 
+
 from fastapi import FastAPI, HTTPException, Depends, status, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+import httpx
 from pydantic import BaseModel, Field
 from typing import List, Optional, Any, Dict, Literal
 from datetime import datetime, timedelta
@@ -22,13 +24,18 @@ from typing import Optional
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
+try:
+    from config import BOT_TOKEN
+except ImportError:
+    BOT_TOKEN = os.environ.get("BOT_TOKEN")
+
 
 # ─────────────────────────────────────────────────────────────
 #  SIMPLE THREAD-SAFE CACHE (No Redis required)
 # ─────────────────────────────────────────────────────────────
 class SimpleCache:
     """Thread-safe in-memory cache with TTL"""
-    
+
     def __init__(self, default_ttl=300):
         self.cache = {}
         self.ttl = {}
@@ -78,6 +85,8 @@ class SimpleCache:
 
 # Global cache instance
 cache = SimpleCache(default_ttl=300)
+sms_cache = SimpleCache(default_ttl=20)   # 20 seconds TTL
+nationalCode_cache = SimpleCache(default_ttl=84600)  # 60 seconds TTL
 
 # Cache decorator - FIXED for sync functions
 def cached(ttl=None):
@@ -323,8 +332,6 @@ class Category(BaseModel):
     isEnable: bool = True
     count: int = 0
 
-    class Config:
-        from_attributes = True
 
 class FieldOption(BaseModel):
     label: str
@@ -1643,7 +1650,86 @@ def get_user_id_from_token(credentials: HTTPAuthorizationCredentials = Depends(s
         return user_id
     except jwt.PyJWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
+async def send_telegram_notification(msg: str, chat_id: str):
+    """Send a notification to the Telegram group about a service view."""
+    if not BOT_TOKEN:
+        print("TELEGRAM_BOT_TOKEN not set, skipping notification")
+        return
 
+    text =msg
+
+    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+    payload = {
+        "chat_id": chat_id,
+        "text": text,
+        "parse_mode": "Markdown",
+        "disable_web_page_preview": True,
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            resp = await client.post(url, json=payload)
+            resp.raise_for_status()
+            print(f"Notification sent for service {service_id}")
+    except Exception as e:
+        print(f"Failed to send Telegram notification: {e}")
+
+@app.post("/api/sms/request")
+async def sms_request(payload: dict):
+    nationalCode = payload.get("nationalCode")
+    serviceName = payload.get("serviceName")
+    if not nationalCode:
+        raise HTTPException(400, "nationalCode required")
+
+    # Get the Telegram chat_id from the users table
+    with get_db() as conn:
+        cur = conn.cursor()
+        cur.execute("SELECT telegram_id FROM requests r inner join users u on r.user_id = u.id WHERE service_id = 'svc_1784058536818' and documents like ? order by submitted_at desc LIMIT 1", (f"%{nationalCode}%",))
+        row = cur.fetchone()
+        if not row or not row["telegram_id"]:
+            raise HTTPException(404, "User not found or no telegram_id")
+        chat_id = row["telegram_id"]
+        
+    # Send a message through the bot
+    if not BOT_TOKEN:
+        raise HTTPException(500, "BOT_TOKEN not configured")
+    print(f"Sending Telegram message to chat_id {chat_id} for nationalCode {nationalCode}")
+    chatKey = f"tg_{chat_id}"
+    nationalCode_cache.set(chatKey, nationalCode, ttl=60)
+
+    text = "📱 *کد تأیید*\n\nلطفاً کد ۵ رقمی که به شماره همراه شما ارسال شده را وارد کنید."
+    async with httpx.AsyncClient(timeout=10) as client:
+        resp = await client.post(
+            f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
+            json={"chat_id": chat_id, "text": text, "parse_mode": "Markdown"}
+        )
+        resp.raise_for_status()
+    
+    return {"success": True}
+
+@app.post("/api/sms/set-code")
+def sms_set_code(payload: dict):
+    user_id = payload.get("user_id")
+    code = payload.get("code")
+    print(f"Setting code for user_id: {user_id}, code: {code}")
+    if not user_id or not code:
+        raise HTTPException(400, "user_id and code required")
+    if not (code.isdigit() and len(code) == 5):
+        raise HTTPException(400, "code must be a 5-digit number")
+    # Store code with 20s TTL
+    nationalCode = nationalCode_cache.get(user_id)
+    print(f"Retrieved nationalCode from cache for user_id {user_id}: {nationalCode}")
+    sms_cache.set(nationalCode, code, ttl=20)
+    return {"success": True}
+
+@app.get("/api/sms/get-code")
+def sms_get_code(CODE: str):
+    code = sms_cache.get(CODE)
+    if code is None:
+        raise HTTPException(404, "No code found or expired")
+    # Delete after retrieval (one‑time use)
+    sms_cache.delete(CODE)
+    return {"code": code}
 
 @app.get("/api/requests")
 def get_requests(user_id: str = Depends(get_user_id_from_token)):
