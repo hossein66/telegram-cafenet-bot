@@ -195,7 +195,7 @@ def paginate_categories(category_ids: List[int], page: int = 0, page_size: int =
 
 def is_image_document(doc_info: Dict) -> bool:
     """Check if document type is Image"""
-    return doc_info.get("type", "") == "Image"
+    return doc_info.get("type", "") in ("Image", "file")
 
 # Error handler decorator with retry
 def handle_errors(func):
@@ -1153,7 +1153,7 @@ async def show_service_detail(query, service_id: str, context: ContextTypes.DEFA
             text += f"🎯 تخفیف: {discount_price} تومان\n"
         text += f"📂 دسته‌بندی: {categories}\n"
         text += f"📄 تعداد مدارک: {len(docs)}\n"
-        text += f"⏱️ زمان لازم: {duration} \n"
+        text += f"⏱️ زمان لازم: {duration} \n\n"
 
         text += f"🔗 [مشاهده در سایت]({COFENET_Server_URL +'?service=' + service['Id'] })\n\n"
         
@@ -1594,6 +1594,8 @@ async def show_document_summary_and_payment(query, context: ContextTypes.DEFAULT
             context.user_data['final_price'] = total_price
             summary = "📋 *خلاصه مدارک*\n\n"
             for key, value in docs_collected.items():
+                if "File" in value:
+                    value = " فایل یا تصویر دریافت شد. "
                 summary += f"🔹 {key}\n   {value}\n\n"
 
             if not docs_collected:
@@ -1856,7 +1858,7 @@ async def handle_image_input(update: Update, context: ContextTypes.DEFAULT_TYPE)
         # Store the image as file_id
         if 'documents_collected' not in context.user_data:
             context.user_data['documents_collected'] = {}
-        context.user_data['documents_collected'][doc_label] = f"🖼️ تصویر (File ID: {photo_file_id})"
+        context.user_data['documents_collected'][doc_label] = f"File ID:{photo_file_id}"
         
         # Clear awaiting_image flag
         context.user_data['awaiting_image'] = False
@@ -1933,7 +1935,7 @@ async def handle_payment(query, context: ContextTypes.DEFAULT_TYPE) -> None:
             return
         
         payment_info = data_store.get_payment_info()
-        card_number = payment_info.get("cardNumber", "5041-7210-0916-7876")
+        card_number = payment_info.get("cardNumber", "5041721009167876")
         logger.info('card_number',card_number);
         account_holder = payment_info.get("accountHolder", "محمد حسین نوابی")
         bank_name = payment_info.get("bankName", "بانک رسالت")
@@ -1945,7 +1947,7 @@ async def handle_payment(query, context: ContextTypes.DEFAULT_TYPE) -> None:
         text += "✅ لطفا مبلغ را به شماره کارت زیر واریز کنید:\n"
         text += f"🔹 شماره کارت: {card_number}\n"
         text += f"🔹 به نام: {account_holder}\n"
-        text += f"🔹 بانک: {bank_name}\n\n"
+        # text += f"🔹 بانک: {bank_name}\n\n"
         text += "❗️ پس از پرداخت، تصویر رسید را ارسال کنید."
         
         keyboard = [

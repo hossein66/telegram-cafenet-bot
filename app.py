@@ -1,9 +1,10 @@
 # app.py - Fixed Version with Better Error Handling
 
 
-from fastapi import FastAPI, HTTPException, Depends, status, Query
+from fastapi import FastAPI, HTTPException, Depends, Response, status, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import httpx
 from pydantic import BaseModel, Field
@@ -23,13 +24,12 @@ from functools import wraps
 from typing import Optional
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-
 try:
     from config import BOT_TOKEN
 except ImportError:
     BOT_TOKEN = os.environ.get("BOT_TOKEN")
 
-
+adminUserId = "user_927b32ac7f9ef3ef"  # Replace with your actual admin user ID
 # ─────────────────────────────────────────────────────────────
 #  SIMPLE THREAD-SAFE CACHE (No Redis required)
 # ─────────────────────────────────────────────────────────────
@@ -523,7 +523,7 @@ def get_payment_info():
             else:
                 # Return defaults if no config exists
                 return {
-                    "cardNumber": "5041-7210-0916-7876",
+                    "cardNumber": "5041721009167876",
                     "accountHolder": "محمد حسین نوابی",
                     "bankName": "بانک رسالت"
                 }
@@ -1429,7 +1429,7 @@ def get_doc_types():
 @app.post("/api/auth/otp/send")
 def send_otp(req: OTPRequest):
     try:
-        code = "12345"  # In production, generate random 5-digit code
+        code = "91200"  # In production, generate random 5-digit code
         expires = (datetime.utcnow() + timedelta(minutes=5)).isoformat()
 
         with get_db() as conn:
@@ -1763,28 +1763,261 @@ def get_requests(user_id: str = Depends(get_user_id_from_token)):
     except Exception as e:
         print(f"❌ Error in get_requests: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-    
+# Add this endpoint after the existing request endpoints
+@app.get("/api/requests/{request_id}/receipt-image")
+def get_receipt_image(request_id: str,user_id: str = Depends(get_user_id_from_token)):
+    """
+    Get the receipt image for a specific request.
+    Returns the image file or 404 if not found.
+    """
+    try:
+        if user_id != adminUserId:
+            raise HTTPException(status_code=403, detail="Forbidden: Only admin can access this endpoint")
+        with get_db() as conn:
+            cur = conn.cursor()
+            cur.execute("""
+                SELECT receipt_image FROM requests WHERE id = ?
+            """, (request_id,))
+            row = cur.fetchone()
+            
+            if not row:
+                raise HTTPException(status_code=404, detail="Request not found")
+            
+            receipt_image = row["receipt_image"]
+            
+            if not receipt_image:
+                raise HTTPException(status_code=404, detail="Receipt image not found")
+            
+            # Check if it's a Telegram file_id
+            is_telegram = (
+                receipt_image.startswith('AgACAg') or 
+                receipt_image.startswith('BQACAg') or 
+                receipt_image.startswith('BAACAg') or
+                (len(receipt_image) > 20 and not receipt_image.startswith('http') and not receipt_image.startswith('data:image'))
+            )
+            
+            if is_telegram:
+                # Return as file_id for the client to handle
+                return {
+                    "type": "telegram",
+                    "file_id": receipt_image,
+                    "url": f"/api/telegram/file/{receipt_image}"
+                }
+            elif receipt_image.startswith('data:image'):
+                # Base64 image - return as-is
+                return Response(
+                    content=receipt_image.split(',')[1] if ',' in receipt_image else receipt_image,
+                    media_type="image/png" if 'png' in receipt_image else "image/jpeg"
+                )
+            elif receipt_image.startswith('http'):
+                # External URL - redirect or proxy
+                return {
+                    "type": "url",
+                    "url": receipt_image
+                }
+            else:
+                # Assume it's a local file path or base64 without prefix
+                return {
+                    "type": "raw",
+                    "data": receipt_image
+                }
+                
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Error in get_receipt_image: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# Alternative: Direct file serving endpoint
+@app.get("/api/requests/{request_id}/receipt-image/file")
+def get_receipt_image_file(request_id: str,user_id: str = Depends(get_user_id_from_token)):
+    """
+    Directly serve the receipt image file.
+    Use this for image tags in HTML.
+    """
+    try:
+        if user_id != adminUserId:
+            raise HTTPException(status_code=403, detail="Forbidden: Only admin can access this endpoint")
+        with get_db() as conn:
+            cur = conn.cursor()
+            cur.execute("""
+                SELECT receipt_image FROM requests WHERE id = ?
+            """, (request_id,))
+            row = cur.fetchone()
+            
+            if not row:
+                raise HTTPException(status_code=404, detail="Request not found")
+            
+            receipt_image = row["receipt_image"]
+            
+            if not receipt_image:
+                raise HTTPException(status_code=404, detail="Receipt image not found")
+            
+            # Check if it's a Telegram file_id
+            is_telegram = (
+                receipt_image.startswith('AgACAg') or 
+                receipt_image.startswith('BQACAg') or 
+                receipt_image.startswith('BAACAg') or
+                (len(receipt_image) > 20 and not receipt_image.startswith('http') and not receipt_image.startswith('data:image'))
+            )
+            
+            if is_telegram:
+                # Redirect to Telegram file endpoint
+                return RedirectResponse(url=f"/api/telegram/file/{receipt_image}")
+            elif receipt_image.startswith('data:image'):
+                # Base64 image
+                import base64
+                try:
+                    if ',' in receipt_image:
+                        # Extract the base64 part
+                        base64_data = receipt_image.split(',')[1]
+                        image_data = base64.b64decode(base64_data)
+                        # Determine content type
+                        if 'png' in receipt_image.lower():
+                            media_type = "image/png"
+                        elif 'jpeg' in receipt_image.lower() or 'jpg' in receipt_image.lower():
+                            media_type = "image/jpeg"
+                        elif 'gif' in receipt_image.lower():
+                            media_type = "image/gif"
+                        else:
+                            media_type = "image/png"  # Default
+                        return Response(content=image_data, media_type=media_type)
+                    else:
+                        raise HTTPException(status_code=400, detail="Invalid base64 image format")
+                except Exception as e:
+                    print(f"❌ Error decoding base64 image: {e}")
+                    raise HTTPException(status_code=500, detail="Error decoding image")
+            elif receipt_image.startswith('http'):
+                # Redirect to external URL
+                return RedirectResponse(url=receipt_image)
+            else:
+                # Try to serve as local file
+                import os
+                file_path = os.path.join("uploads", receipt_image) if receipt_image else None
+                if file_path and os.path.exists(file_path):
+                    return FileResponse(file_path)
+                else:
+                    raise HTTPException(status_code=404, detail="Image file not found")
+                
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Error in get_receipt_image_file: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/requests/all")
+def get_requests_all(user_id: str = Depends(get_user_id_from_token)):
+    """
+    Get all requests for the authenticated user.
+    """
+    try:
+        if user_id != adminUserId:
+            raise HTTPException(status_code=403, detail="Forbidden: Only admin can access this endpoint")
+        with get_db() as conn:
+            cur = conn.cursor()
+            cur.execute("""
+                SELECT * FROM requests r inner join users u on r.user_id=u.id ORDER BY submitted_at DESC
+            """)
+            rows = cur.fetchall()
+
+            result = []
+            for row in rows:
+                r = dict(row)
+                result.append({
+                    "id": r["id"],
+                    "userId": r["user_id"],
+                    "first_name": r["first_name"],
+                    "last_name": r["last_name"],
+                    "username": r["username"],
+                    "telegram_id": r["telegram_id"],
+                    "serviceId": r["service_id"],
+                    "serviceTitle": r["service_title"],
+                    "price": r["price"],
+                    "documents": json.loads(r["documents"] or "[]"),
+                    # "receiptImage": r["receipt_image"],
+                    "status": r["status"],
+                    "submittedAt": r["submitted_at"]
+                })
+            return result
+    except Exception as e:
+        print(f"❌ Error in get_requests: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/telegram/file/{file_id}")
+async def get_telegram_file(file_id: str,user_id: str = Depends(get_user_id_from_token)):
+    if not BOT_TOKEN:
+        raise HTTPException(
+            status_code=500,
+            detail="BOT_TOKEN not configured"
+        )
+
+    try:
+        if user_id != adminUserId:
+            raise HTTPException(status_code=403, detail="Forbidden: Only admin can access this endpoint")        
+        async with httpx.AsyncClient(timeout=30.0) as client:
+
+            # Get file information from Telegram
+            response = await client.get(
+                f"https://api.telegram.org/bot{BOT_TOKEN}/getFile",
+                params={"file_id": file_id}
+            )
+
+            response.raise_for_status()
+
+            data = response.json()
+
+            if not data.get("ok"):
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Telegram API error: {data.get('description')}"
+                )
+
+            file_path = data["result"]["file_path"]
+
+            # Download the actual file
+            file_response = await client.get(
+                f"https://api.telegram.org/file/bot{BOT_TOKEN}/{file_path}"
+            )
+
+            file_response.raise_for_status()
+
+            return Response(
+                content=file_response.content,
+                media_type="application/octet-stream"
+            )
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        print(f"❌ Error in get_telegram_file: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        )    
 @app.put("/api/requests/{request_id}/status")
 def update_request_status(
     request_id: str,
     status: Literal["pending", "processing", "done", "rejected"],
-    user: dict = Depends(get_current_user)
+    user_id: str = Depends(get_user_id_from_token)
 ):
     try:
+        if user_id != adminUserId:
+            raise HTTPException(status_code=403, detail="Forbidden: Only admin can access this endpoint")        
         with get_db() as conn:
             cur = conn.cursor()
             cur.execute("""
                 UPDATE requests
                 SET status = ?, updated_at = ?
-                WHERE id = ? AND user_id = ?
-            """, (status, datetime.utcnow().isoformat(), request_id, user["id"]))
+                WHERE id = ? 
+            """, (status, datetime.utcnow().isoformat(), request_id))
             conn.commit()
 
             if cur.rowcount == 0:
                 raise HTTPException(status_code=404, detail="Request not found")
 
         # Clear cache
-        cache.delete(f"user_requests_{user['id']}")
         return {"success": True, "status": status}
     except HTTPException:
         raise

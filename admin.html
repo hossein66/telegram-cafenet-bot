@@ -1,0 +1,1763 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>مدیریت درخواست‌ها | Cafenet</title>
+    <style>
+        /* ───────────── CSS Variables ───────────── */
+        :root {
+            --primary: #6C5CE7;
+            --primary-dark: #5A4BD1;
+            --primary-light: #A29BFE;
+            --success: #00B894;
+            --warning: #FDCB6E;
+            --danger: #E17055;
+            --info: #0984E3;
+            --gray-50: #F8F9FA;
+            --gray-100: #F1F3F5;
+            --gray-200: #E9ECEF;
+            --gray-300: #DEE2E6;
+            --gray-400: #CED4DA;
+            --gray-500: #ADB5BD;
+            --gray-600: #868E96;
+            --gray-700: #495057;
+            --gray-800: #343A40;
+            --gray-900: #212529;
+            --radius: 12px;
+            --radius-sm: 8px;
+            --shadow: 0 4px 20px rgba(108, 92, 231, 0.08);
+            --transition: 0.2s ease;
+            --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+
+        /* ───────────── Reset & Base ───────────── */
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font);
+            background: var(--gray-50);
+            color: var(--gray-900);
+            min-height: 100vh;
+            margin: 0;
+            padding: 0;
+            background-image: radial-gradient(ellipse at 10% 20%, rgba(108, 92, 231, 0.04) 0%, transparent 60%),
+                radial-gradient(ellipse at 90% 80%, rgba(108, 92, 231, 0.03) 0%, transparent 60%);
+        }
+
+        /* ───────────── App Container ───────────── */
+        .app-container {
+            width: 100%;
+            max-width: 100%;
+            min-height: 100vh;
+            background: #ffffff;
+            padding: 12px 16px;
+            transition: var(--transition);
+            position: relative;
+        }
+
+        @media (min-width: 768px) {
+            .app-container {
+                padding: 16px 32px;
+            }
+        }
+        @media (min-width: 1200px) {
+            .app-container {
+                padding: 20px 48px;
+            }
+        }
+
+        /* ───────────── Typography ───────────── */
+        h1,
+        h2,
+        h3 {
+            font-weight: 700;
+            letter-spacing: -0.01em;
+        }
+        h1 {
+            font-size: 24px;
+            color: var(--gray-900);
+        }
+        h2 {
+            font-size: 18px;
+            color: var(--gray-800);
+        }
+        h3 {
+            font-size: 15px;
+            color: var(--gray-700);
+        }
+        .text-muted {
+            color: var(--gray-600);
+            font-size: 13px;
+        }
+        .text-small {
+            font-size: 12px;
+        }
+
+        /* ───────────── Login Screen ───────────── */
+        #loginScreen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 80vh;
+            padding: 20px 0;
+            animation: fadeUp 0.4s ease;
+        }
+        #loginScreen .brand {
+            margin-bottom: 24px;
+            text-align: center;
+        }
+        #loginScreen .brand .logo {
+            font-size: 40px;
+            display: block;
+            margin-bottom: 4px;
+        }
+        #loginScreen .brand h1 {
+            font-size: 26px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        #loginScreen .brand p {
+            color: var(--gray-600);
+            font-size: 14px;
+            margin-top: 2px;
+        }
+        .login-form {
+            width: 100%;
+            max-width: 360px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .form-group label {
+            font-weight: 600;
+            font-size: 13px;
+            color: var(--gray-700);
+        }
+        .form-group input {
+            padding: 10px 14px;
+            border: 2px solid var(--gray-200);
+            border-radius: var(--radius-sm);
+            font-size: 15px;
+            transition: var(--transition);
+            background: var(--gray-50);
+            font-family: inherit;
+            direction: ltr;
+            text-align: left;
+        }
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.08);
+            background: #fff;
+        }
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-weight: 600;
+            font-size: 15px;
+            cursor: pointer;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            font-family: inherit;
+        }
+        .btn-primary {
+            background: var(--primary);
+            color: #fff;
+        }
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(108, 92, 231, 0.25);
+        }
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        .btn-success {
+            background: var(--success);
+            color: #fff;
+        }
+        .btn-success:hover {
+            background: #00A382;
+            transform: translateY(-1px);
+        }
+        .btn-danger {
+            background: var(--danger);
+            color: #fff;
+        }
+        .btn-danger:hover {
+            background: #D63031;
+        }
+        .btn-outline {
+            background: transparent;
+            color: var(--gray-600);
+            border: 2px solid var(--gray-300);
+        }
+        .btn-outline:hover {
+            border-color: var(--gray-600);
+            color: var(--gray-800);
+        }
+        .btn-sm {
+            padding: 4px 12px;
+            font-size: 12px;
+            border-radius: 6px;
+        }
+        .btn-block {
+            width: 100%;
+        }
+        .otp-row {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        .otp-row .form-group {
+            flex: 1;
+        }
+        .otp-row .btn {
+            flex-shrink: 0;
+            margin-top: 2px;
+            height: 44px;
+        }
+        .login-error {
+            color: var(--danger);
+            font-size: 13px;
+            text-align: center;
+            min-height: 20px;
+        }
+        .login-success {
+            color: var(--success);
+            font-size: 13px;
+            text-align: center;
+        }
+        .otp-section {
+            display: none;
+            animation: fadeUp 0.3s ease;
+        }
+        .otp-section.visible {
+            display: block;
+        }
+
+        /* ───────────── Dashboard ───────────── */
+        #dashboardScreen {
+            display: none;
+            animation: fadeUp 0.3s ease;
+        }
+        #dashboardScreen.visible {
+            display: block;
+        }
+
+        .dashboard-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 8px 16px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid var(--gray-100);
+            margin-bottom: 16px;
+        }
+        .dashboard-header .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .dashboard-header .user-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--primary-light);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 15px;
+            flex-shrink: 0;
+        }
+        .dashboard-header .user-details {
+            line-height: 1.3;
+        }
+        .dashboard-header .user-details .name {
+            font-weight: 700;
+            font-size: 15px;
+        }
+        .dashboard-header .user-details .phone {
+            font-size: 12px;
+            color: var(--gray-600);
+        }
+        .dashboard-header .actions {
+            display: flex;
+            gap: 6px;
+        }
+
+        /* ───────────── Stats ───────────── */
+        .stats-row {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-bottom: 14px;
+        }
+        .stat-card {
+            background: var(--gray-50);
+            border-radius: var(--radius-sm);
+            padding: 6px 14px;
+            flex: 1 1 auto;
+            min-width: 50px;
+            text-align: center;
+            border: 1px solid var(--gray-200);
+        }
+        .stat-card .number {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--gray-900);
+        }
+        .stat-card .label {
+            font-size: 11px;
+            color: var(--gray-600);
+        }
+        .stat-card.pending .number {
+            color: var(--warning);
+        }
+        .stat-card.processing .number {
+            color: var(--info);
+        }
+        .stat-card.done .number {
+            color: var(--success);
+        }
+        .stat-card.rejected .number {
+            color: var(--danger);
+        }
+
+        /* ───────────── Filter Bar ───────────── */
+        .filter-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px 12px;
+            align-items: center;
+            padding: 10px 0 14px 0;
+            border-bottom: 1px solid var(--gray-200);
+            margin-bottom: 16px;
+        }
+        .filter-bar .filter-group {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 4px;
+        }
+        .filter-bar .filter-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--gray-700);
+            margin-left: 4px;
+        }
+        .filter-btn {
+            padding: 3px 14px;
+            border-radius: 20px;
+            border: 2px solid var(--gray-300);
+            background: transparent;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: var(--transition);
+            font-family: inherit;
+            color: var(--gray-700);
+        }
+        .filter-btn:hover {
+            border-color: var(--primary-light);
+            color: var(--primary);
+        }
+        .filter-btn.active {
+            background: var(--primary);
+            color: #fff;
+            border-color: var(--primary);
+        }
+        .filter-select {
+            padding: 4px 12px;
+            border: 2px solid var(--gray-300);
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
+            background: #fff;
+            font-family: inherit;
+            cursor: pointer;
+            color: var(--gray-700);
+            transition: var(--transition);
+            min-width: 120px;
+        }
+        .filter-select:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+        .filter-count {
+            font-size: 13px;
+            color: var(--gray-600);
+            margin-right: auto;
+        }
+
+        /* ───────────── Request List ───────────── */
+        .requests-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .request-card {
+            background: var(--gray-50);
+            border-radius: var(--radius-sm);
+            padding: 10px 14px;
+            border: 1px solid var(--gray-200);
+            transition: var(--transition);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .request-card:hover {
+            border-color: var(--primary-light);
+            box-shadow: 0 2px 12px rgba(108, 92, 231, 0.08);
+        }
+        .request-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 6px 10px;
+        }
+        .request-row .main-info {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+            flex: 1;
+        }
+        .request-row .main-info .title {
+            font-weight: 700;
+            font-size: 14px;
+            color: var(--gray-800);
+        }
+        .request-row .main-info .price {
+            font-weight: 600;
+            font-size: 13px;
+            color: var(--primary);
+            background: rgba(108, 92, 231, 0.08);
+            padding: 0 10px;
+            border-radius: 12px;
+        }
+        .request-row .main-info .date {
+            font-size: 12px;
+            color: var(--gray-600);
+            direction: ltr;
+            unicode-bidi: plaintext;
+        }
+        .request-row .status-badge {
+            padding: 2px 12px;
+            border-radius: 14px;
+            font-size: 12px;
+            font-weight: 600;
+            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .status-badge.pending {
+            background: #FFF3CD;
+            color: #856404;
+        }
+        .status-badge.processing {
+            background: #D1ECF1;
+            color: #0C5460;
+        }
+        .status-badge.done {
+            background: #D4EDDA;
+            color: #155724;
+        }
+        .status-badge.rejected {
+            background: #F8D7DA;
+            color: #721C24;
+        }
+
+        .request-meta {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px 16px;
+            padding-top: 4px;
+            border-top: 1px solid var(--gray-200);
+            font-size: 12px;
+            color: var(--gray-600);
+        }
+        .request-meta .doc-count {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .request-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            align-items: center;
+            margin-top: 2px;
+        }
+        .request-actions .status-select {
+            padding: 3px 10px;
+            border: 2px solid var(--gray-300);
+            border-radius: 6px;
+            font-size: 13px;
+            background: #fff;
+            font-family: inherit;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        .request-actions .status-select:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+        .request-actions .btn-update {
+            padding: 3px 14px;
+            font-size: 12px;
+        }
+
+        /* ───────────── Detail Toggle ───────────── */
+        .detail-toggle {
+            background: none;
+            border: none;
+            color: var(--primary);
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+            padding: 2px 0;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            transition: var(--transition);
+        }
+        .detail-toggle:hover {
+            color: var(--primary-dark);
+        }
+
+        .request-detail {
+            display: none;
+            margin-top: 8px;
+            padding-top: 10px;
+            border-top: 1px dashed var(--gray-300);
+            font-size: 13px;
+            line-height: 1.5;
+            background: #fff;
+            border-radius: var(--radius-sm);
+            padding: 12px 14px;
+            box-shadow: inset 0 1px 4px rgba(0,0,0,0.02);
+        }
+        .request-detail.visible {
+            display: block;
+            animation: fadeUp 0.2s ease;
+        }
+        .request-detail .detail-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px 12px;
+            margin-bottom: 4px;
+        }
+        .request-detail .detail-label {
+            font-weight: 600;
+            color: var(--gray-700);
+            min-width: 80px;
+            font-size: 12px;
+        }
+        .request-detail .detail-value {
+            color: var(--gray-800);
+            word-break: break-all;
+            font-size: 13px;
+        }
+        .request-detail .doc-item {
+            background: var(--gray-50);
+            padding: 4px 10px;
+            border-radius: 4px;
+            margin: 2px 0;
+            display: inline-block;
+            border: 1px solid var(--gray-200);
+            font-size: 12px;
+        }
+        .request-detail .doc-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        
+        /* ───────────── Receipt Image Styles ───────────── */
+        .receipt-container {
+            display: inline-block;
+            position: relative;
+            width: 100%;
+            max-width: 300px;
+        }
+        .receipt-thumb {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: 6px;
+            border: 2px solid var(--gray-300);
+            cursor: pointer;
+            transition: transform 0.2s ease, border-color 0.2s ease;
+            object-fit: contain;
+            background: var(--gray-100);
+        }
+        .receipt-thumb:hover {
+            transform: scale(1.02);
+            border-color: var(--primary);
+        }
+        .receipt-loading {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: var(--gray-600);
+            padding: 8px 16px;
+            background: var(--gray-100);
+            border-radius: 6px;
+            border: 2px dashed var(--gray-300);
+        }
+        .receipt-loading .spinner-small {
+            width: 20px;
+            height: 20px;
+            border: 3px solid var(--gray-300);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+        }
+        .receipt-error {
+            color: var(--danger);
+            font-size: 13px;
+            padding: 8px 12px;
+            background: #fff0f0;
+            border-radius: 6px;
+            border: 1px solid #ffd4d4;
+            display: inline-block;
+        }
+        .receipt-telegram {
+            background: #e8f0fe;
+            padding: 6px 12px;
+            border-radius: 6px;
+            display: inline-block;
+            font-size: 12px;
+            color: var(--gray-700);
+            border: 2px dashed var(--gray-400);
+        }
+        .receipt-telegram code {
+            background: #f1f3f5;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 11px;
+        }
+        .receipt-actions {
+            margin-top: 8px;
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+        .receipt-hint {
+            font-size: 11px;
+            color: var(--gray-500);
+            margin-top: 4px;
+        }
+        
+        .btn-show-receipt {
+            background: var(--primary);
+            color: #fff;
+            padding: 4px 14px;
+            font-size: 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .btn-show-receipt:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+        .btn-show-receipt:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .request-detail .doc-img-thumb {
+            height: 32px;
+            width: 32px;
+            object-fit: cover;
+            border-radius: 4px;
+            cursor: pointer;
+            border: 1px solid var(--gray-300);
+            transition: transform 0.2s ease;
+            vertical-align: middle;
+        }
+        .request-detail .doc-img-thumb:hover {
+            transform: scale(1.1);
+        }
+        .request-detail .user-info-box {
+            background: var(--gray-50);
+            padding: 8px 12px;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            border-right: 3px solid var(--primary);
+        }
+        .request-detail .user-info-box .user-title {
+            font-weight: 700;
+            color: var(--primary);
+            font-size: 13px;
+            margin-bottom: 4px;
+        }
+        .request-detail .telegram-img-placeholder {
+            background: #e8f0fe;
+            padding: 4px 10px;
+            border-radius: 4px;
+            display: inline-block;
+            font-size: 12px;
+            color: var(--gray-700);
+            border: 1px dashed var(--gray-400);
+        }
+        .request-detail .telegram-img-placeholder code {
+            font-size: 11px;
+            background: #f1f3f5;
+            padding: 1px 6px;
+            border-radius: 3px;
+        }
+
+        /* ───────────── Image Modal ───────────── */
+        .image-modal {
+            display: none;
+            position: fixed;
+            z-index: 9999;
+            padding-top: 40px;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.92);
+            animation: fadeUp 0.2s ease;
+        }
+        .image-modal .modal-content {
+            margin: auto;
+            display: block;
+            max-width: 92%;
+            max-height: 88vh;
+            border-radius: 6px;
+            box-shadow: 0 0 40px rgba(0,0,0,0.5);
+        }
+        .image-modal .modal-close {
+            position: absolute;
+            top: 16px;
+            left: 32px;
+            color: #fff;
+            font-size: 36px;
+            font-weight: 300;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        .image-modal .modal-close:hover {
+            color: #bbb;
+            transform: rotate(90deg);
+        }
+
+        /* ───────────── Empty / Loading ───────────── */
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--gray-600);
+        }
+        .empty-state .emoji {
+            font-size: 40px;
+            display: block;
+            margin-bottom: 8px;
+        }
+        .loading-spinner {
+            display: flex;
+            justify-content: center;
+            padding: 30px 0;
+        }
+        .loading-spinner .spinner {
+            width: 32px;
+            height: 32px;
+            border: 4px solid var(--gray-200);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+        }
+
+        /* ───────────── Toast ───────────── */
+        .toast-container {
+            position: fixed;
+            top: 16px;
+            right: 16px;
+            z-index: 99999;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-width: 340px;
+            width: 100%;
+        }
+        .toast {
+            padding: 10px 16px;
+            border-radius: var(--radius-sm);
+            background: var(--gray-900);
+            color: #fff;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            font-size: 13px;
+            animation: slideIn 0.25s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-right: 4px solid var(--primary);
+        }
+        .toast.success {
+            border-right-color: var(--success);
+        }
+        .toast.error {
+            border-right-color: var(--danger);
+        }
+        .toast .toast-icon {
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+        .toast .toast-close {
+            margin-right: auto;
+            background: none;
+            border: none;
+            color: rgba(255, 255, 255, 0.6);
+            cursor: pointer;
+            font-size: 16px;
+            padding: 0 4px;
+        }
+
+        /* ───────────── Animations ───────────── */
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(30px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        /* ───────────── Scroll ───────────── */
+        .requests-scroll {
+            max-height: 65vh;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+        .requests-scroll::-webkit-scrollbar {
+            width: 4px;
+        }
+        .requests-scroll::-webkit-scrollbar-track {
+            background: var(--gray-100);
+            border-radius: 8px;
+        }
+        .requests-scroll::-webkit-scrollbar-thumb {
+            background: var(--gray-400);
+            border-radius: 8px;
+        }
+
+        /* ───────────── Responsive ───────────── */
+        @media (max-width: 600px) {
+            .app-container {
+                padding: 8px 10px;
+            }
+            .dashboard-header {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 6px;
+            }
+            .filter-bar {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 6px;
+            }
+            .filter-bar .filter-group {
+                flex-wrap: wrap;
+            }
+            .filter-count {
+                margin-right: 0;
+            }
+            .stats-row {
+                gap: 4px;
+            }
+            .stat-card {
+                padding: 4px 10px;
+                min-width: 40px;
+            }
+            .stat-card .number {
+                font-size: 15px;
+            }
+            .request-row {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .request-row .main-info {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 4px;
+            }
+            .request-row .status-badge {
+                align-self: flex-start;
+            }
+            .request-detail .detail-row {
+                flex-direction: column;
+                gap: 0;
+            }
+            .request-detail .detail-label {
+                min-width: auto;
+            }
+            .toast-container {
+                right: 8px;
+                left: 8px;
+                max-width: none;
+            }
+            .image-modal .modal-close {
+                left: 16px;
+                font-size: 28px;
+            }
+            .receipt-thumb {
+                max-height: 200px;
+            }
+            .receipt-container {
+                max-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ─── Toast Container ─── -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- ─── Image Modal ─── -->
+    <div id="imageModal" class="image-modal" onclick="closeImageModal(event)">
+        <span class="modal-close">&times;</span>
+        <img class="modal-content" id="modalImage" src="" alt="تصویر بزرگ" />
+    </div>
+
+    <!-- ─── App ─── -->
+    <div class="app-container" id="app">
+
+        <!-- ===== LOGIN SCREEN ===== -->
+        <div id="loginScreen">
+            <div class="brand">
+                <span class="logo">📋</span>
+                <h1>مدیریت درخواست‌ها</h1>
+                <p>برای مشاهده و مدیریت درخواست‌های خود وارد شوید</p>
+            </div>
+            <div class="login-form">
+                <div class="form-group">
+                    <label for="phoneInput">شماره موبایل</label>
+                    <input type="tel" id="phoneInput" placeholder="مثلاً ۰۹۱۲۳۴۵۶۷۸۹" value="09123456789" dir="ltr" />
+                </div>
+                <button class="btn btn-primary btn-block" id="sendOtpBtn">ارسال کد تأیید</button>
+                <div class="otp-section" id="otpSection">
+                    <div class="otp-row">
+                        <div class="form-group">
+                            <label for="otpInput">کد تأیید</label>
+                            <input type="text" id="otpInput" placeholder="کد ۵ رقمی" maxlength="5" dir="ltr" />
+                        </div>
+                        <button class="btn btn-success" id="verifyOtpBtn" style="height:44px;">ورود</button>
+                    </div>
+                    <div style="text-align:center;font-size:12px;color:var(--gray-500);margin-top:4px;">
+                        کد آزمایشی: <strong>12345</strong>
+                    </div>
+                </div>
+                <div class="login-error" id="loginError"></div>
+                <div class="login-success" id="loginSuccess"></div>
+            </div>
+        </div>
+
+        <!-- ===== DASHBOARD SCREEN ===== -->
+        <div id="dashboardScreen">
+            <!-- Header -->
+            <div class="dashboard-header">
+                <div class="user-info">
+                    <div class="user-avatar" id="userAvatar">👤</div>
+                    <div class="user-details">
+                        <div class="name" id="userName">کاربر</div>
+                        <div class="phone" id="userPhone">۰۹۱۲۳۴۵۶۷۸۹</div>
+                    </div>
+                </div>
+                <div class="actions">
+                    <button class="btn btn-outline btn-sm" id="refreshBtn">⟳</button>
+                    <button class="btn btn-danger btn-sm" id="logoutBtn">خروج</button>
+                </div>
+            </div>
+
+            <!-- Stats -->
+            <div class="stats-row" id="statsRow">
+                <div class="stat-card pending"><div class="number" id="statPending">0</div><div class="label">در انتظار</div></div>
+                <div class="stat-card processing"><div class="number" id="statProcessing">0</div><div class="label">در حال بررسی</div></div>
+                <div class="stat-card done"><div class="number" id="statDone">0</div><div class="label">انجام شده</div></div>
+                <div class="stat-card rejected"><div class="number" id="statRejected">0</div><div class="label">رد شده</div></div>
+                <div class="stat-card"><div class="number" id="statTotal">0</div><div class="label">مجموع</div></div>
+            </div>
+
+            <!-- Filter Bar -->
+            <div class="filter-bar" id="filterBar">
+                <div class="filter-group">
+                    <span class="filter-label">وضعیت:</span>
+                    <button class="filter-btn active" data-status="all">همه</button>
+                    <button class="filter-btn" data-status="pending">در انتظار</button>
+                    <button class="filter-btn" data-status="processing">در حال بررسی</button>
+                    <button class="filter-btn" data-status="done">انجام شده</button>
+                    <button class="filter-btn" data-status="rejected">رد شده</button>
+                </div>
+                <div class="filter-group">
+                    <span class="filter-label">سرویس:</span>
+                    <select class="filter-select" id="serviceFilter">
+                        <option value="all">همه سرویس‌ها</option>
+                    </select>
+                </div>
+                <span class="filter-count" id="filterCount">۰ مورد</span>
+            </div>
+
+            <!-- Requests -->
+            <div class="requests-scroll" id="requestsContainer">
+                <div id="requestsList"></div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ─── JavaScript ─── -->
+    <script>
+// Updated JavaScript - Fix double API calls
+
+(function() {
+    'use strict';
+
+    // ─── DOM refs ───
+    const loginScreen = document.getElementById('loginScreen');
+    const dashboardScreen = document.getElementById('dashboardScreen');
+    const phoneInput = document.getElementById('phoneInput');
+    const otpInput = document.getElementById('otpInput');
+    const sendOtpBtn = document.getElementById('sendOtpBtn');
+    const verifyOtpBtn = document.getElementById('verifyOtpBtn');
+    const otpSection = document.getElementById('otpSection');
+    const loginError = document.getElementById('loginError');
+    const loginSuccess = document.getElementById('loginSuccess');
+    const requestsList = document.getElementById('requestsList');
+    const userAvatar = document.getElementById('userAvatar');
+    const userName = document.getElementById('userName');
+    const userPhone = document.getElementById('userPhone');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const refreshBtn = document.getElementById('refreshBtn');
+    const toastContainer = document.getElementById('toastContainer');
+    const imageModal = document.getElementById('imageModal');
+    const modalImage = document.getElementById('modalImage');
+    const serviceFilter = document.getElementById('serviceFilter');
+    const filterCount = document.getElementById('filterCount');
+
+    // Stats
+    const statPending = document.getElementById('statPending');
+    const statProcessing = document.getElementById('statProcessing');
+    const statDone = document.getElementById('statDone');
+    const statRejected = document.getElementById('statRejected');
+    const statTotal = document.getElementById('statTotal');
+
+    // ─── State ───
+    let token = localStorage.getItem('cafenet_token') || '';
+    let currentUser = null;
+    let allRequests = [];
+    let statusFilter = 'all';
+    let serviceFilterValue = 'all';
+    let isLoading = false;  // ← Add loading flag to prevent concurrent calls
+    let isInitialLoad = true;  // ← Track initial load
+
+    // Track loaded receipts
+    const loadedReceipts = new Set();
+
+    // ─── API Base ───
+    const API_BASE = 'http://127.0.0.1:8001/api';
+
+    // ─── Helpers ───
+    function formatDate(iso) {
+        if (!iso) return '—';
+        try {
+            const d = new Date(iso);
+            return new Intl.DateTimeFormat('fa-IR', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            }).format(d);
+        } catch {
+            return iso;
+        }
+    }
+
+    function formatPrice(p) {
+        return Number(p).toLocaleString('fa-IR') + ' تومان';
+    }
+
+    function getStatusLabel(status) {
+        const map = { 'pending': 'در انتظار', 'processing': 'در حال بررسی', 'done': 'انجام شده', 'rejected': 'رد شده' };
+        return map[status] || status;
+    }
+
+    function getStatusEmoji(status) {
+        const map = { 'pending': '⏳', 'processing': '🔄', 'done': '✅', 'rejected': '❌' };
+        return map[status] || '📌';
+    }
+
+    function getInitials(name) {
+        if (!name) return '👤';
+        const parts = name.trim().split(/\s+/);
+        if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+        return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+    }
+
+    function isImageUrl(str) {
+        if (typeof str !== 'string') return false;
+        if (str.match(/^https?:\/\/\S+\.(jpg|jpeg|png|gif|svg|webp|bmp|tiff)/i) || str.startsWith('data:image')) {
+            return true;
+        }
+        if (str.startsWith('AgACAg') || str.startsWith('BQACAg') || str.match(/^[A-Za-z0-9_-]{20,}/)) {
+            return true;
+        }
+        return false;
+    }
+
+    function isTelegramFileId(str) {
+        if (typeof str !== 'string') return false;
+        return str.startsWith('AgACAg') || str.startsWith('BQACAg') || str.startsWith('BAACAg');
+    }
+
+    // ─── Get receipt image URL ───
+    function getReceiptImageUrl(requestId, receiptImage) {
+        if (!receiptImage)  return `${API_BASE}/requests/${requestId}/receipt-image/file`;
+        
+        if (isTelegramFileId(receiptImage)) {
+            return `${API_BASE}/telegram/file/${encodeURIComponent(receiptImage)}`;
+        }
+        
+        if (receiptImage.startsWith('data:image')) {
+            return receiptImage;
+        }
+        
+        if (receiptImage.startsWith('http://') || receiptImage.startsWith('https://')) {
+            return receiptImage;
+        }
+        
+        return `${API_BASE}/requests/${requestId}/receipt-image/file`;
+    }
+
+    // ─── Image Modal ───
+    window.openImageModal = function(src) {
+        if (!src) return;
+        modalImage.src = src;
+        imageModal.style.display = 'block';
+        document.body.style.overflow = 'hidden';
+    }
+    window.closeImageModal = function(event) {
+        if (event && event.target !== event.currentTarget) return;
+        imageModal.style.display = 'none';
+        document.body.style.overflow = '';
+    }
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && imageModal.style.display === 'block') {
+            closeImageModal(e);
+        }
+    });
+
+    // ─── Toast ───
+    function showToast(message, type = 'info', duration = 3500) {
+        const icons = { success: '✅', error: '❌', warning: '⚠️', info: 'ℹ️' };
+        const el = document.createElement('div');
+        el.className = `toast ${type}`;
+        el.innerHTML = `
+            <span class="toast-icon">${icons[type] || 'ℹ️'}</span>
+            <span>${message}</span>
+            <button class="toast-close">✕</button>
+        `;
+        el.querySelector('.toast-close').addEventListener('click', () => el.remove());
+        toastContainer.appendChild(el);
+        setTimeout(() => { if (el.parentNode) el.remove(); }, duration);
+    }
+
+    // ─── API Calls ───
+    async function apiFetch(endpoint, options = {}) {
+        const url = endpoint.startsWith('http') ? endpoint : API_BASE + endpoint;
+        const headers = { 'Content-Type': 'application/json', ...options.headers };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        const resp = await fetch(url, { ...options, headers });
+        const data = await resp.json().catch(() => null);
+        if (!resp.ok) {
+            const msg = data?.detail || data?.message || `خطا ${resp.status}`;
+            throw new Error(msg);
+        }
+        return data;
+    }
+
+    // ─── Auth ───
+    async function sendOtp(phone) {
+        return await apiFetch('/auth/otp/send', {
+            method: 'POST',
+            body: JSON.stringify({ phone, app: 'web' }),
+        });
+    }
+    async function verifyOtp(phone, otp) {
+        return await apiFetch('/auth/otp/verify', {
+            method: 'POST',
+            body: JSON.stringify({ phone, otp }),
+        });
+    }
+
+    // ─── Requests ───
+    async function fetchRequests() {
+        console.log('📡 Fetching requests from API...');
+        return await apiFetch('/requests/all');
+    }
+    async function updateRequestStatus(requestId, status) {
+        return await apiFetch(`/requests/${requestId}/status?status=${status}`, {
+            method: 'PUT',
+        });
+    }
+
+    // ─── UI: Login ───
+    function showLogin() {
+        loginScreen.style.display = 'flex';
+        dashboardScreen.classList.remove('visible');
+        dashboardScreen.style.display = 'none';
+    }
+    function showDashboard(user) {
+        loginScreen.style.display = 'none';
+        dashboardScreen.style.display = 'block';
+        dashboardScreen.classList.add('visible');
+        currentUser = user;
+        userAvatar.textContent = getInitials(user.firstName || user.phone || 'کاربر');
+        userName.textContent = user.firstName && user.lastName ?
+            `${user.firstName} ${user.lastName}` :
+            (user.firstName || user.phone || 'کاربر');
+        userPhone.textContent = user.phone || '—';
+        // Only load if not already loading
+        if (!isLoading) {
+            loadRequests();
+        }
+    }
+
+    // ─── Filters ───
+    function populateServiceFilter(requests) {
+        const services = [...new Set(requests.map(r => r.serviceTitle).filter(Boolean))].sort();
+        serviceFilter.innerHTML = '<option value="all">همه سرویس‌ها</option>';
+        services.forEach(s => {
+            const opt = document.createElement('option');
+            opt.value = s;
+            opt.textContent = s;
+            serviceFilter.appendChild(opt);
+        });
+    }
+
+    function applyFilters() {
+        const filtered = allRequests.filter(r => {
+            const statusMatch = statusFilter === 'all' || r.status === statusFilter;
+            const serviceMatch = serviceFilterValue === 'all' || r.serviceTitle === serviceFilterValue;
+            return statusMatch && serviceMatch;
+        });
+        renderRequests(filtered);
+        filterCount.textContent = `${filtered.length} مورد از ${allRequests.length}`;
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.status === statusFilter);
+        });
+    }
+
+    // ─── Load Receipt Image on Demand ───
+    window.loadReceipt = function(requestId) {
+        if (loadedReceipts.has(requestId)) {
+            const container = document.getElementById(`receipt-${requestId}`);
+            if (container) {
+                const img = container.querySelector('img');
+                if (img) {
+                    if (img.style.display === 'none' || img.style.display === '') {
+                        img.style.display = 'block';
+                        const hint = container.querySelector('.receipt-hint');
+                        if (hint) hint.style.display = 'block';
+                    } else {
+                        img.style.display = 'none';
+                        const hint = container.querySelector('.receipt-hint');
+                        if (hint) hint.style.display = 'none';
+                    }
+                }
+            }
+            return;
+        }
+
+        const container = document.getElementById(`receipt-${requestId}`);
+        if (!container) return;
+
+        const request = allRequests.find(r => r.id === requestId);
+        if (!request) {
+            showToast('درخواست یافت نشد', 'error');
+            return;
+        }
+
+        // if (!request.receiptImage) {
+        //     container.innerHTML = '<span class="text-muted">تصویر رسید وجود ندارد</span>';
+        //     return;
+        // }
+
+        container.innerHTML = `
+            <div class="receipt-loading">
+                <div class="spinner-small"></div>
+                <span>بارگذاری رسید...</span>
+            </div>
+        `;
+
+        const imageUrl = getReceiptImageUrl(requestId, request.receiptImage);
+        if (!imageUrl) {
+            container.innerHTML = '<span class="text-muted">تصویر رسید وجود ندارد</span>';
+            return;
+        }
+
+        if (isTelegramFileId(request.receiptImage)) {
+            const img = document.createElement('img');
+            img.src = imageUrl;
+            img.alt = 'رسید';
+            img.className = 'receipt-thumb';
+            img.onclick = function() { openImageModal(imageUrl); };
+            img.onload = function() {
+                container.innerHTML = '';
+                container.appendChild(img);
+                const hint = document.createElement('div');
+                hint.className = 'receipt-hint';
+                hint.textContent = '(کلیک برای بزرگنمایی)';
+                container.appendChild(hint);
+                loadedReceipts.add(requestId);
+                showToast('رسید بارگذاری شد', 'success');
+            };
+            img.onerror = function() {
+                container.innerHTML = `
+                    <span class="receipt-telegram">🖼️ رسید تلگرام<br><code>${request.receiptImage.substring(0, 30)}...</code></span>
+                    <div class="receipt-actions">
+                        <button class="btn btn-sm btn-outline" onclick="loadReceipt('${requestId}')">⟳ تلاش مجدد</button>
+                    </div>
+                `;
+            };
+            return;
+        }
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+        fetch(imageUrl, {
+            signal: controller.signal,
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        })
+        .then(response => {
+            clearTimeout(timeoutId);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            return response.blob();
+        })
+        .then(blob => {
+            const url = URL.createObjectURL(blob);
+            const img = document.createElement('img');
+            img.src = url;
+            img.alt = 'رسید';
+            img.className = 'receipt-thumb';
+            img.onclick = function() { openImageModal(url); };
+            container.innerHTML = '';
+            container.appendChild(img);
+            const hint = document.createElement('div');
+            hint.className = 'receipt-hint';
+            hint.textContent = '(کلیک برای بزرگنمایی)';
+            container.appendChild(hint);
+            loadedReceipts.add(requestId);
+            showToast('رسید بارگذاری شد', 'success');
+        })
+        .catch(error => {
+            clearTimeout(timeoutId);
+            console.error('Error loading receipt:', error);
+            container.innerHTML = `
+                <div class="receipt-error">
+                    ❌ خطا در بارگذاری تصویر رسید
+                    <div style="margin-top:4px;font-size:12px;color:var(--gray-600);">
+                        ${error.message || 'خطای ناشناخته'}
+                    </div>
+                </div>
+                <div class="receipt-actions">
+                    <button class="btn btn-sm btn-outline" onclick="loadReceipt('${requestId}')">⟳ تلاش مجدد</button>
+                </div>
+            `;
+        });
+    };
+
+    // ─── UI: Requests ───
+    function renderRequests(reqs) {
+        const container = requestsList;
+        if (!reqs || reqs.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <span class="emoji">📭</span>
+                    <h3>هیچ درخواستی یافت نشد</h3>
+                    <p class="text-muted">با تنظیمات فیلتر یا بارگذاری مجدد امتحان کنید.</p>
+                </div>
+            `;
+            return;
+        }
+
+        let html = '';
+        reqs.forEach(r => {
+            const docs = r.documents || [];
+            const docCount = docs.length;
+            const status = r.status || 'pending';
+            const receiptImg = r.receiptImage || '';
+            const userId = r.userId || '—';
+            const serviceId = r.serviceId || '—';
+            const requestId = r.id || '—';
+            const hasReceipt = !!receiptImg;
+
+            const firstName = r.first_name || '';
+            const lastName = r.last_name || '';
+            const fullName = `${firstName} ${lastName}`.trim() || '—';
+            const phone = r.username || '—';
+            const telegramId = r.telegram_id || '—';
+            const isPremium = r.is_premium ? '✅ بله' : '❌ خیر';
+
+            let docHtml = '';
+            if (docs.length > 0) {
+                docHtml = '<div class="doc-list">';
+                docs.forEach(d => {
+                    const label = d.title || d.label || 'مدرك';
+                    const value = d.value ? d.value.replace('File ID:', '').trim() : '';
+                    
+                    if (value && isImageUrl(value)) {
+                        if (isTelegramFileId(value)) {
+                            const imgSrc = `${API_BASE}/telegram/file/${encodeURIComponent(value)}`;
+                            docHtml += `
+                                <span class="doc-item">
+                                    <strong>${label}</strong>:
+                                    <span class="telegram-img-placeholder">
+                                        🖼️ تصویر تلگرام
+                                        <br><code>${value.substring(0, 30)}...</code>
+                                        <button class="btn btn-sm btn-primary" style="margin-top:4px;padding:2px 8px;font-size:11px;" onclick="event.stopPropagation(); openImageModal('${imgSrc}')">نمایش</button>
+                                    </span>
+                                </span>
+                            `;
+                        } else {
+                            docHtml += `
+                                <span class="doc-item">
+                                    <strong>${label}</strong>:
+                                    <img src="${value}" class="doc-img-thumb" onclick="event.stopPropagation(); openImageModal('${value}')" alt="${label}" />
+                                </span>
+                            `;
+                        }
+                    } else if (value) {
+                        docHtml += `<span class="doc-item"><strong>${label}</strong>: ${value}</span>`;
+                    } else {
+                        docHtml += `<span class="doc-item"><strong>${label}</strong>: (خالی)</span>`;
+                    }
+                });
+                docHtml += '</div>';
+            } else {
+                docHtml = '<span class="text-muted">هیچ مدرکی ارسال نشده</span>';
+            }
+
+            let receiptHtml = '';
+
+                receiptHtml = `
+                    <div class="receipt-container" id="receipt-${requestId}">
+                        <button class="btn-show-receipt" onclick="loadReceipt('${requestId}')">
+                            🖼️ نمایش رسید
+                        </button>
+                    </div>
+                `;
+
+
+            html += `
+                <div class="request-card" data-id="${r.id}">
+                    <div class="request-row">
+                        <div class="main-info">
+                            <span class="title">${r.serviceTitle || 'بدون عنوان'}</span>
+                            <span class="price">${formatPrice(r.price || 0)}</span>
+                            <span class="date">📅 ${formatDate(r.submittedAt)}</span>
+                        </div>
+                        <span class="status-badge ${status}">
+                            ${getStatusEmoji(status)} ${getStatusLabel(status)}
+                        </span>
+                    </div>
+                    <div class="request-meta">
+                        <span class="doc-count">📎 ${docCount} مستند</span>
+                        <span>🆔 ${r.id.substring(0,12)}</span>
+                        ${hasReceipt ? '<span>🧾 رسید</span>' : ''}
+                        <button class="detail-toggle" data-id="${r.id}">🔽 جزئیات</button>
+                    </div>
+                    <div class="request-actions">
+                        <select class="status-select" data-id="${r.id}">
+                            <option value="pending" ${status === 'pending' ? 'selected' : ''}>در انتظار</option>
+                            <option value="processing" ${status === 'processing' ? 'selected' : ''}>در حال بررسی</option>
+                            <option value="done" ${status === 'done' ? 'selected' : ''}>انجام شده</option>
+                            <option value="rejected" ${status === 'rejected' ? 'selected' : ''}>رد شده</option>
+                        </select>
+                        <button class="btn btn-primary btn-sm btn-update" data-id="${r.id}">بروزرسانی</button>
+                    </div>
+
+                    <div class="request-detail" id="detail-${r.id}">
+                        <div class="user-info-box">
+                            <div class="user-title">👤 اطلاعات کاربر ثبت‌کننده</div>
+                            <div class="detail-row"><span class="detail-label">نام و نام‌خانوادگی:</span><span class="detail-value">${fullName}</span></div>
+                            <div class="detail-row"><span class="detail-label">شماره موبایل:</span><span class="detail-value">${phone}</span></div>
+                            <div class="detail-row"><span class="detail-label">شناسه تلگرام:</span><span class="detail-value">${telegramId}</span></div>
+                            <div class="detail-row"><span class="detail-label">پریمیوم:</span><span class="detail-value">${isPremium}</span></div>
+                        </div>
+                        <div class="detail-row"><span class="detail-label">شناسه درخواست:</span><span class="detail-value">${requestId}</span></div>
+                        <div class="detail-row"><span class="detail-label">شناسه کاربر:</span><span class="detail-value">${userId}</span></div>
+                        <div class="detail-row"><span class="detail-label">شناسه سرویس:</span><span class="detail-value">${serviceId}</span></div>
+                        <div class="detail-row"><span class="detail-label">قیمت:</span><span class="detail-value">${formatPrice(r.price || 0)}</span></div>
+                        <div class="detail-row"><span class="detail-label">تاریخ ثبت:</span><span class="detail-value">${formatDate(r.submittedAt)}</span></div>
+                        <div class="detail-row" style="flex-direction:column;align-items:flex-start;">
+                            <span class="detail-label">مدارک:</span>
+                            <div class="detail-value">${docHtml}</div>
+                        </div>
+                        <div class="detail-row" style="flex-direction:column;align-items:flex-start;">
+                            <span class="detail-label">تصویر رسید:</span>
+                            <div class="detail-value">${receiptHtml}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+
+        container.innerHTML = html;
+
+        container.querySelectorAll('.detail-toggle').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const id = this.dataset.id;
+                const detailDiv = document.getElementById(`detail-${id}`);
+                if (detailDiv) {
+                    detailDiv.classList.toggle('visible');
+                    this.textContent = detailDiv.classList.contains('visible') ? '🔼 بستن' : '🔽 جزئیات';
+                }
+            });
+        });
+
+        container.querySelectorAll('.btn-update').forEach(btn => {
+            btn.addEventListener('click', async function() {
+                const card = this.closest('.request-card');
+                const id = this.dataset.id;
+                const select = card.querySelector('.status-select');
+                await handleStatusUpdate(id, select.value);
+            });
+        });
+        container.querySelectorAll('.status-select').forEach(sel => {
+            sel.addEventListener('change', async function() {
+                const id = this.dataset.id;
+                await handleStatusUpdate(id, this.value);
+            });
+        });
+    }
+
+    function updateStats(reqs) {
+        const counts = { pending: 0, processing: 0, done: 0, rejected: 0 };
+        reqs.forEach(r => {
+            const s = r.status || 'pending';
+            if (counts[s] !== undefined) counts[s]++;
+        });
+        statPending.textContent = counts.pending;
+        statProcessing.textContent = counts.processing;
+        statDone.textContent = counts.done;
+        statRejected.textContent = counts.rejected;
+        statTotal.textContent = reqs.length;
+    }
+
+    async function handleStatusUpdate(requestId, newStatus) {
+        try {
+            await updateRequestStatus(requestId, newStatus);
+            showToast(`وضعیت به "${getStatusLabel(newStatus)}" تغییر یافت`, 'success');
+            await loadRequests();
+        } catch (err) {
+            showToast(err.message || 'خطا در بروزرسانی', 'error');
+            await loadRequests();
+        }
+    }
+
+    // ─── MAIN: Load Requests (with prevention of double calls) ───
+    async function loadRequests(force = false) {
+        // Prevent concurrent loads
+        if (isLoading && !force) {
+            console.log('⏳ Already loading, skipping...');
+            return;
+        }
+
+        isLoading = true;
+        console.log('🔄 Loading requests...');
+
+        try {
+            requestsList.innerHTML = `<div class="loading-spinner"><div class="spinner"></div></div>`;
+            const data = await fetchRequests();
+            allRequests = data || [];
+            loadedReceipts.clear();
+            updateStats(allRequests);
+            populateServiceFilter(allRequests);
+            applyFilters();
+            isInitialLoad = false;
+            console.log('✅ Requests loaded successfully');
+        } catch (err) {
+            if (err.message.includes('401') || err.message.includes('Invalid token')) {
+                localStorage.removeItem('cafenet_token');
+                token = '';
+                showLogin();
+                showToast('نشست منقضی شد، دوباره وارد شوید', 'warning');
+                return;
+            }
+            showToast(err.message || 'خطا در دریافت درخواست‌ها', 'error');
+            requestsList.innerHTML = `
+                <div class="empty-state">
+                    <span class="emoji">⚠️</span>
+                    <h3>خطا در دریافت</h3>
+                    <p class="text-muted">${err.message || 'لطفاً دوباره تلاش کنید'}</p>
+                    <button class="btn btn-primary btn-sm mt-2" onclick="location.reload()">تلاش مجدد</button>
+                </div>
+            `;
+        } finally {
+            isLoading = false;
+        }
+    }
+
+    // ─── Login Flow ───
+    async function handleSendOtp() {
+        const phone = phoneInput.value.trim();
+        if (!phone || phone.length < 10) {
+            loginError.textContent = 'شماره موبایل معتبر وارد کنید.';
+            return;
+        }
+        loginError.textContent = '';
+        loginSuccess.textContent = '';
+        sendOtpBtn.disabled = true;
+        sendOtpBtn.textContent = '⏳ ...';
+        try {
+            await sendOtp(phone);
+            otpSection.classList.add('visible');
+            loginSuccess.textContent = '✅ کد ارسال شد (آزمایشی: 12345)';
+            otpInput.focus();
+            showToast('کد تأیید ارسال شد', 'success');
+        } catch (err) {
+            loginError.textContent = err.message || 'خطا در ارسال کد';
+            showToast(err.message || 'خطا در ارسال کد', 'error');
+        } finally {
+            sendOtpBtn.disabled = false;
+            sendOtpBtn.textContent = 'ارسال کد تأیید';
+        }
+    }
+
+    async function handleVerifyOtp() {
+        const phone = phoneInput.value.trim();
+        const otp = otpInput.value.trim();
+        if (!phone || phone.length < 10) { loginError.textContent = 'شماره موبایل معتبر نیست.'; return; }
+        if (!otp || otp.length !== 5) { loginError.textContent = 'کد ۵ رقمی را وارد کنید.'; return; }
+        loginError.textContent = '';
+        loginSuccess.textContent = '';
+        verifyOtpBtn.disabled = true;
+        verifyOtpBtn.textContent = '⏳';
+        try {
+            const result = await verifyOtp(phone, otp);
+            if (result.success && result.token) {
+                token = result.token;
+                localStorage.setItem('cafenet_token', token);
+                const user = result.user || { phone };
+                showDashboard(user);
+                showToast('ورود موفق ✅', 'success');
+            } else {
+                loginError.textContent = result.message || 'خطا در تأیید کد';
+                showToast(result.message || 'خطا در تأیید کد', 'error');
+            }
+        } catch (err) {
+            loginError.textContent = err.message || 'خطا در تأیید کد';
+            showToast(err.message || 'خطا در تأیید کد', 'error');
+        } finally {
+            verifyOtpBtn.disabled = false;
+            verifyOtpBtn.textContent = 'ورود';
+        }
+    }
+
+    // ─── Logout ───
+    function handleLogout() {
+        localStorage.removeItem('cafenet_token');
+        token = '';
+        currentUser = null;
+        allRequests = [];
+        loadedReceipts.clear();
+        isLoading = false;
+        showLogin();
+        showToast('خارج شدید', 'info');
+        otpSection.classList.remove('visible');
+        otpInput.value = '';
+        loginError.textContent = '';
+        loginSuccess.textContent = '';
+    }
+
+    // ─── Init ───
+    function init() {
+        console.log('🚀 Initializing app...');
+
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                statusFilter = this.dataset.status;
+                applyFilters();
+            });
+        });
+        serviceFilter.addEventListener('change', function() {
+            serviceFilterValue = this.value;
+            applyFilters();
+        });
+
+        const savedToken = localStorage.getItem('cafenet_token');
+        if (savedToken) {
+            token = savedToken;
+            showDashboard({ phone: '—', firstName: 'کاربر' });
+            // loadRequests will be called from showDashboard
+        } else {
+            showLogin();
+        }
+
+        sendOtpBtn.addEventListener('click', handleSendOtp);
+        verifyOtpBtn.addEventListener('click', handleVerifyOtp);
+        logoutBtn.addEventListener('click', handleLogout);
+        refreshBtn.addEventListener('click', () => { 
+            if (token) {
+                loadedReceipts.clear();
+                loadRequests(true);  // Force reload
+            }
+        });
+        phoneInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleSendOtp(); });
+        otpInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleVerifyOtp(); });
+    }
+
+    document.addEventListener('DOMContentLoaded', init);
+
+})();
+    </script>
+
+</body>
+</html>
