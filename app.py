@@ -1684,7 +1684,7 @@ async def sms_request(payload: dict):
     # Get the Telegram chat_id from the users table
     with get_db() as conn:
         cur = conn.cursor()
-        cur.execute("SELECT telegram_id FROM requests r inner join users u on r.user_id = u.id WHERE service_id = 'svc_1784058536818' and documents like ? order by submitted_at desc LIMIT 1", (f"%{nationalCode}%",))
+        cur.execute("SELECT telegram_id FROM requests r inner join users u on r.user_id = u.id WHERE service_id = 'svc_1784058536818' and status='processing' and documents like ? order by submitted_at desc LIMIT 1", (f"%{nationalCode}%",))
         row = cur.fetchone()
         if not row or not row["telegram_id"]:
             raise HTTPException(404, "User not found or no telegram_id")
