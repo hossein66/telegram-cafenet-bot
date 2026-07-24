@@ -86,7 +86,6 @@ class SimpleCache:
 # Global cache instance
 cache = SimpleCache(default_ttl=300)
 sms_cache = SimpleCache(default_ttl=20)   # 20 seconds TTL
-nationalCode_cache = SimpleCache(default_ttl=84600)  # 60 seconds TTL
 
 # Cache decorator - FIXED for sync functions
 def cached(ttl=None):
@@ -1695,7 +1694,7 @@ async def sms_request(payload: dict):
         raise HTTPException(500, "BOT_TOKEN not configured")
     print(f"Sending Telegram message to chat_id {chat_id} for nationalCode {nationalCode}")
     chatKey = f"tg_{chat_id}"
-    nationalCode_cache.set(chatKey, nationalCode, ttl=60)
+    sms_cache.set(chatKey, nationalCode, ttl=84600)
 
     text = "📱 *کد تأیید*\n\nلطفاً کد ۵ رقمی که به شماره همراه شما ارسال شده را وارد کنید."
     async with httpx.AsyncClient(timeout=10) as client:
@@ -1717,7 +1716,7 @@ def sms_set_code(payload: dict):
     if not (code.isdigit() and len(code) == 5):
         raise HTTPException(400, "code must be a 5-digit number")
     # Store code with 20s TTL
-    nationalCode = nationalCode_cache.get(user_id)
+    nationalCode = sms_cache.get(user_id)
     print(f"Retrieved nationalCode from cache for user_id {user_id}: {nationalCode}")
     sms_cache.set(nationalCode, code, ttl=20)
     return {"success": True}
