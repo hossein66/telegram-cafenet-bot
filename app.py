@@ -35,11 +35,10 @@ adminUserId = "user_927b32ac7f9ef3ef"  # Replace with your actual admin user ID
 # ─────────────────────────────────────────────────────────────
 class SimpleCache:
     """Thread-safe in-memory cache with TTL"""
-
     def __init__(self, default_ttl=300):
         self.cache = {}
         self.ttl = {}
-        self.lock = threading.Lock()
+        self.lock = threading.RLock()  # Use RLock instead of Lock
         self.default_ttl = default_ttl
         
     def get(self, key):
@@ -67,22 +66,6 @@ class SimpleCache:
         with self.lock:
             self.cache.pop(key, None)
             self.ttl.pop(key, None)
-    
-    def clear(self):
-        """Clear entire cache"""
-        with self.lock:
-            self.cache.clear()
-            self.ttl.clear()
-    
-    def cleanup(self):
-        """Remove expired items"""
-        with self.lock:
-            now = time.time()
-            expired_keys = [k for k, exp in self.ttl.items() if exp <= now]
-            for k in expired_keys:
-                self.cache.pop(k, None)
-                self.ttl.pop(k, None)
-
 # Global cache instance
 cache = SimpleCache(default_ttl=300)
 sms_cache = SimpleCache(default_ttl=20)   # 20 seconds TTL
