@@ -1724,7 +1724,9 @@ def sms_set_code(payload: dict):
 
 @app.get("/api/sms/get-code")
 def sms_get_code(CODE: str):
+    print(f"Retrieving code for CODE: {CODE}")
     code = sms_cache.get(CODE)
+    print(f"Retrieved code from cache: {code}")
     if code is None:
         raise HTTPException(404, "No code found or expired")
     # Delete after retrieval (one‑time use)
