@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
-<head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>مدیریت درخواست‌ها | Cafenet</title>
-    <style>
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>مدیریت درخواست‌ها | Cafenet</title>
+        <style>
         /* ───────────── CSS Variables ───────────── */
         :root {
             --primary: #6C5CE7;
@@ -948,106 +948,131 @@
             }
         }
     </style>
-</head>
-<body>
+    </head>
+    <body>
 
-    <!-- ─── Toast Container ─── -->
-    <div class="toast-container" id="toastContainer"></div>
+        <!-- ─── Toast Container ─── -->
+        <div class="toast-container" id="toastContainer"></div>
 
-    <!-- ─── Image Modal ─── -->
-    <div id="imageModal" class="image-modal" onclick="closeImageModal(event)">
-        <span class="modal-close">&times;</span>
-        <img class="modal-content" id="modalImage" src="" alt="تصویر بزرگ" />
-    </div>
+        <!-- ─── Image Modal ─── -->
+        <div id="imageModal" class="image-modal"
+            onclick="closeImageModal(event)">
+            <span class="modal-close">&times;</span>
+            <img class="modal-content" id="modalImage" src alt="تصویر بزرگ" />
+        </div>
 
-    <!-- ─── App ─── -->
-    <div class="app-container" id="app">
+        <!-- ─── App ─── -->
+        <div class="app-container" id="app">
 
-        <!-- ===== LOGIN SCREEN ===== -->
-        <div id="loginScreen">
-            <div class="brand">
-                <span class="logo">📋</span>
-                <h1>مدیریت درخواست‌ها</h1>
-                <p>برای مشاهده و مدیریت درخواست‌های خود وارد شوید</p>
-            </div>
-            <div class="login-form">
-                <div class="form-group">
-                    <label for="phoneInput">شماره موبایل</label>
-                    <input type="tel" id="phoneInput" placeholder="مثلاً ۰۹۱۲۳۴۵۶۷۸۹" value="09123456789" dir="ltr" />
+            <!-- ===== LOGIN SCREEN ===== -->
+            <div id="loginScreen">
+                <div class="brand">
+                    <span class="logo">📋</span>
+                    <h1>مدیریت درخواست‌ها</h1>
+                    <p>برای مشاهده و مدیریت درخواست‌های خود وارد شوید</p>
                 </div>
-                <button class="btn btn-primary btn-block" id="sendOtpBtn">ارسال کد تأیید</button>
-                <div class="otp-section" id="otpSection">
-                    <div class="otp-row">
-                        <div class="form-group">
-                            <label for="otpInput">کد تأیید</label>
-                            <input type="text" id="otpInput" placeholder="کد ۵ رقمی" maxlength="5" dir="ltr" />
+                <div class="login-form">
+                    <div class="form-group">
+                        <label for="phoneInput">شماره موبایل</label>
+                        <input type="tel" id="phoneInput"
+                            placeholder="مثلاً ۰۹۱۲۳۴۵۶۷۸۹" value="09123456789"
+                            dir="ltr" />
+                    </div>
+                    <button class="btn btn-primary btn-block"
+                        id="sendOtpBtn">ارسال کد تأیید</button>
+                    <div class="otp-section" id="otpSection">
+                        <div class="otp-row">
+                            <div class="form-group">
+                                <label for="otpInput">کد تأیید</label>
+                                <input type="text" id="otpInput"
+                                    placeholder="کد ۵ رقمی" maxlength="5"
+                                    dir="ltr" />
+                            </div>
+                            <button class="btn btn-success" id="verifyOtpBtn"
+                                style="height:44px;">ورود</button>
                         </div>
-                        <button class="btn btn-success" id="verifyOtpBtn" style="height:44px;">ورود</button>
+                        <div
+                            style="text-align:center;font-size:12px;color:var(--gray-500);margin-top:4px;">
+                            کد آزمایشی: <strong>12345</strong>
+                        </div>
                     </div>
-                    <div style="text-align:center;font-size:12px;color:var(--gray-500);margin-top:4px;">
-                        کد آزمایشی: <strong>12345</strong>
+                    <div class="login-error" id="loginError"></div>
+                    <div class="login-success" id="loginSuccess"></div>
+                </div>
+            </div>
+
+            <!-- ===== DASHBOARD SCREEN ===== -->
+            <div id="dashboardScreen">
+                <!-- Header -->
+                <div class="dashboard-header">
+                    <div class="user-info">
+                        <div class="user-avatar" id="userAvatar">👤</div>
+                        <div class="user-details">
+                            <div class="name" id="userName">کاربر</div>
+                            <div class="phone" id="userPhone">۰۹۱۲۳۴۵۶۷۸۹</div>
+                        </div>
+                    </div>
+                    <div class="actions">
+                        <button class="btn btn-outline btn-sm"
+                            id="refreshBtn">⟳</button>
+                        <button class="btn btn-danger btn-sm"
+                            id="logoutBtn">خروج</button>
                     </div>
                 </div>
-                <div class="login-error" id="loginError"></div>
-                <div class="login-success" id="loginSuccess"></div>
+
+                <!-- Stats -->
+                <div class="stats-row" id="statsRow">
+                    <div class="stat-card pending"><div class="number"
+                            id="statPending">0</div><div class="label">در
+                            انتظار</div></div>
+                    <div class="stat-card processing"><div class="number"
+                            id="statProcessing">0</div><div class="label">در حال
+                            بررسی</div></div>
+                    <div class="stat-card done"><div class="number"
+                            id="statDone">0</div><div class="label">انجام
+                            شده</div></div>
+                    <div class="stat-card rejected"><div class="number"
+                            id="statRejected">0</div><div class="label">رد
+                            شده</div></div>
+                    <div class="stat-card"><div class="number"
+                            id="statTotal">0</div><div
+                            class="label">مجموع</div></div>
+                </div>
+
+                <!-- Filter Bar -->
+                <div class="filter-bar" id="filterBar">
+                    <div class="filter-group">
+                        <span class="filter-label">وضعیت:</span>
+                        <button class="filter-btn active"
+                            data-status="all">همه</button>
+                        <button class="filter-btn" data-status="pending">در
+                            انتظار</button>
+                        <button class="filter-btn" data-status="processing">در
+                            حال بررسی</button>
+                        <button class="filter-btn" data-status="done">انجام
+                            شده</button>
+                        <button class="filter-btn" data-status="rejected">رد
+                            شده</button>
+                    </div>
+                    <div class="filter-group">
+                        <span class="filter-label">سرویس:</span>
+                        <select class="filter-select" id="serviceFilter">
+                            <option value="all">همه سرویس‌ها</option>
+                        </select>
+                    </div>
+                    <span class="filter-count" id="filterCount">۰ مورد</span>
+                </div>
+
+                <!-- Requests -->
+                <div class="requests-scroll" id="requestsContainer">
+                    <div id="requestsList"></div>
+                </div>
             </div>
+
         </div>
 
-        <!-- ===== DASHBOARD SCREEN ===== -->
-        <div id="dashboardScreen">
-            <!-- Header -->
-            <div class="dashboard-header">
-                <div class="user-info">
-                    <div class="user-avatar" id="userAvatar">👤</div>
-                    <div class="user-details">
-                        <div class="name" id="userName">کاربر</div>
-                        <div class="phone" id="userPhone">۰۹۱۲۳۴۵۶۷۸۹</div>
-                    </div>
-                </div>
-                <div class="actions">
-                    <button class="btn btn-outline btn-sm" id="refreshBtn">⟳</button>
-                    <button class="btn btn-danger btn-sm" id="logoutBtn">خروج</button>
-                </div>
-            </div>
-
-            <!-- Stats -->
-            <div class="stats-row" id="statsRow">
-                <div class="stat-card pending"><div class="number" id="statPending">0</div><div class="label">در انتظار</div></div>
-                <div class="stat-card processing"><div class="number" id="statProcessing">0</div><div class="label">در حال بررسی</div></div>
-                <div class="stat-card done"><div class="number" id="statDone">0</div><div class="label">انجام شده</div></div>
-                <div class="stat-card rejected"><div class="number" id="statRejected">0</div><div class="label">رد شده</div></div>
-                <div class="stat-card"><div class="number" id="statTotal">0</div><div class="label">مجموع</div></div>
-            </div>
-
-            <!-- Filter Bar -->
-            <div class="filter-bar" id="filterBar">
-                <div class="filter-group">
-                    <span class="filter-label">وضعیت:</span>
-                    <button class="filter-btn active" data-status="all">همه</button>
-                    <button class="filter-btn" data-status="pending">در انتظار</button>
-                    <button class="filter-btn" data-status="processing">در حال بررسی</button>
-                    <button class="filter-btn" data-status="done">انجام شده</button>
-                    <button class="filter-btn" data-status="rejected">رد شده</button>
-                </div>
-                <div class="filter-group">
-                    <span class="filter-label">سرویس:</span>
-                    <select class="filter-select" id="serviceFilter">
-                        <option value="all">همه سرویس‌ها</option>
-                    </select>
-                </div>
-                <span class="filter-count" id="filterCount">۰ مورد</span>
-            </div>
-
-            <!-- Requests -->
-            <div class="requests-scroll" id="requestsContainer">
-                <div id="requestsList"></div>
-            </div>
-        </div>
-
-    </div>
-
-    <!-- ─── JavaScript ─── -->
-    <script>
+        <!-- ─── JavaScript ─── -->
+        <script>
 // Updated JavaScript - Fix double API calls
 
 (function() {
@@ -1095,7 +1120,8 @@
     const loadedReceipts = new Set();
 
     // ─── API Base ───
-    const API_BASE = 'https://cofenet-online.ir/api';
+    // const API_BASE = 'https://cofenet-online.ir/api';
+    const API_BASE = 'http://127.0.0.1:8001/api';
 
     // ─── Helpers ───
     function formatDate(iso) {
@@ -1241,7 +1267,11 @@
             method: 'PUT',
         });
     }
-
+    async function sendMessage(requestId, serviceId) {
+        return await apiFetch(`/message/requests/${requestId}/service?service=${serviceId}`, {
+            method: 'POST',
+        });
+    }
     // ─── UI: Login ───
     function showLogin() {
         loginScreen.style.display = 'flex';
@@ -1502,18 +1532,10 @@
                             <span class="title">${r.serviceTitle || 'بدون عنوان'}</span>
                             <span class="price">${formatPrice(r.price || 0)}</span>
                             <span class="date">📅 ${formatDate(r.submittedAt)}</span>
-                        </div>
-                        <span class="status-badge ${status}">
-                            ${getStatusEmoji(status)} ${getStatusLabel(status)}
-                        </span>
-                    </div>
-                    <div class="request-meta">
-                        <span class="doc-count">📎 ${docCount} مستند</span>
-                        <span>🆔 ${r.id.substring(0,12)}</span>
-                        ${hasReceipt ? '<span>🧾 رسید</span>' : ''}
+                                                <div class="request-meta">
+                     
                         <button class="detail-toggle" data-id="${r.id}">🔽 جزئیات</button>
-                    </div>
-                    <div class="request-actions">
+                                            <div class="request-actions">
                         <select class="status-select" data-id="${r.id}">
                             <option value="pending" ${status === 'pending' ? 'selected' : ''}>در انتظار</option>
                             <option value="processing" ${status === 'processing' ? 'selected' : ''}>در حال بررسی</option>
@@ -1521,7 +1543,17 @@
                             <option value="rejected" ${status === 'rejected' ? 'selected' : ''}>رد شده</option>
                         </select>
                         <button class="btn btn-primary btn-sm btn-update" data-id="${r.id}">بروزرسانی</button>
+                        <button class="btn btn-success btn-sm btn-send-message" data-id="${r.id}" data-serviceId="${r.serviceId}">ارسال پیام</button>
+
                     </div>
+                    </div>
+                        </div>
+                        <span class="status-badge ${status}">
+                            ${getStatusEmoji(status)} ${getStatusLabel(status)}
+                        </span>
+                    </div>
+
+
 
                     <div class="request-detail" id="detail-${r.id}">
                         <div class="user-info-box">
@@ -1570,6 +1602,16 @@
                 await handleStatusUpdate(id, select.value);
             });
         });
+                container.querySelectorAll('.btn-send-message').forEach(btn => {
+            btn.addEventListener('click', async function() {
+                const card = this.closest('.request-card');
+                const id = this.dataset.id;
+                const serviceId = this.dataset.serviceid;
+                console.log('serviceid',serviceId,this.dataset);
+                const select = card.querySelector('.status-select');
+                await handleSendMessage(id,serviceId);
+            });
+        });
         container.querySelectorAll('.status-select').forEach(sel => {
             sel.addEventListener('change', async function() {
                 const id = this.dataset.id;
@@ -1599,6 +1641,16 @@
         } catch (err) {
             showToast(err.message || 'خطا در بروزرسانی', 'error');
             await loadRequests();
+        }
+    }
+        async function handleSendMessage(requestId,serviceId) {
+        try {
+            await sendMessage(requestId,serviceId);
+            showToast(`ارسال پیام با موفقیت انجام شد `, 'success');
+            // await loadRequests();
+        } catch (err) {
+            showToast(err.message || 'خطا در ارسال پیام', 'error');
+            // await loadRequests();
         }
     }
 
@@ -1759,5 +1811,5 @@
 })();
     </script>
 
-</body>
+    </body>
 </html>

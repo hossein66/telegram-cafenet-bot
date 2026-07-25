@@ -8,7 +8,7 @@ import re
 import asyncio
 import time
 from typing import List, Dict, Optional, Any, Tuple
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, BotCommand, CopyTextButton
+from telegram import CallbackQuery, Update, InlineKeyboardButton, InlineKeyboardMarkup, BotCommand, CopyTextButton
 from telegram.ext import (
     Application,
     CommandHandler,
@@ -527,6 +527,12 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             await handle_payment(query, context)
         elif data == "payment_done":
             await handle_payment_done(query, context)
+        elif data.startswith("customer_ready_"):
+            request_id = data[15:]
+            await handle_customer_ready(query,request_id, context) 
+        elif data.startswith("customer_stop_"):
+            request_id = data[14:]
+            await handle_customer_stop(query,request_id, context)                
         elif data.startswith("prev_doc_"):
             doc_index = int(data[9:])
             await go_to_previous_document(query, doc_index, context)
@@ -2195,6 +2201,51 @@ async def handle_payment_done(query, context: ContextTypes.DEFAULT_TYPE) -> None
         logger.error(f"Error in handle_payment_done: {e}")
         logger.error(traceback.format_exc())
         await query.edit_message_text("❌ خطا در تایید پرداخت. لطفا مجددا تلاش کنید.")
+
+@handle_errors
+async def handle_customer_ready(
+    query: CallbackQuery,
+    service_id: str,
+    context: ContextTypes.DEFAULT_TYPE
+) -> None:
+    """Start the customer service process."""
+    await query.answer()
+
+    # Update the service state
+    user_data = context.user_data
+    user_data[f"service_{service_id}_active"] = True
+
+    # Build the "stop" button
+    keyboard = [[InlineKeyboardButton("⏹️ توقف", callback_data=f"customer_stop_{service_id}")]]
+
+    # Edit the original message to reflect the new state
+    await query.message.reply_text(
+        text="✅ خرید امتیاز فعال شد. هر زمان خواستید با دکمهٔ «توقف» آن را متوقف کنید.",
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+
+
+@handle_errors
+async def handle_customer_stop(
+    query: CallbackQuery,
+    service_id: str,
+    context: ContextTypes.DEFAULT_TYPE
+) -> None:
+    """Stop the customer service process."""
+    await query.answer()
+
+    # Update the service state
+    user_data = context.user_data
+    user_data[f"service_{service_id}_active"] = False
+
+    # Build the "start" button
+    keyboard = [[InlineKeyboardButton("▶️ شروع", callback_data=f"customer_ready_{service_id}")]]
+
+    # Edit the original message to reflect the new state
+    await query.message.reply_text(
+        text="⏸️ خرید امتیاز متوقف شد. با دکمهٔ «شروع» می‌توانید دوباره آن را فعال کنید.",
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
 
 async def validate_referral_code(code: str, token: str) -> Optional[int]:
     try:
