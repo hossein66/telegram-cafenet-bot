@@ -371,8 +371,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await authenticateUserWithServer(user, context=context)
         
         welcome_text = (
-            f"به ربات کافی‌نت آنلاین نت خوش آمدید {user.first_name}! 👋\n"
-            "چه کمکی می توان به شما بکنم؟\n\n"
+            f"به ربات کافی‌نت آنلاین خوش آمدید {user.first_name}! 👋\n\n"
+            "این ربات به شما کمک می‌کند تا به راحتی خدمات اداری و دولتی را در اختیار داشته باشید، همچنین همه خدمات ضمانت بازگشت وجه را دارند.\n\n"
             "🔹 با کلیک روی هر دکمه می‌توانید خدمات مربوطه را مشاهده کنید.\n"
             "🔹 همچنین می‌توانید عبارت مورد نظر را تایپ کرده و جستجو کنید.\n"
             "🔹 از منوی زیر نیز می‌توانید استفاده کنید."
@@ -1189,7 +1189,6 @@ async def show_service_detail(query, service_id: str, context: ContextTypes.DEFA
         text += f"💰 قیمت: {price} تومان\n"
         if discount > 0:
             text += f"🎯 تخفیف: {discount_price} تومان\n"
-        text += f"📂 دسته‌بندی: {categories}\n"
         text += f"📄 تعداد مدارک: {len(docs)}\n"
         text += f"⏱️ زمان لازم: {duration} \n\n"
 
