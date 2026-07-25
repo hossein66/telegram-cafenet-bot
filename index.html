@@ -1026,7 +1026,17 @@ function setupScrollObserver() {
             step: 0,
             values: {},
             receiptImage: null,
-            totalSteps: docs.length + 2
+            totalSteps: docs.length + 2,
+            // NEW code fields
+            originalPrice: d.price || 0,
+            finalPrice: d.price || 0,
+            referralCode: null,
+            discountCode: null,
+            referralDiscount: 0,
+            discountDiscount: 0,
+            referralApplied: false,
+            discountApplied: false,
+            randomData: null
         };
         renderRequestModal();
         document.getElementById('requestOverlay').classList.add('open');
@@ -1575,39 +1585,68 @@ function setupScrollObserver() {
             <div style="font-size:12px;color:var(--text3);background:var(--surface2);padding:10px 14px;border-radius:8px;margin-top:4px;">✅ اطلاعات را بررسی کنید، سپس برای رفتن به مرحله پرداخت کلیک کنید.</div>`;
 }
 
- function renderPaymentStep() {
+function renderPaymentStep() {
     const { service } = requestState;
     
-    // Check if user is logged in
+    // Check if user is logged in (optional – we'll still allow guest? but we require login)
     if ((!currentUser || !localStorage.getItem('cafenet_token')) && 1==2) {
-        return `<div style="text-align:center;padding:30px 0;">
-                    <div style="font-size:48px;margin-bottom:16px;">🔐</div>
-                    <h3 style="font-size:18px;font-weight:700;color:var(--text);margin-bottom:12px;">برای پرداخت باید وارد شوید</h3>
-                    <p style="color:var(--text3);font-size:14px;margin-bottom:20px;">لطفاً ابتدا وارد حساب کاربری خود شوید تا بتوانید پرداخت را تکمیل کنید.</p>
-                    <button class="btn-primary" onclick="closeRequest();savePendingRequest();authState.callback='submitAfterLogin';openAuth();" 
-                            style="padding:12px 32px;font-size:16px;">
-                        🚪 ورود به حساب
-                    </button>
-                </div>`;
+        // ... (keep existing login prompt)
     }
     
     // Generate random numbers if not already generated for this request
     if (!requestState.randomData) {
-        requestState.randomData = addRandomNumbersToPrice(service.price);
+        requestState.randomData = addRandomNumbersToPrice(requestState.originalPrice);
     }
     
-    const { finalPrice, randomNumbers, addedAmount } = requestState.randomData;
-    service.price = finalPrice;
+    // Use finalPrice from state (may have discounts applied)
+    const displayPrice = requestState.finalPrice;
+    const { randomNumbers, addedAmount } = requestState.randomData;
     
-    // Use the globally fetched payment info (no API call needed here)
+    // Use the globally fetched payment info
     const cardNumber = PAYMENT_INFO.cardNumber;
     const personName = PAYMENT_INFO.personName;
 
+    // Build discount summary if any applied
+    let discountSummary = '';
+    if (requestState.referralApplied || requestState.discountApplied) {
+        discountSummary = `<div style="background:#ECFDF5;border:1px solid #10B981;border-radius:8px;padding:10px 14px;margin-bottom:12px;">
+            <div style="font-size:13px;font-weight:600;color:#065F46;">✅ تخفیف‌های اعمال شده</div>`;
+        if (requestState.referralApplied) {
+            discountSummary += `<div style="font-size:12px;color:#065F46;">🔑 کد معرف: ${requestState.referralCode} (${formatPrice(requestState.referralDiscount)} تومان)</div>`;
+        }
+        if (requestState.discountApplied) {
+            discountSummary += `<div style="font-size:12px;color:#065F46;">🎫 کد تخفیف: ${requestState.discountCode} (${formatPrice(requestState.discountDiscount)} تومان)</div>`;
+        }
+        discountSummary += `</div>`;
+    }
+
     return `<div class="receipt-info">
                 <h4>💳 اطلاعات پرداخت</h4>
-                <div class="receipt-line"><span class="rk">مبلغ قابل پرداخت:</span><span class="rv">${formatPrice(service.price)} تومان <button class="receipt-copy-btn" onclick="copyText('${formatPrice(service.price)}', 'مبلغ کپی شد')">کپی</button></span></div>
+                <div class="receipt-line"><span class="rk">مبلغ اصلی:</span><span class="rv">${formatPrice(requestState.originalPrice)} تومان</span></div>
+                ${requestState.referralApplied || requestState.discountApplied ? 
+                    `<div class="receipt-line"><span class="rk">تخفیف اعمال شده:</span><span class="rv" style="color:var(--success);">- ${formatPrice((requestState.referralDiscount || 0) + (requestState.discountDiscount || 0))} تومان</span></div>` : ''}
+                <div class="receipt-line" style="border-top:1px solid var(--border);padding-top:8px;"><span class="rk" style="font-weight:700;">مبلغ قابل پرداخت:</span><span class="rv" style="font-size:20px;">${formatPrice(displayPrice)} تومان <button class="receipt-copy-btn" onclick="copyText('${formatPrice(displayPrice)}', 'مبلغ کپی شد')">کپی</button></span></div>
                 <div class="receipt-line"><span class="rk">شماره کارت:</span><span class="rv">${cardNumber} <button class="receipt-copy-btn" onclick="copyText('${cardNumber}', 'شماره کارت کپی شد')">کپی</button></span></div>
                 <div class="receipt-line"><span class="rk">به نام:</span><span class="rv">${personName} </span></div>
+            </div>
+            ${discountSummary}
+            <!-- Code application section -->
+            <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px;margin:8px 0;">
+                <div style="font-size:13px;font-weight:600;color:var(--text2);margin-bottom:8px;">🎫 کد تخفیف یا معرف</div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                    <input type="text" id="codeInput" placeholder="کد را وارد کنید..." style="flex:1;min-width:140px;padding:10px 14px;border:1.5px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;outline:none;transition:.2s;">
+                    <button onclick="applyCode()" style="padding:10px 20px;border:none;border-radius:8px;background:var(--brand);color:#fff;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;transition:.15s;">اعمال</button>
+                </div>
+                <div style="display:flex;gap:12px;margin-top:8px;font-size:12px;">
+                    <label style="display:flex;align-items:center;gap:4px;cursor:pointer;">
+                        <input type="radio" name="codeType" value="referral" checked> کد معرف
+                    </label>
+                    <label style="display:flex;align-items:center;gap:4px;cursor:pointer;">
+                        <input type="radio" name="codeType" value="discount"> کد تخفیف
+                    </label>
+                </div>
+                ${requestState.referralApplied || requestState.discountApplied ? 
+                    `<div style="font-size:12px;color:var(--text3);margin-top:6px;">✅ کد اعمال شده است. برای تغییر، ابتدا صفحه را ببندید و دوباره شروع کنید.</div>` : ''}
             </div>
             <div class="field-group">
                 <div class="field-label">📎 تصویر رسید پرداخت</div>
@@ -1621,8 +1660,33 @@ function setupScrollObserver() {
                 <div class="field-error" id="fieldError" style="display:none"></div>
             </div>
             <div style="font-size:12px;color:var(--text3);background:var(--surface2);padding:10px 14px;border-radius:8px;">⚠️ آپلود رسید پرداخت الزامی است. پس از بررسی، کارشناسان با شما تماس می‌گیرند.</div>`;
+}  
+async function applyCode() {
+    const input = document.getElementById('codeInput');
+    if (!input) return;
+    const code = input.value.trim();
+    if (!code) {
+        showToast('لطفاً کد را وارد کنید.', 'error');
+        return;
+    }
+    // Determine which type of code
+    const typeRadios = document.querySelectorAll('input[name="codeType"]');
+    let type = 'referral';
+    for (const radio of typeRadios) {
+        if (radio.checked) {
+            type = radio.value;
+            break;
+        }
+    }
+    if (type === 'referral') {
+        await applyReferralCode(code);
+    } else {
+        await applyDiscountCode(code);
+    }
+    // Clear input after attempt (whether success or fail)
+    input.value = '';
 }
-    function copyText(text, msg) {
+function copyText(text, msg) {
         navigator.clipboard.writeText(text).then(() => showToast(msg, 'success')).catch(() => {});
     }
 
@@ -1738,16 +1802,18 @@ function setupScrollObserver() {
         if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'در حال ارسال...'; }
 
         try {
-            const result = await apiFetch('/api/requests', {
-                method: 'POST',
-                body: JSON.stringify({
-                    serviceId: service.id,
-                    serviceTitle: service.title,
-                    price: service.price,
-                    documents,
-                    receiptImage
-                })
-            });
+             const result = await apiFetch('/api/requests', {
+            method: 'POST',
+            body: JSON.stringify({
+                serviceId: service.id,
+                serviceTitle: service.title,
+                price: service.price,
+                documents,
+                receiptImage,
+                referralCode: requestState.referralApplied ? requestState.referralCode : null,
+                discountCode: requestState.discountApplied ? requestState.discountCode : null
+            })
+        });
             showToast('✅ درخواست شما با موفقیت ثبت شد', 'success');
             closeRequest();
             closeServicePage();
@@ -1757,7 +1823,77 @@ function setupScrollObserver() {
             if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = '✅ ثبت نهایی درخواست'; }
         }
     }
+    // ─── REFERRAL & DISCOUNT CODE HELPERS ──────────────────────
+async function applyReferralCode(code) {
+    if (requestState.referralApplied) {
+        showToast('❌ قبلاً یک کد معرف اعمال کرده‌اید.', 'error');
+        return false;
+    }
+    try {
+        const result = await apiFetch('/api/referral/validate', {
+            method: 'POST',
+            body: JSON.stringify({ code })
+        });
+        if (result && result.success) {
+            const discount = result.discount;
+            requestState.referralDiscount = discount;
+            requestState.referralCode = code;
+            requestState.referralApplied = true;
+            // Recalculate final price
+            requestState.finalPrice = Math.max(0, requestState.originalPrice - discount);
+            // Also adjust for discount code if already applied
+            if (requestState.discountApplied) {
+                requestState.finalPrice = Math.max(0, requestState.finalPrice - requestState.discountDiscount);
+            }
+            // Update service price for display
+            requestState.service.price = requestState.finalPrice;
+            showToast(`✅ کد معرف با ${formatPrice(discount)} تومان تخفیف اعمال شد`, 'success');
+            // Re-render payment step
+            renderRequestModal();
+            return true;
+        } else {
+            showToast('❌ کد معرف نامعتبر است', 'error');
+            return false;
+        }
+    } catch (e) {
+        showToast('⚠️ خطا در اعتبارسنجی کد: ' + e.message, 'error');
+        return false;
+    }
+}
 
+async function applyDiscountCode(code) {
+    if (requestState.discountApplied) {
+        showToast('❌ قبلاً یک کد تخفیف اعمال کرده‌اید.', 'error');
+        return false;
+    }
+    try {
+        const result = await apiFetch('/api/discount/validate', {
+            method: 'POST',
+            body: JSON.stringify({ code })
+        });
+        if (result && result.success) {
+            const discount = result.discount;
+            requestState.discountDiscount = discount;
+            requestState.discountCode = code;
+            requestState.discountApplied = true;
+            // Recalculate final price
+            requestState.finalPrice = Math.max(0, requestState.originalPrice - discount);
+            if (requestState.referralApplied) {
+                requestState.finalPrice = Math.max(0, requestState.finalPrice - requestState.referralDiscount);
+            }
+            requestState.service.price = requestState.finalPrice;
+            showToast(`✅ کد تخفیف با ${formatPrice(discount)} تومان تخفیف اعمال شد`, 'success');
+            renderRequestModal();
+            return true;
+        } else {
+            showToast('❌ کد تخفیف نامعتبر است', 'error');
+            return false;
+        }
+    } catch (e) {
+        showToast('⚠️ خطا در اعتبارسنجی کد: ' + e.message, 'error');
+        return false;
+    }
+}
     async function checkPendingRequest() {
         const pending = sessionStorage.getItem('pendingRequest');
         if (!pending) return;

@@ -65,7 +65,7 @@
       background: white; border-radius: 24px; border: 1px solid #e9edf2;
       overflow-x: auto; box-shadow: 0 10px 25px -8px rgba(0,0,0,0.04);
     }
-    table { width: 100%; border-collapse: collapse; min-width: 2000px; font-size: 0.8rem; }
+    table { width: 100%; border-collapse: collapse; min-width: 2100px; font-size: 0.8rem; }
     th {
       background: #f8fafc; color: #1e3a5f; font-weight: 600;
       padding: 12px 8px; text-align: right; border-bottom: 2px solid #dde3ea;
@@ -99,8 +99,14 @@
       border: 1px solid #cbd5e1; border-radius: 30px; padding: 0 6px;
       font-size: 0.7rem; height: 24px; background: white; max-width: 120px;
     }
+    .inline-sort-input {
+      border: 1px solid #cbd5e1; border-radius: 30px; padding: 0 8px;
+      font-size: 0.7rem; width: 50px; text-align: center; background: white;
+    }
+    .inline-sort-input:focus { outline: 2px solid #94a3b8; }
     .title-col { min-width: 180px; }
     .id-col { min-width: 50px; }
+    .sort-col { min-width: 40px; }
     .badge-true { color: #0f7b3a; }
     .badge-false { color: #b91c1c; }
     .field-group { background: #f8fafc; padding: 12px; border-radius: 16px; margin-top: 6px; border: 1px solid #e9edf2; }
@@ -273,14 +279,19 @@
     </div>
   </div>
 
-  <div class="search-bar">
-    <input type="text" id="searchInput" placeholder="جستجو در عنوان، دسته‌بندی، مدارک..." oninput="applyFilters()">
-    <select id="categoryFilter" onchange="applyFilters()">
-      <option value="">همه دسته‌بندی‌ها</option>
-    </select>
-    <button class="btn btn-outline" onclick="clearFilters()" style="padding:6px 14px;"><i class="fas fa-times"></i> پاک کردن</button>
-    <span id="filterResultCount" style="color:#64748b; font-size:0.85rem; margin-right:8px;"></span>
-  </div>
+<div class="search-bar">
+  <input type="text" id="searchInput" placeholder="جستجو در عنوان، دسته‌بندی، مدارک..." oninput="applyFilters()">
+  <select id="categoryFilter" onchange="applyFilters()">
+    <option value="">همه دسته‌بندی‌ها</option>
+  </select>
+  <select id="specialFilter" onchange="applyFilters()">
+    <option value="">همه</option>
+    <option value="true">ویژه</option>
+    <option value="false">غیرویژه</option>
+  </select>
+  <button class="btn btn-outline" onclick="clearFilters()" style="padding:6px 14px;"><i class="fas fa-times"></i> پاک کردن</button>
+  <span id="filterResultCount" style="color:#64748b; font-size:0.85rem; margin-right:8px;"></span>
+</div>
 
   <div class="stats" id="statsBar">
     <div class="stat-card"><i class="fas fa-list"></i> مجموع: <span id="totalItems">0</span></div>
@@ -296,6 +307,7 @@
           <th class="id-col">شناسه</th>
           <th class="title-col">عنوان</th>
           <th>دسته</th>
+          <th class="sort-col">ترتیب</th>
           <th>قیمت</th>
           <th>مدت</th>
           <th>ویژه</th>
@@ -429,6 +441,29 @@
     }
   }
 
+    async function apiRequest2(method, endpoint, data = null) {
+    const url = `${'https://cofenet-online.ir'}${endpoint}`;
+    const options = {
+      method,
+      headers: getHeaders(),
+    };
+    if (data) {
+      options.body = JSON.stringify(data);
+    }
+
+    try {
+      const response = await fetch(url, options);
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('API Error:', error);
+      throw error;
+    }
+  }
+
   // ============================================================
   //  API ENDPOINT FUNCTIONS
   // ============================================================
@@ -437,35 +472,9 @@
   async function fetchServices() {
     showLoading(true);
     try {
-      const data = await apiRequest('GET', '/api/services/all');
-      return data.items.map(item => ({
-        serviceId: item.serviceId,
-        serviceTitle: item.serviceTitle,
-        category: item.category,
-        sort: item.sort || 0,
-        data: {
-          price: item.price || 0,
-          cost: 0,
-          benefit: item.price || 0,
-          duration: item.duration || '—',
-          isSpecial: item.isSpecial || false,
-          isEnabled: item.isEnabled !== false,
-          type: item.type || 'selectable',
-          description: item.description || '',
-          isPaymentRequired: true,
-          isLocationBased: true,
-          autoInvoiceEnabled: true,
-          isNoticeEnabled: false,
-          noticeText: null,
-          noticeImage: null,
-          images: [],
-          forms: [{ fields: [] }],
-          id: item.serviceId,
-          title: item.serviceTitle,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        }
-      }));
+      const data = await apiRequest('GET', '/api/services/full/all');
+      return data
+      
     } catch (error) {
       showToast('❌ خطا در دریافت خدمات: ' + error.message);
       return [];
@@ -479,7 +488,6 @@
     showLoading(true);
     try {
       const data = await apiRequest('GET', `/api/services/${serviceId}`);
-      // The API returns data in the format we need
       return data;
     } catch (error) {
       showToast('❌ خطا در دریافت اطلاعات سرویس: ' + error.message);
@@ -645,6 +653,7 @@
         if (item.data.type === undefined) item.data.type = 'selectable';
         if (item.data.isPaymentRequired === undefined) item.data.isPaymentRequired = true;
         if (item.data.autoInvoiceEnabled === undefined) item.data.autoInvoiceEnabled = true;
+        if (item.sort === undefined) item.sort = 0;
       });
 
       applyFilters();
@@ -848,30 +857,46 @@
   // ============================================================
   //  FILTER & SEARCH
   // ============================================================
-  function applyFilters() {
-    const searchTerm = document.getElementById('searchInput').value.trim().toLowerCase();
-    const categoryFilter = document.getElementById('categoryFilter').value;
-    filteredItems = items.filter(item => {
-      const title = item.serviceTitle || item.Title || '';
-      const catName = item.category || '';
-      const fields = item.data?.forms?.flatMap(f => f.fields?.map(fld => fld.label || '') || []) || [];
-      const searchMatch = !searchTerm || 
-        title.toLowerCase().includes(searchTerm) ||
-        catName.toLowerCase().includes(searchTerm) ||
-        fields.some(f => f.toLowerCase().includes(searchTerm));
-      let catFilterMatch = true;
-      if (categoryFilter) {
-        const filterId = parseInt(categoryFilter);
-        const catId = getCategoryIdByName(catName);
-        catFilterMatch = (catId === filterId);
+function applyFilters() {
+  const searchTerm = document.getElementById('searchInput').value.trim().toLowerCase();
+  const categoryFilter = document.getElementById('categoryFilter').value;
+  const specialFilter = document.getElementById('specialFilter').value;
+  
+  filteredItems = items.filter(item => {
+    const title = item.serviceTitle || item.Title || '';
+    const catName = item.category || '';
+    const fields = item.data?.forms?.flatMap(f => f.fields?.map(fld => fld.label || '') || []) || [];
+    
+    const searchMatch = !searchTerm || 
+      title.toLowerCase().includes(searchTerm) ||
+      catName.toLowerCase().includes(searchTerm) ||
+      fields.some(f => f.toLowerCase().includes(searchTerm));
+    
+    let catFilterMatch = true;
+    if (categoryFilter) {
+      const filterId = parseInt(categoryFilter);
+      const selectedCategory = categories.find(c => c.id === filterId);
+      if (selectedCategory) {
+        catFilterMatch = (catName === selectedCategory.name);
+      } else {
+        catFilterMatch = false;
       }
-      return searchMatch && catFilterMatch;
-    });
-    document.getElementById('filterResultCount').textContent = `(${filteredItems.length} مورد)`;
-    renderFilteredTable();
-  }
+    }
+    
+    let specialFilterMatch = true;
+    if (specialFilter !== '') {
+      const isSpecial = item.data?.isSpecial === true;
+      specialFilterMatch = (isSpecial === (specialFilter === 'true'));
+    }
+    
+    return searchMatch && catFilterMatch && specialFilterMatch;
+  });
+  
+  document.getElementById('filterResultCount').textContent = `(${filteredItems.length} مورد)`;
+  renderFilteredTable();
+} 
 
-  function clearFilters() {
+function clearFilters() {
     document.getElementById('searchInput').value = '';
     document.getElementById('categoryFilter').value = '';
     applyFilters();
@@ -881,7 +906,7 @@
     const tbody = document.getElementById('itemsTableBody');
     const displayItems = filteredItems.length > 0 ? filteredItems : items;
     if (!displayItems.length) {
-      tbody.innerHTML = `<tr><td colspan="11" style="text-align:center; padding:40px; color:#94a3b8;">هیچ آیتمی با این فیلترها یافت نشد.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="12" style="text-align:center; padding:40px; color:#94a3b8;">هیچ آیتمی با این فیلترها یافت نشد.</td></tr>`;
       updateStats();
       return;
     }
@@ -892,6 +917,7 @@
       const isSpecial = item.data?.isSpecial === true;
       const title = item.serviceTitle || item.Title || 'بدون عنوان';
       const category = item.category || 'بدون دسته';
+      const sort = item.sort || 0;
       const price = item.data?.price || item.data?.cost || 0;
       const duration = item.data?.duration || '—';
       const type = item.data?.type || '—';
@@ -937,6 +963,10 @@
             ${catOptions}
           </select>
           <span style="font-size:0.6rem; color:#94a3b8; display:block;"><i class="fas ${catIcon}"></i> ${category}</span>
+        </td>
+        <td class="sort-col">
+          <input type="number" class="inline-sort-input" value="${sort}" 
+                 onchange="updateSort(${origIdx}, this.value)" min="0">
         </td>
         <td>
           <input type="number" class="inline-price-input" value="${price}" 
@@ -1035,6 +1065,20 @@
     }
   }
 
+  async function updateSort(idx, value) {
+    if (items[idx]) {
+      const newSort = parseInt(value);
+      if (!isNaN(newSort) && newSort >= 0) {
+        items[idx].sort = newSort;
+        await saveServiceToServer(items[idx]);
+        showToast('ترتیب به‌روز شد');
+        applyFilters();
+      } else {
+        showToast('لطفاً عدد معتبر وارد کنید');
+      }
+    }
+  }
+
   async function updateCategory(idx, value) {
     if (items[idx]) {
       const catName = value || 'بدون دسته';
@@ -1094,6 +1138,7 @@
     copy.serviceTitle = (copy.serviceTitle || copy.Title || '') + ' (کپی)';
     copy.data.id = 'copy_' + Date.now();
     copy.data.title = copy.serviceTitle;
+    copy.sort = (original.sort || 0) + 1;
     items.splice(idx+1, 0, copy);
     applyFilters();
     showToast('کپی شد (برای ذخیره روی سرور، روی ذخیره کلیک کنید)');
@@ -1132,7 +1177,7 @@
   }
 
   // ============================================================
-  //  RENDER MODAL FORM - FIXED TO HANDLE FORMS DATA
+  //  RENDER MODAL FORM
   // ============================================================
   function renderModalForm(item) {
     const isNew = !item;
@@ -1142,6 +1187,7 @@
     let category = isNew ? '' : (item.category || '');
     let serviceId = isNew ? 'svc_' + Date.now() : (item.serviceId || '');
     let title = isNew ? '' : (item.serviceTitle || item.Title || '');
+    let sort = isNew ? 0 : (item.sort || 0);
     let price = isNew ? 0 : (data.price || 0);
     let duration = isNew ? '' : (data.duration || '');
     let isSpecial = isNew ? false : (data.isSpecial === true);
@@ -1268,14 +1314,15 @@
         <select id="editCategory">${catOptions}</select>
       </div>
       <div class="form-row">
-        <label>توضیحات</label>
-        <textarea id="editDescription" rows="2" placeholder="توضیحات سرویس">${description}</textarea>
-      </div>
-      <div class="form-row">
         <div class="inline-group">
+          <div><label>ترتیب</label><input type="number" id="editSort" value="${sort}" min="0"></div>
           <div><label>قیمت (تومان)</label><input type="number" id="editPrice" value="${price}" min="0"></div>
           <div><label>مدت زمان</label><input type="text" id="editDuration" value="${duration}" placeholder="مثلاً 45 دقیقه"></div>
         </div>
+      </div>
+      <div class="form-row">
+        <label>توضیحات</label>
+        <textarea id="editDescription" rows="2" placeholder="توضیحات سرویس">${description}</textarea>
       </div>
       <div class="form-row">
         <div class="inline-group">
@@ -1672,6 +1719,7 @@
     item.serviceId = document.getElementById('editServiceId').value.trim() || 'svc_' + Date.now();
     item.serviceTitle = document.getElementById('editTitle').value.trim() || 'بدون عنوان';
     item.category = document.getElementById('editCategory').value.trim() || 'دسته‌بندی نشده';
+    item.sort = parseInt(document.getElementById('editSort').value) || 0;
     item.Title = item.serviceTitle;
     
     if (!item.data) item.data = {};
@@ -1736,6 +1784,7 @@
             if (!item.serviceId) item.serviceId = item.Id || 'svc_' + Date.now();
             if (!item.serviceTitle) item.serviceTitle = item.Title || 'بدون عنوان';
             if (!item.category) item.category = item.category || item.Category || 'دسته‌بندی نشده';
+            if (item.sort === undefined) item.sort = item.Sort || 0;
             if (!item.data.forms) item.data.forms = [{ fields: [] }];
             if (!item.data.forms[0]) item.data.forms[0] = { fields: [] };
             if (item.data.price === undefined) item.data.price = item.Price || 0;
@@ -1842,6 +1891,7 @@
   window.saveChanges = saveChanges;
   window.applyFilters = applyFilters;
   window.clearFilters = clearFilters;
+  window.updateSort = updateSort;
   window.updateSpecial = updateSpecial;
   window.updateEnabled = updateEnabled;
   window.updateTitle = updateTitle;

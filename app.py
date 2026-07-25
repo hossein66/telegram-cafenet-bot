@@ -34,6 +34,7 @@ redis_client = redis.Redis(
     db=0,
     decode_responses=True
 )
+security = HTTPBearer()
 
 class RedisCache:
     def __init__(self, default_ttl=300):
@@ -54,6 +55,11 @@ class RedisCache:
     
     def clear(self):
         self.client.flushdb()
+    def cleanup(self):
+        """Redis automatically handles expiration, so this is a no-op"""
+        # Redis automatically removes expired keys
+        # This method exists for compatibility
+        pass    
 
 # Then use:
 sms_cache = RedisCache(default_ttl=20)
@@ -101,7 +107,7 @@ class SimpleCache:
             self.cache.pop(key, None)
             self.ttl.pop(key, None)
 # Global cache instance
-cache = SimpleCache(default_ttl=300)
+cache = RedisCache(default_ttl=300)
 # sms_cache = SimpleCache(default_ttl=20)   # 20 seconds TTL
 
 # Cache decorator - FIXED for sync functions
@@ -300,6 +306,44 @@ def init_db():
         updated_at TEXT
     )
 """)
+            
+                        # Referral codes
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS referral_codes (
+                    code TEXT PRIMARY KEY,
+                    discount_amount INTEGER NOT NULL,
+                    expires_at TEXT,
+                    max_uses INTEGER DEFAULT 1,
+                    used_count INTEGER DEFAULT 0,
+                    is_active INTEGER DEFAULT 1,
+                    created_at TEXT
+                )
+            """)
+
+            # Discount codes
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS discount_codes (
+                    code TEXT PRIMARY KEY,
+                    discount_amount INTEGER NOT NULL,
+                    expires_at TEXT,
+                    max_uses INTEGER DEFAULT 1,
+                    used_count INTEGER DEFAULT 0,
+                    is_active INTEGER DEFAULT 1,
+                    created_at TEXT
+                )
+            """)
+
+            # Add columns to requests if not exist
+            try:
+                cur.execute("ALTER TABLE requests ADD COLUMN referral_code TEXT")
+            except sqlite3.OperationalError:
+                pass
+            try:
+                cur.execute("ALTER TABLE requests ADD COLUMN discount_code TEXT")
+            except sqlite3.OperationalError:
+                pass
+            
+            
             # ─── CREATE INDEXES ─────────────────────────────────────
             print("📊 Creating indexes...")
             
@@ -417,6 +461,8 @@ class RequestCreate(BaseModel):
     price: int
     documents: List[Dict[str, str]]
     receiptImage: Optional[str] = None
+    referralCode: Optional[str] = None
+    discountCode: Optional[str] = None
 
 class RequestResponse(BaseModel):
     id: str
@@ -547,6 +593,67 @@ def get_payment_info():
         print(f"❌ Error in get_payment_info: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/api/referral/validate")
+def validate_referral_code(payload: dict):
+    """
+    Validate a referral code. Returns discount amount if valid.
+    """
+    code = payload.get("code")
+    print(f"Validating referral code: {code}")
+    if not code:
+        raise HTTPException(status_code=400, detail="کد معرف الزامی است!")
+    
+    with get_db() as conn:
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT discount_amount, expires_at, max_uses, used_count, is_active
+            FROM referral_codes
+            WHERE code = ?
+        """, (code,))
+        row = cur.fetchone()
+        
+        if not row:
+            raise HTTPException(status_code=400, detail="کد معرف نامعتبر است!")
+        if not row["is_active"]:
+            raise HTTPException(status_code=400, detail="کد معرف غیرفعال است!")
+        if row["expires_at"] and datetime.fromisoformat(row["expires_at"]) < datetime.utcnow():
+            raise HTTPException(status_code=400, detail="کد معرف منقضی شده است!")
+        if row["used_count"] >= row["max_uses"]:
+            raise HTTPException(status_code=400, detail="کد معرف به حداکثر استفاده رسیده است!")
+        
+        # Optionally, you could check if this user already used this code, but we skip that for now.
+        return {"success": True, "discount": row["discount_amount"]}
+
+@app.post("/api/discount/validate")
+def validate_discount_code(payload: dict):
+    """
+    Validate a discount code. Returns discount amount if valid.
+    """
+    code = payload.get("code")
+    print(f"Validating discount code: {code}")
+    if not code:
+        raise HTTPException(status_code=400, detail="کد تخفیف الزامی است!")
+    
+    with get_db() as conn:
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT discount_amount, expires_at, max_uses, used_count, is_active
+            FROM discount_codes
+            WHERE code = ?
+        """, (code,))
+        row = cur.fetchone()
+        
+        if not row:
+            raise HTTPException(status_code=400, detail="کد تخفیف نامعتبر است!")
+        if not row["is_active"]:
+            raise HTTPException(status_code=400, detail="کد تخفیف غیرفعال است!")
+        if row["expires_at"] and datetime.fromisoformat(row["expires_at"]) < datetime.utcnow():
+            raise HTTPException(status_code=400, detail="کد تخفیف منقضی شده است!")
+        if row["used_count"] >= row["max_uses"]:
+            raise HTTPException(status_code=400, detail="کد تخفیف به حداکثر استفاده رسیده است!")
+        
+        return {"success": True, "discount": row["discount_amount"]}
+    
 # Admin endpoint to update payment info
 @app.put("/api/payment/info")
 def update_payment_info(
@@ -1226,70 +1333,76 @@ def get_service(service_id: str):
     except Exception as e:
         print(f"❌ Error in get_service: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-@app.get("/api/services/full", response_model=ServiceDetailResponse)
-def get_serviceFull():
+@app.get("/api/services/full/all")
+def get_service_full():
+    print(f"📊 Total services in DB1")
+
     try:
         with get_db() as conn:
             cur = conn.cursor()
-
+            
             cur.execute("""
-                SELECT s.*
+                SELECT s.*, c.name as category_name
                 FROM services s
-
+                LEFT JOIN categories c ON s.category_id = c.id
+                ORDER BY s.sort ASC
             """)
-            row = cur.fetchone()
+            rows = cur.fetchall()  # Get all rows
 
-            if not row:
-                raise HTTPException(status_code=404, detail="Service not found")
+            if not rows:
+                return []  # Return empty list instead of 404
 
-            row_dict = dict(row)
+            results = []
+            for row in rows:
+                row_dict = dict(row)
+                
+                # Parse JSON fields
+                images = json.loads(row_dict.get("images", "[]"))
+                forms = json.loads(row_dict.get("forms", "[]"))
 
-            # Parse JSON fields
-            images = json.loads(row_dict.get("images", "[]"))
-            forms = json.loads(row_dict.get("forms", "[]"))
-
-            data = {
-                "sort": row_dict.get("sort", 0),
-                "price": row_dict.get("price", 0),
-                "cost": row_dict.get("cost", 0),
-                "benefit": row_dict.get("benefit", 0),
-                "duration": row_dict.get("duration", ""),
-                "isSpecial": bool(row_dict.get("is_special", 0)),
-                "isEnabled": bool(row_dict.get("is_enabled", 1)),
-                "type": row_dict.get("type", "selectable"),
-                "description": row_dict.get("description", ""),
-                "isPaymentRequired": bool(row_dict.get("is_payment_required", 1)),
-                "isLocationBased": bool(row_dict.get("is_location_based", 1)),
-                "autoInvoiceEnabled": bool(row_dict.get("auto_invoice_enabled", 1)),
-                "isNoticeEnabled": bool(row_dict.get("is_notice_enabled", 0)),
-                "noticeText": row_dict.get("notice_text"),
-                "noticeImage": row_dict.get("notice_image"),
-                "images": images,
-                "forms": forms,
-                "id": row_dict.get("id"),
-                "title": row_dict.get("title"),
-                "createdAt": row_dict.get("created_at"),
-                "updatedAt": row_dict.get("updated_at"),
-                "category": {
-                    "title": row_dict.get("category_name"),
-                    "type": "service",
-                    "is_enabled": True
+                data = {
+                    "sort": row_dict.get("sort", 0),
+                    "price": row_dict.get("price", 0),
+                    "cost": row_dict.get("cost", 0),
+                    "benefit": row_dict.get("benefit", 0),
+                    "duration": row_dict.get("duration", ""),
+                    "isSpecial": bool(row_dict.get("is_special", 0)),
+                    "isEnabled": bool(row_dict.get("is_enabled", 1)),
+                    "type": row_dict.get("type", "selectable"),
+                    "description": row_dict.get("description", ""),
+                    "isPaymentRequired": bool(row_dict.get("is_payment_required", 1)),
+                    "isLocationBased": bool(row_dict.get("is_location_based", 1)),
+                    "autoInvoiceEnabled": bool(row_dict.get("auto_invoice_enabled", 1)),
+                    "isNoticeEnabled": bool(row_dict.get("is_notice_enabled", 0)),
+                    "noticeText": row_dict.get("notice_text"),
+                    "noticeImage": row_dict.get("notice_image"),
+                    "images": images,
+                    "forms": forms,
+                    "id": row_dict.get("id"),
+                    "title": row_dict.get("title"),
+                    "createdAt": row_dict.get("created_at"),
+                    "updatedAt": row_dict.get("updated_at"),
+                    "category": {
+                        "title": row_dict.get("category_name"),
+                        "type": "service",
+                        "is_enabled": True
+                    }
                 }
-            }
 
-            return {
-                "serviceId": row_dict.get("id"),
-                "serviceTitle": row_dict.get("title"),
-                "category": row_dict.get("category_name"),
-                "sort": row_dict.get("sort", 0),
-                "data": data
-            }
+                results.append({
+                    "serviceId": row_dict.get("id"),
+                    "serviceTitle": row_dict.get("title"),
+                    "category": row_dict.get("category_name"),
+                    "sort": row_dict.get("sort", 0),
+                    "data": data
+                })
+
+            return results
     except HTTPException:
         raise
     except Exception as e:
-        print(f"❌ Error in get_service: {e}")
+        print(f"❌ Error in get_services_full: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
 # ─────────────────────────────────────────────────────────────
 #  BULK DATA IMPORT
 # ─────────────────────────────────────────────────────────────
@@ -1630,8 +1743,9 @@ def create_request(req: RequestCreate, user: dict = Depends(get_current_user)):
             cur = conn.cursor()
             cur.execute("""
                 INSERT INTO requests
-                    (id, user_id, service_id, service_title, price, documents, receipt_image, status, submitted_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    (id, user_id, service_id, service_title, price, documents, receipt_image, 
+                     status, submitted_at, updated_at, referral_code, discount_code)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 req_id,
                 user["id"],
@@ -1642,8 +1756,25 @@ def create_request(req: RequestCreate, user: dict = Depends(get_current_user)):
                 req.receiptImage,
                 "pending",
                 now,
-                now
+                now,
+                req.referralCode,
+                req.discountCode
             ))
+
+            # Increment usage counts for the codes if provided
+            # if req.referralCode:
+            #     cur.execute("""
+            #         UPDATE referral_codes
+            #         SET used_count = used_count + 1
+            #         WHERE code = ?
+            #     """, (req.referralCode,))
+            # if req.discountCode:
+            #     cur.execute("""
+            #         UPDATE discount_codes
+            #         SET used_count = used_count + 1
+            #         WHERE code = ?
+            #     """, (req.discountCode,))
+            
             conn.commit()
 
         # Clear user requests cache
@@ -1652,7 +1783,7 @@ def create_request(req: RequestCreate, user: dict = Depends(get_current_user)):
     except Exception as e:
         print(f"❌ Error in create_request: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-security = HTTPBearer()
+
 
 def get_user_id_from_token(credentials: HTTPAuthorizationCredentials = Depends(security)) -> str:
     """
@@ -1686,7 +1817,7 @@ async def send_telegram_notification(msg: str, chat_id: str):
         async with httpx.AsyncClient(timeout=5.0) as client:
             resp = await client.post(url, json=payload)
             resp.raise_for_status()
-            print(f"Notification sent for service {service_id}")
+            # print(f"Notification sent for service {service_id}")
     except Exception as e:
         print(f"Failed to send Telegram notification: {e}")
 
@@ -1773,7 +1904,7 @@ def get_requests(user_id: str = Depends(get_user_id_from_token)):
                     "serviceTitle": r["service_title"],
                     "price": r["price"],
                     "documents": json.loads(r["documents"] or "[]"),
-                    "receiptImage": r["receipt_image"],
+                    # "receiptImage": r["receipt_image"],
                     "status": r["status"],
                     "submittedAt": r["submitted_at"]
                 })
@@ -2143,7 +2274,25 @@ def seed_data():
                     datetime.utcnow().isoformat(),
                     datetime.utcnow().isoformat()
                 ))
+                        # Seed some referral/discount codes
+            cur.execute("SELECT COUNT(*) FROM referral_codes")
+            if cur.fetchone()[0] == 0:
+                sample_codes = [
+                    ("REF123", 50000, None, 10, 0, 1, datetime.utcnow().isoformat()),
+                    ("SAVE10", 10000, None, 5, 0, 1, datetime.utcnow().isoformat()),
+                ]
+                cur.executemany("""
+                    INSERT INTO referral_codes (code, discount_amount, expires_at, max_uses, used_count, is_active, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                """, sample_codes)
 
+                sample_discount = [
+                    ("DISCOUNT20", 20000, None, 3, 0, 1, datetime.utcnow().isoformat()),
+                ]
+                cur.executemany("""
+                    INSERT INTO discount_codes (code, discount_amount, expires_at, max_uses, used_count, is_active, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                """, sample_discount)
             conn.commit()
             print("✅ Seed complete!")
     except Exception as e:

@@ -23,6 +23,7 @@ import base64
 import httpx
 from api_client import API_BASE, COFENET_Server_URL, data_store
 import random
+from datetime import datetime
 # try:
 #     from PIL import Image
 #     import io
@@ -70,7 +71,14 @@ DOC_TYPES = data_store.doc_types
 CATEGORY_NAMES = data_store.category_names
 CATEGORY_SORT = data_store.category_sort
 DOC_TYPE_MAP = data_store.doc_type_map
-
+# State flags for code entry
+AWAITING_REFERRAL = "awaiting_referral"
+AWAITING_DISCOUNT = "awaiting_discount"
+# Context keys for codes
+REFERRAL_CODE = "referral_code"
+DISCOUNT_CODE = "discount_code"
+REFERRAL_APPLIED = "referral_applied"
+DISCOUNT_APPLIED = "discount_applied"
 # Helper functions
 def format_price(price: int) -> str:
     """Format price with Persian commas"""
@@ -477,6 +485,10 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             await show_my_profile(query, context)    
         elif data == "support":
             await show_support(query, context)
+        elif data == "apply_referral_code":
+            await apply_referral_code_callback(query, context)
+        elif data == "apply_discount_code":
+            await apply_discount_code_callback(query, context)    
         elif data.startswith("categories_page_"):
             page = int(data.split("_")[2])
             await show_categories_page(query, page)
@@ -507,6 +519,11 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         elif data == "back_to_menu":
             await back_to_menu(query, context)
         elif data == "pay_now":
+            context.user_data.pop(AWAITING_REFERRAL, None)
+            context.user_data.pop(AWAITING_DISCOUNT, None)
+            context.user_data.pop('awaiting_image', None)
+            context.user_data.pop('collecting_docs', None)
+            context.user_data.pop('validation_error', None)
             await handle_payment(query, context)
         elif data == "payment_done":
             await handle_payment_done(query, context)
@@ -691,9 +708,8 @@ async def show_my_requests(query, context: Optional[ContextTypes.DEFAULT_TYPE] =
             submitted_date = "—"
             if req.get("submittedAt"):
                 try:
-                    from datetime import datetime
                     date_obj = datetime.fromisoformat(req["submittedAt"].replace("Z", "+00:00"))
-                    submitted_date = date_obj.strftime("%Y-%m-%d")
+                    submitted_date = to_jalali(date_obj)  # This converts to Persian date
                 except:
                     submitted_date = "—"
 
@@ -724,7 +740,29 @@ async def show_my_requests(query, context: Optional[ContextTypes.DEFAULT_TYPE] =
             "❌ خطا در نمایش درخواست‌ها. لطفا مجددا تلاش کنید."
         )
 
-
+def to_jalali(date_obj):
+    """Convert Gregorian datetime to Jalali (Persian) date string"""
+    gy, gm, gd = date_obj.year, date_obj.month, date_obj.day
+    
+    # Gregorian to Jalali conversion algorithm
+    g_days_in_month = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334]
+    gy2 = gy + 1 if gm > 2 else gy
+    days = 355666 + (365 * gy) + ((gy + 3) // 4) - ((gy + 99) // 100) + ((gy + 399) // 400) + gd + g_days_in_month[gm - 1]
+    jy = -1595 + (33 * (days // 12053))
+    days %= 12053
+    jy += 4 * (days // 1461)
+    days %= 1461
+    if days > 365:
+        jy += (days - 1) // 365
+        days = (days - 1) % 365
+    if days < 186:
+        jm = 1 + (days // 31)
+        jd = 1 + (days % 31)
+    else:
+        jm = 7 + ((days - 186) // 30)
+        jd = 1 + ((days - 186) % 30)
+    
+    return f"{jy}/{jm:02d}/{jd:02d}"
 @handle_errors
 async def show_support(query, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Show support information with contact button"""
@@ -1648,6 +1686,12 @@ async def start_over(query, context: ContextTypes.DEFAULT_TYPE):
         context.user_data['awaiting_image'] = False
         context.user_data.pop('validation_error', None)
         
+        context.user_data.pop(REFERRAL_APPLIED, None)
+        context.user_data.pop(DISCOUNT_APPLIED, None)
+        context.user_data.pop(REFERRAL_CODE, None)
+        context.user_data.pop(DISCOUNT_CODE, None)
+        context.user_data.pop('referral_discount', None)
+        context.user_data.pop('discount_amount', None)
         await collect_next_document(query, 0, context)
     except Exception as e:
         logger.error(f"Error in start_over: {e}")
@@ -1657,6 +1701,13 @@ async def start_over(query, context: ContextTypes.DEFAULT_TYPE):
 async def handle_document_input(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle document input from user with validation"""
     try:
+        # At the beginning of handle_document_input
+        if context.user_data.get(AWAITING_REFERRAL, False):
+          await process_referral_code(update, context)
+          return
+        if context.user_data.get(AWAITING_DISCOUNT, False):
+          await process_discount_code(update, context)
+          return
                 # 1. Authenticate the user to get internal user_id
         if not await ensure_authenticated(update, context):
             await update.message.reply_text("❌ لطفاً /start را بزنید.")
@@ -1791,6 +1842,162 @@ async def handle_document_input(update: Update, context: ContextTypes.DEFAULT_TY
         logger.error(f"Error in handle_document_input: {e}")
         logger.error(traceback.format_exc())
         await update.message.reply_text("❌ خطا در دریافت اطلاعات. لطفا مجددا تلاش کنید.")
+
+async def process_referral_code(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if context.user_data.get(REFERRAL_APPLIED, False):
+        await update.message.reply_text(
+            "❌ شما قبلاً یک کد معرف اعمال کرده‌اید.\n"
+            "امکان اعمال مجدد وجود ندارد."
+        )
+        context.user_data.pop(AWAITING_REFERRAL, None)
+        return
+
+    code = update.message.text.strip()
+    if not code:
+        await update.message.reply_text("❌ لطفا یک کد معتبر وارد کنید.")
+        return
+
+    token = get_user_token(context)
+    if not token:
+        await update.message.reply_text("❌ خطا در احراز هویت. لطفا /start را بزنید.")
+        context.user_data.pop(AWAITING_REFERRAL, None)
+        return
+
+    discount = await validate_referral_code(code, token)
+    if discount is None or discount <= 0:
+        await update.message.reply_text(
+            "❌ کد معرف نامعتبر است.\n"
+            "لطفا مجددا تلاش کنید یا با پشتیبانی تماس بگیرید.",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("🔄 تلاش مجدد", callback_data="apply_referral_code")],
+                [InlineKeyboardButton("🔙 بازگشت به پرداخت", callback_data="pay_now")]
+            ])
+        )
+        return
+
+    # Apply discount and mark as applied
+    original_price = context.user_data.get('final_price', 0)
+    new_price = max(0, original_price - discount)
+    context.user_data['final_price'] = new_price
+    context.user_data[REFERRAL_CODE] = code
+    context.user_data[REFERRAL_APPLIED] = True
+    context.user_data['referral_discount'] = discount
+
+    context.user_data.pop(AWAITING_REFERRAL, None)
+    await update_payment_screen(update, context, discount_applied=discount, code_type="معرف")
+    
+async def process_discount_code(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if context.user_data.get(DISCOUNT_APPLIED, False):
+        await update.message.reply_text(
+            "❌ شما قبلاً یک کد تخفیف اعمال کرده‌اید.\n"
+            "امکان اعمال مجدد وجود ندارد."
+        )
+        context.user_data.pop(AWAITING_DISCOUNT, None)
+        return
+
+    code = update.message.text.strip()
+    if not code:
+        await update.message.reply_text("❌ لطفا یک کد معتبر وارد کنید.")
+        return
+
+    token = get_user_token(context)
+    if not token:
+        await update.message.reply_text("❌ خطا در احراز هویت. لطفا /start را بزنید.")
+        context.user_data.pop(AWAITING_DISCOUNT, None)
+        return
+
+    discount = await validate_discount_code(code, token)
+    if discount is None or discount <= 0:
+        await update.message.reply_text(
+            "❌ کد تخفیف نامعتبر است.\n"
+            "لطفا مجددا تلاش کنید یا با پشتیبانی تماس بگیرید.",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("🔄 تلاش مجدد", callback_data="apply_discount_code")],
+                [InlineKeyboardButton("🔙 بازگشت به پرداخت", callback_data="pay_now")]
+            ])
+        )
+        return
+
+    original_price = context.user_data.get('final_price', 0)
+    new_price = max(0, original_price - discount)
+    context.user_data['final_price'] = new_price
+    context.user_data[DISCOUNT_CODE] = code
+    context.user_data[DISCOUNT_APPLIED] = True
+    context.user_data['discount_amount'] = discount
+
+    context.user_data.pop(AWAITING_DISCOUNT, None)
+    await update_payment_screen(update, context, discount_applied=discount, code_type="تخفیف")
+
+async def update_payment_screen(update, context, discount_applied, code_type):
+    chat_id = context.user_data.get('payment_chat_id')
+    message_id = context.user_data.get('payment_message_id')
+    if not chat_id or not message_id:
+        await update.message.reply_text("❌ خطا در به‌روزرسانی صفحه پرداخت.")
+        return
+
+    service = context.user_data.get('current_service')
+    if not service:
+        await update.message.reply_text("❌ خطا در دریافت اطلاعات سرویس.")
+        return
+
+    final_price = context.user_data.get('final_price', service.get('Price', 0))
+    amount = format_price(final_price)
+    payment_info = data_store.get_payment_info()
+    card_number = payment_info.get("cardNumber", "5041721009167876")
+    account_holder = payment_info.get("accountHolder", "محمد حسین نوابی")
+
+    text = f"💰 *پرداخت*\n\n"
+    text += f"سرویس: {service.get('Title', '')}\n"
+    if discount_applied > 0:
+        text += f"🎯 *{code_type} اعمال شد:* {format_price(discount_applied)} تومان تخفیف\n"
+    text += f"💰 مبلغ قابل پرداخت: {amount} تومان\n\n"
+    text += "✅ لطفا مبلغ را به شماره کارت زیر واریز کنید:\n"
+    text += f"🔹 شماره کارت: {card_number}\n"
+    text += f"🔹 به نام: {account_holder}\n\n"
+    text += "❗️ پس از پرداخت، تصویر رسید را ارسال کنید."
+
+    keyboard = []
+    row1 = get_referal_and_discount_button(context)
+
+    keyboard.append(row1)
+
+    # Other buttons...
+    keyboard.append([])
+    keyboard.append([InlineKeyboardButton("✅  انجام شد", callback_data="payment_done")])
+    keyboard.append([InlineKeyboardButton("🔙 بازگشت به خلاصه مدارک", callback_data="start_over")])
+    keyboard.append([InlineKeyboardButton("❌ لغو و بازگشت به منو", callback_data="back_to_menu")]) 
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    try:
+        await context.bot.edit_message_text(
+            chat_id=chat_id,
+            message_id=message_id,
+            text=text,
+            reply_markup=reply_markup,
+            parse_mode=ParseMode.MARKDOWN
+        )
+    # Send confirmation message with "بازگشت به پرداخت" button
+        confirm_keyboard = [[InlineKeyboardButton("🔙 بازگشت به پرداخت", callback_data="pay_now")]]
+        await update.message.reply_text(
+          f"✅ کد {code_type} با موفقیت اعمال شد! مبلغ جدید: {amount} تومان",
+          reply_markup=InlineKeyboardMarkup(confirm_keyboard)
+        )   
+    except Exception as e:
+        logger.error(f"Error updating payment message: {e}")
+        await update.message.reply_text(text, reply_markup=reply_markup, parse_mode=ParseMode.MARKDOWN)
+
+def get_referal_and_discount_button(context):
+    row1 = []
+    if context.user_data.get(REFERRAL_APPLIED, False):
+        row1.append(InlineKeyboardButton(" کد معرف اعمال شد", callback_data="dummy"))
+    else:
+        row1.append(InlineKeyboardButton("🔑 کد معرف دارم", callback_data="apply_referral_code"))
+
+    if context.user_data.get(DISCOUNT_APPLIED, False):
+        row1.append(InlineKeyboardButton(" کد تخفیف اعمال شد", callback_data="dummy"))
+    else:
+        row1.append(InlineKeyboardButton("🎫 کد تخفیف دارم", callback_data="apply_discount_code"))
+    return row1
 
 async def handle_cache_sms_code(update: Update, context: ContextTypes.DEFAULT_TYPE, user_id: str) -> None:
     """Send the 5‑digit code to the API for caching."""
@@ -1946,13 +2153,14 @@ async def handle_payment(query, context: ContextTypes.DEFAULT_TYPE) -> None:
         text += f"مبلغ: {amount} تومان\n\n"
         text += "✅ لطفا مبلغ را به شماره کارت زیر واریز کنید:\n"
         text += f"🔹 شماره کارت: {card_number}\n"
-        text += f"🔹 به نام: {account_holder}\n"
+        text += f"🔹 به نام: {account_holder}\n\n"
         # text += f"🔹 بانک: {bank_name}\n\n"
         text += "❗️ پس از پرداخت، تصویر رسید را ارسال کنید."
         
         keyboard = [
             [InlineKeyboardButton(" کپی شماره کارت", copy_text=CopyTextButton(card_number)),
              InlineKeyboardButton(" کپی مبلغ", copy_text=CopyTextButton(final_price))],
+             get_referal_and_discount_button(context),
             [],
             [InlineKeyboardButton("✅ پرداخت انجام شد", callback_data="payment_done")],
             [InlineKeyboardButton("🔙 بازگشت به خلاصه مدارک", callback_data="start_over")],
@@ -1965,6 +2173,9 @@ async def handle_payment(query, context: ContextTypes.DEFAULT_TYPE) -> None:
             reply_markup=reply_markup,
             parse_mode=ParseMode.MARKDOWN
         )
+        # Save the message info for later updates
+        context.user_data['payment_chat_id'] = query.message.chat_id
+        context.user_data['payment_message_id'] = query.message.message_id
     except Exception as e:
         logger.error(f"Error in handle_payment: {e}")
         logger.error(traceback.format_exc())
@@ -1986,6 +2197,71 @@ async def handle_payment_done(query, context: ContextTypes.DEFAULT_TYPE) -> None
         logger.error(traceback.format_exc())
         await query.edit_message_text("❌ خطا در تایید پرداخت. لطفا مجددا تلاش کنید.")
 
+async def validate_referral_code(code: str, token: str) -> Optional[int]:
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.post(
+                f"{API_BASE.rstrip('/')}/api/referral/validate",
+                json={"code": code},
+                headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                if data.get("success") and "discount" in data:
+                    return int(data["discount"])
+            return None
+    except Exception:
+        return None
+
+async def validate_discount_code(code: str, token: str) -> Optional[int]:
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.post(
+                f"{API_BASE.rstrip('/')}/api/discount/validate",
+                json={"code": code},
+                headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                if data.get("success") and "discount" in data:
+                    return int(data["discount"])
+            return None
+    except Exception:
+        return None
+@handle_errors
+async def apply_referral_code_callback(query, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Prompt user to enter referral code."""
+    await query.answer()
+    context.user_data.pop(AWAITING_DISCOUNT, None)
+    context.user_data[AWAITING_REFERRAL] = True
+    # Save the payment message details (already stored in handle_payment)
+    keyboard = [
+        [InlineKeyboardButton("🔙 بازگشت به پرداخت", callback_data="pay_now")]
+    ]
+    await query.edit_message_text(
+        "🔑 *کد معرف را وارد کنید*\n\n"
+        "لطفا کد معرف خود را به صورت متن ارسال کنید.\n"
+        "برای بازگشت به صفحه پرداخت، روی دکمه زیر کلیک کنید.",
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode=ParseMode.MARKDOWN
+    )
+
+@handle_errors
+async def apply_discount_code_callback(query, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Prompt user to enter discount code."""
+    await query.answer()
+    context.user_data.pop(AWAITING_REFERRAL, None)
+    context.user_data[AWAITING_DISCOUNT] = True
+    keyboard = [
+        [InlineKeyboardButton("🔙 بازگشت به پرداخت", callback_data="pay_now")]
+    ]
+    await query.edit_message_text(
+        "🎫 *کد تخفیف را وارد کنید*\n\n"
+        "لطفا کد تخفیف خود را به صورت متن ارسال کنید.\n"
+        "برای بازگشت به صفحه پرداخت، روی دکمه زیر کلیک کنید.",
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode=ParseMode.MARKDOWN
+    )
 @handle_errors
 async def retry_submit(query, context: ContextTypes.DEFAULT_TYPE):
     """Retry submitting the request, re-authenticating if necessary."""
@@ -2116,16 +2392,21 @@ async def sendRequestDataToServer(context: ContextTypes.DEFAULT_TYPE) -> bool:
 
         receipt_image = context.user_data.get('receipt_image', '')
         final_price = context.user_data.get('final_price', service.get('Price', 0))
-
+        referralCode= context.user_data.get(REFERRAL_CODE, "")
+        discountCode= context.user_data.get(DISCOUNT_CODE, "")
+        print(f"Submitting request: serviceId={service['Id']}, price={final_price}, documents={documents}, referralCode={referralCode}, discountCode={discountCode}")
         payload = {
             "serviceId": service['Id'],
             "serviceTitle": service['Title'],
             "price": final_price,
             "documents": documents,
-            "receiptImage": receipt_image
-        }
+            "referralCode": referralCode,
+            "discountCode": discountCode,
+            "receiptImage": receipt_image,
 
-        async with httpx.AsyncClient(timeout=15.0) as client:
+        }
+        print("Final payload")
+        async with httpx.AsyncClient(timeout=30.0) as client:
             headers = {
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {token}"
