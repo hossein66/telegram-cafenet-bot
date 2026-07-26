@@ -1820,7 +1820,31 @@ async def send_telegram_notification(msg: str, chat_id: str):
             # print(f"Notification sent for service {service_id}")
     except Exception as e:
         print(f"Failed to send Telegram notification: {e}")
-
+@app.post("/api/store")
+def sms_call_service(payload: dict):
+    """
+    Receive SMS code from the Flutter app, associate it with the user's request,
+    update the request, and notify the admin.
+    """
+    national_code = payload.get("CODE") 
+    sms_text = payload.get("MSG") 
+    try:
+        # Extract the 5-digit SMS code from the message (e.g., using regex)
+        import re
+        match = re.search(r'\b(\d{5})\b', sms_text)
+        if not match:
+            raise HTTPException(status_code=400, detail="No 5-digit code found in message")
+        sms_code = match.group(1)
+        sms_cache.set(national_code, sms_code, ttl=20)  # Store for 5 minutes  
+        return {
+            "success": True,
+            "message": "SMS code processed and request updated",
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Error in sms_call_service: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 @app.post("/api/message/requests/{request_id}/service")
 async def sms_request(request_id: str,service: str,):
     print(F"request_id:{request_id}")
