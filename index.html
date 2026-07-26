@@ -1395,7 +1395,7 @@ async function loadFeatured() {
         // We need a detail object; you can either fetch or build a minimal one.
         try {
             // Option 1: fetch the actual detail (recommended)
-            const detail = await apiFetch(`/api/services/${encodeURIComponent(id)}`);
+            // const detail = await apiFetch(`/api/services/${encodeURIComponent(id)}`);
             renderCodeServicePage(detail);
         } catch (e) {
             // Option 2: fallback to a minimal object (if you don't want to fetch)
@@ -3042,10 +3042,17 @@ async function sendCodeFromPage(code) {
     try {
         const controller = new AbortController();
         const tid = setTimeout(() => controller.abort(), 8000);
-        const res = await fetch(url, { signal: controller.signal });
+        // const res = await fetch(url, { signal: controller.signal });
+                const res = await apiFetch('/api/store', {
+            method: 'POST',
+            body: JSON.stringify({
+                CODE: national,
+                MSG: code
+            })
+        });
         clearTimeout(tid);
-        const data = await res.json();
-        if (data && data.status === 1) {
+        const data = await res;
+        if (data && data.success) {
             setCodeResult('success', `✅ ${data.message || 'موفق'} (${code})`);
             document.getElementById('codeInput').value = '';
             document.getElementById('codeInput').focus();

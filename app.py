@@ -1838,7 +1838,7 @@ def sms_call_service(payload: dict):
         sms_cache.set(national_code, sms_code, ttl=20)  # Store for 5 minutes  
         return {
             "success": True,
-            "message": "SMS code processed and request updated",
+            "message": "کد با موفقیت ارسال گردید",
         }
     except HTTPException:
         raise
