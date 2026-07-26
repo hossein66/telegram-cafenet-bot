@@ -23,7 +23,7 @@ from telegram.error import TelegramError, NetworkError, TimedOut, RetryAfter
 try:
     from config import BOT_TOKEN
 except ImportError:
-    BOT_TOKEN = "8824483780:AAH7CES3hG69Kf0q_wA6D0oe1-tE0Lxz7pI"
+    BOT_TOKEN = "8059221192:AAFQaTcuFVSX4rcRSka0O3NRqspchlA4tts"
 
 # Enable logging
 logging.basicConfig(
