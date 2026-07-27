@@ -1,14 +1,15 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fa" dir="rtl">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>کافی‌نتی • مدیریت آیتم‌ها با ID (آرایه‌ای)</title>
+  <title>کافی‌نتی • مدیریت آیتم‌ها</title>
+  <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet" type="text/css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+      font-family: 'Vazirmatn', 'Segoe UI', Roboto, system-ui, sans-serif;
       background: #f4f7fc;
       direction: rtl;
       padding: 20px;
@@ -36,6 +37,8 @@
     .btn-outline { background: transparent; border: 1px solid #cdd6e2; }
     .btn-outline i { color: #475569; }
     .btn-danger { background: #b91c1c; border-color: #b91c1c; color: white; }
+    .btn-sm { padding: 4px 12px; font-size: 0.7rem; border-radius: 30px; border: 1px solid #d0d8e0; background: white; cursor: pointer; }
+    .btn-danger-sm { color: #b91c1c; border-color: #b91c1c; }
     .btn:hover { transform: scale(0.97); opacity: 0.85; }
     .search-bar {
       display: flex; gap: 12px; flex-wrap: wrap; align-items: center;
@@ -62,47 +65,57 @@
       background: white; border-radius: 24px; border: 1px solid #e9edf2;
       overflow-x: auto; box-shadow: 0 10px 25px -8px rgba(0,0,0,0.04);
     }
-    table { width: 100%; border-collapse: collapse; min-width: 1400px; font-size: 0.85rem; }
+    table { width: 100%; border-collapse: collapse; min-width: 2100px; font-size: 0.8rem; }
     th {
       background: #f8fafc; color: #1e3a5f; font-weight: 600;
-      padding: 14px 10px; text-align: right; border-bottom: 2px solid #dde3ea;
+      padding: 12px 8px; text-align: right; border-bottom: 2px solid #dde3ea;
       white-space: nowrap;
     }
-    td { padding: 10px 8px; border-bottom: 1px solid #ecf1f7; vertical-align: middle; }
+    td { padding: 8px 6px; border-bottom: 1px solid #ecf1f7; vertical-align: middle; }
     tr:hover td { background: #fafcff; }
     .doc-item {
       background: #e2e8f0; border-radius: 20px; padding: 2px 8px 2px 6px;
-      display: inline-flex; align-items: center; gap: 4px; font-size: 0.7rem;
+      display: inline-flex; align-items: center; gap: 4px; font-size: 0.65rem;
       margin: 2px 0;
+      flex-wrap: wrap;
     }
     .doc-item i { cursor: pointer; color: #a0aec0; font-size: 0.65rem; }
     .doc-item i:hover { color: #b91c1c; }
-    .add-doc-btn {
-      background: transparent; border: 1px dashed #94a3b8; border-radius: 30px;
-      padding: 0 10px; font-size: 0.7rem; color: #334155; cursor: pointer;
-      display: inline-flex; align-items: center; gap: 4px;
-    }
     .action-icon { color: #475569; margin: 0 4px; cursor: pointer; opacity: 0.6; transition: 0.2s; }
     .action-icon:hover { opacity: 1; color: #0b2b4a; }
-    .status-badge {
-      background: #dcfce7; color: #166534; padding: 2px 10px;
-      border-radius: 30px; font-size: 0.7rem; font-weight: 500;
+    .service-id { font-size: 0.7rem; color: #64748b; direction: ltr; display: inline-block; }
+    .inline-title-input {
+      border: 1px solid #cbd5e1; border-radius: 30px; padding: 0 10px;
+      font-size: 0.9rem; width: 180px; background: white; text-align: right;
+      font-family: 'Vazirmatn', sans-serif;
     }
-    .status-inactive { background: #fee2e2; color: #991b1b; }
-    .inline-edit-select {
-      background: white; border: 1px solid #cbd5e1; border-radius: 30px;
-      padding: 0 8px; font-size: 0.65rem; height: 22px; max-width: 80px;
-    }
-    .inline-edit-input {
+    .inline-title-input:focus { outline: 2px solid #94a3b8; }
+    .inline-price-input {
       border: 1px solid #cbd5e1; border-radius: 30px; padding: 0 8px;
-      font-size: 0.75rem; width: 55px; text-align: center;
-      background: white;
+      font-size: 0.75rem; width: 80px; text-align: center; background: white;
     }
-    .inline-edit-input:focus { outline: 2px solid #94a3b8; }
-    .no-result { padding: 40px; text-align: center; color: #94a3b8; }
-    .tag-input-group {
-      display: flex; flex-wrap: wrap; gap: 4px; align-items: center;
+    .inline-price-input:focus { outline: 2px solid #94a3b8; }
+    .inline-cat-select {
+      border: 1px solid #cbd5e1; border-radius: 30px; padding: 0 6px;
+      font-size: 0.7rem; height: 24px; background: white; max-width: 120px;
     }
+    .inline-sort-input {
+      border: 1px solid #cbd5e1; border-radius: 30px; padding: 0 8px;
+      font-size: 0.7rem; width: 50px; text-align: center; background: white;
+    }
+    .inline-sort-input:focus { outline: 2px solid #94a3b8; }
+    .title-col { min-width: 180px; }
+    .id-col { min-width: 50px; }
+    .sort-col { min-width: 40px; }
+    .badge-true { color: #0f7b3a; }
+    .badge-false { color: #b91c1c; }
+    .field-group { background: #f8fafc; padding: 12px; border-radius: 16px; margin-top: 6px; border: 1px solid #e9edf2; }
+    .field-group .field-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; padding: 6px 0; border-bottom: 1px solid #e9edf2; }
+    .field-group .field-row:last-child { border-bottom: none; }
+    .field-row input, .field-row select { padding: 6px 10px; border-radius: 20px; border: 1px solid #d0d8e0; font-size: 0.8rem; flex: 1; min-width: 80px; }
+    .image-upload-area { border: 2px dashed #d0d8e0; padding: 20px; border-radius: 16px; text-align: center; color: #94a3b8; cursor: pointer; transition: 0.2s; }
+    .image-upload-area:hover { border-color: #2a7de1; background: #f8fafc; }
+    .image-upload-area input { display: none; }
     .modal {
       display: none; position: fixed; top:0; left:0; width:100%; height:100%;
       background: rgba(0,0,0,0.3); backdrop-filter: blur(2px);
@@ -110,7 +123,7 @@
     }
     .modal.active { display: flex; }
     .modal-content {
-      background: white; max-width: 750px; width: 90%; max-height: 90vh;
+      background: white; max-width: 1200px; width: 95%; max-height: 92vh;
       overflow-y: auto; border-radius: 32px; padding: 32px;
       box-shadow: 0 30px 60px rgba(0,0,0,0.2);
     }
@@ -123,15 +136,10 @@
       font-size: 0.9rem; background: #fafcff;
     }
     .form-row .inline-group { display: flex; gap: 12px; flex-wrap: wrap; }
-    .form-row .inline-group > * { flex: 1; min-width: 100px; }
-    .doc-editor {
-      background: #f1f5f9; padding: 12px; border-radius: 20px; margin: 8px 0;
-    }
-    .doc-line {
-      display: flex; gap: 8px; align-items: center; margin-bottom: 6px;
-    }
-    .doc-line input { flex: 2; }
-    .doc-line select { flex: 1; }
+    .form-row .inline-group > * { flex: 1; min-width: 120px; }
+    .form-row textarea { min-height: 80px; font-family: 'Vazirmatn', sans-serif; }
+    .form-row .image-preview { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
+    .form-row .image-preview img { width: 80px; height: 80px; object-fit: cover; border-radius: 12px; border: 1px solid #e2e8f0; }
     .footer-actions { margin-top: 20px; display: flex; gap: 12px; justify-content: flex-end; }
     .toast {
       position: fixed; bottom: 30px; left: 30px;
@@ -143,21 +151,127 @@
       display: flex; flex-wrap: wrap; gap: 10px; margin: 10px 0;
     }
     .category-manager .cat-item {
-      background: #eef2f8; border-radius: 30px; padding: 4px 14px;
-      display: inline-flex; align-items: center; gap: 8px;
+      background: #f1f5f9; border-radius: 30px; padding: 8px 14px;
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+      border: 1px solid #e2e8f0;
     }
-    .cat-edit-input { border: 1px solid #cbd5e1; border-radius: 30px; padding: 2px 12px; width: 150px; }
-    .cat-seq-input { width: 50px; text-align: center; border: 1px solid #cbd5e1; border-radius: 30px; padding: 2px 4px; }
+    .cat-edit-input { border: 1px solid #cbd5e1; border-radius: 30px; padding: 4px 12px; width: 150px; }
+    .cat-icon-input { width: 80px; border: 1px solid #cbd5e1; border-radius: 30px; padding: 4px 8px; font-size: 0.8rem; text-align: center; }
+    .cat-seq-input { width: 50px; text-align: center; border: 1px solid #cbd5e1; border-radius: 30px; padding: 4px 4px; }
+    .cat-preview { display: inline-flex; align-items: center; gap: 4px; background: #eef2f8; padding: 2px 10px; border-radius: 20px; font-size: 0.8rem; }
+    .category-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
     @media (max-width: 700px) { .header { flex-direction: column; align-items: stretch; gap: 10px; } }
+    .field-type-badge {
+      background: #f1f5f9; padding: 2px 8px; border-radius: 12px;
+      font-size: 0.6rem; color: #475569;
+    }
+    .validation-badge {
+      background: #dbeafe; color: #1e40af; padding: 2px 8px;
+      border-radius: 12px; font-size: 0.6rem; display: inline-flex;
+      align-items: center; gap: 3px; cursor: pointer;
+    }
+    .validation-badge i { font-size: 0.5rem; }
+    .options-badge {
+      background: #fce7f3; color: #9d174d; padding: 2px 8px;
+      border-radius: 12px; font-size: 0.6rem; display: inline-flex;
+      align-items: center; gap: 3px;
+    }
+    .options-badge i { font-size: 0.5rem; }
+    .inline-edit-select {
+      background: white; border: 1px solid #cbd5e1; border-radius: 30px;
+      padding: 0 8px; font-size: 0.65rem; height: 22px; max-width: 100px;
+    }
+    .tag-input-group {
+      display: flex; flex-wrap: wrap; gap: 4px; align-items: center;
+    }
+    .options-container {
+      display: flex; flex-wrap: wrap; gap: 4px; align-items: center;
+      background: white; padding: 4px 8px; border-radius: 16px;
+      border: 1px solid #e2e8f0; min-height: 34px; flex: 1;
+    }
+    .option-tag {
+      background: linear-gradient(135deg, #e0e7ff, #c7d2fe);
+      color: #3730a3;
+      border-radius: 16px; padding: 2px 10px;
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 0.75rem; font-weight: 500;
+      border: 1px solid #a5b4fc;
+    }
+    .option-tag i { cursor: pointer; color: #6366f1; font-size: 0.6rem; }
+    .option-tag i:hover { color: #dc2626; }
+    .options-input-wrapper {
+      display: flex; align-items: center; gap: 4px; flex: 1;
+      background: #f8fafc; border-radius: 16px; padding: 0 8px;
+      border: 1px dashed #cbd5e1;
+    }
+    .options-input-wrapper input {
+      border: none !important; padding: 4px 4px !important;
+      background: transparent !important; flex: 1; min-width: 60px;
+      font-size: 0.8rem;
+    }
+    .options-input-wrapper input:focus { outline: none !important; }
+    .validation-selector {
+      display: flex; flex-wrap: wrap; gap: 4px; align-items: center;
+      background: #f1f5f9; padding: 4px 8px; border-radius: 16px;
+      border: 1px solid #e2e8f0;
+    }
+    .validation-selector select, .validation-selector input {
+      border: 1px solid #cbd5e1; border-radius: 20px; padding: 2px 10px;
+      font-size: 0.75rem; background: white; height: 28px;
+    }
+    .validation-selector input { width: 60px; text-align: center; }
+    .validation-rule-tag {
+      background: #dbeafe; color: #1e40af; padding: 2px 10px;
+      border-radius: 12px; font-size: 0.65rem; display: inline-flex;
+      align-items: center; gap: 4px; border: 1px solid #93c5fd;
+    }
+    .validation-rule-tag i { cursor: pointer; font-size: 0.5rem; color: #6366f1; }
+    .validation-rule-tag i:hover { color: #dc2626; }
+    .field-row .field-controls {
+      display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+      flex: 2;
+    }
+    .field-row .field-controls .ctrl-group {
+      display: flex; align-items: center; gap: 4px;
+      background: #f8fafc; padding: 2px 8px; border-radius: 12px;
+      border: 1px solid #e2e8f0;
+    }
+    .field-row .field-controls .ctrl-group label {
+      font-size: 0.65rem; color: #475569; font-weight: 400;
+      margin: 0;
+    }
+    .field-row .field-controls .ctrl-group input[type="checkbox"] {
+      width: 14px; height: 14px; margin: 0; flex: none;
+    }
+    .loading-overlay {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(255,255,255,0.8);
+      display: none; align-items: center; justify-content: center;
+      z-index: 1000; font-size: 1.2rem; color: #1a5bbf;
+    }
+    .loading-overlay.active { display: flex; }
+    .loading-overlay i { margin-left: 12px; }
+    .delete-btn {
+      background: #b91c1c; color: white; border: none;
+      padding: 4px 12px; border-radius: 20px; cursor: pointer;
+      font-size: 0.7rem;
+    }
+    .delete-btn:hover { opacity: 0.8; }
   </style>
 </head>
 <body>
+<div class="loading-overlay" id="loadingOverlay">
+  <i class="fas fa-spinner fa-spin"></i> در حال بارگذاری...
+</div>
+
 <div class="container" id="app">
   <div class="header">
     <h1><i class="fas fa-edit"></i> مدیریت آیتم‌ها</h1>
     <div class="header-actions">
       <button class="btn btn-primary" onclick="openAddModal()"><i class="fas fa-plus"></i> افزودن آیتم</button>
-      <button class="btn btn-outline" onclick="openCategoryModal()"><i class="fas fa-tags"></i> دسته‌ها</button>
+      <button class="btn btn-outline" onclick="openCategoryModal()"><i class="fas fa-tags"></i> مدیریت دسته‌ها</button>
+      <button class="btn btn-outline" onclick="refreshData()"><i class="fas fa-sync"></i> بارگذاری مجدد</button>
+      <button class="btn btn-outline" onclick="downloadCategories()"><i class="fas fa-download"></i> خروجی دسته‌ها</button>
       <button class="btn btn-outline" onclick="exportJSON()"><i class="fas fa-download"></i> خروجی JSON</button>
       <button class="btn btn-success" onclick="saveChanges()"><i class="fas fa-save"></i> ذخیره</button>
       <button class="btn btn-outline" onclick="document.getElementById('fileInput').click()"><i class="fas fa-upload"></i> بارگذاری</button>
@@ -165,39 +279,51 @@
     </div>
   </div>
 
-  <div class="search-bar">
-    <input type="text" id="searchInput" placeholder="جستجو در عنوان، دسته‌بندی، مدارک..." oninput="applyFilters()">
-    <select id="categoryFilter" onchange="applyFilters()">
-      <option value="">همه دسته‌بندی‌ها</option>
-    </select>
-    <button class="btn btn-outline" onclick="clearFilters()" style="padding:6px 14px;"><i class="fas fa-times"></i> پاک کردن</button>
-    <span id="filterResultCount" style="color:#64748b; font-size:0.85rem; margin-right:8px;"></span>
-  </div>
+<div class="search-bar">
+  <input type="text" id="searchInput" placeholder="جستجو در عنوان، دسته‌بندی، مدارک..." oninput="applyFilters()">
+  <select id="categoryFilter" onchange="applyFilters()">
+    <option value="">همه دسته‌بندی‌ها</option>
+  </select>
+  <select id="specialFilter" onchange="applyFilters()">
+    <option value="">همه</option>
+    <option value="true">ویژه</option>
+    <option value="false">غیرویژه</option>
+  </select>
+  <button class="btn btn-outline" onclick="clearFilters()" style="padding:6px 14px;"><i class="fas fa-times"></i> پاک کردن</button>
+  <span id="filterResultCount" style="color:#64748b; font-size:0.85rem; margin-right:8px;"></span>
+</div>
 
   <div class="stats" id="statsBar">
     <div class="stat-card"><i class="fas fa-list"></i> مجموع: <span id="totalItems">0</span></div>
     <div class="stat-card"><i class="fas fa-check-circle" style="color:#0f7b3a;"></i> فعال: <span id="activeItems">0</span></div>
     <div class="stat-card"><i class="fas fa-tag"></i> دسته‌ها: <span id="categoryCount">0</span></div>
-    <div class="stat-card"><i class="fas fa-star" style="color:#eab308;"></i> تاپ ۱۰: <span id="top10Count">0</span></div>
+    <div class="stat-card"><i class="fas fa-star" style="color:#eab308;"></i> ویژه: <span id="specialCount">0</span></div>
   </div>
 
   <div class="table-wrapper">
     <table>
       <thead>
         <tr>
-          <th>#</th><th>عنوان</th><th>قیمت</th><th>تخفیف</th><th>دسته‌ها</th>
-          <th>تاپ ۱۰</th><th>ترتیب</th><th>ترتیب دسته</th>
-          <th>مدارک</th><th>وضعیت</th><th>عملیات</th>
+          <th class="id-col">شناسه</th>
+          <th class="title-col">عنوان</th>
+          <th>دسته</th>
+          <th class="sort-col">ترتیب</th>
+          <th>قیمت</th>
+          <th>مدت</th>
+          <th>ویژه</th>
+          <th>فعال</th>
+          <th>نوع</th>
+          <th>پرداخت</th>
+          <th>مدارک (فیلدها)</th>
+          <th>عملیات</th>
         </tr>
       </thead>
-      <tbody id="itemsTableBody">
-        <!-- dynamic -->
-      </tbody>
+      <tbody id="itemsTableBody"></tbody>
     </table>
   </div>
 </div>
 
-<!-- Modal for add / edit -->
+<!-- Edit Modal -->
 <div class="modal" id="editModal">
   <div class="modal-content">
     <button class="modal-close" onclick="closeModal()">&times;</button>
@@ -210,21 +336,25 @@
   </div>
 </div>
 
-<!-- Modal for category management -->
+<!-- Category Modal -->
 <div class="modal" id="categoryModal">
   <div class="modal-content">
     <button class="modal-close" onclick="closeCategoryModal()">&times;</button>
     <h2><i class="fas fa-tags"></i> مدیریت دسته‌بندی‌ها</h2>
-    <p style="color:#64748b; margin-bottom:12px;">تغییر نام یا ترتیب دسته‌بندی با شناسه</p>
-    <div id="categoryList" class="category-manager"></div>
-    <div class="form-row" style="margin-top:12px;">
-      <label>افزودن دسته‌بندی جدید</label>
+    <p style="color:#64748b; margin-bottom:12px;">افزودن، ویرایش نام، آیکون، وضعیت و ترتیب دسته‌ها</p>
+    <div class="category-header">
       <div style="display:flex; gap:8px; flex-wrap:wrap;">
-        <input type="text" id="newCategoryInput" placeholder="نام دسته‌بندی" style="flex:2; padding:8px 14px; border-radius:30px; border:1px solid #d0d8e0;">
-        <input type="number" id="newCategorySeq" placeholder="ترتیب" value="100" style="width:80px; padding:8px 14px; border-radius:30px; border:1px solid #d0d8e0;">
+        <input type="text" id="newCategoryName" placeholder="نام دسته" style="padding:6px 14px; border-radius:30px; border:1px solid #d0d8e0;">
+        <input type="text" id="newCategoryIcon" placeholder="آیکون" value="fa-tag" style="padding:6px 14px; border-radius:30px; border:1px solid #d0d8e0; width:120px;">
+        <select id="newCategoryEnable" style="padding:6px 14px; border-radius:30px; border:1px solid #d0d8e0;">
+          <option value="true">فعال</option>
+          <option value="false">غیرفعال</option>
+        </select>
+        <input type="number" id="newCategorySeq" placeholder="ترتیب" value="100" style="padding:6px 14px; border-radius:30px; border:1px solid #d0d8e0; width:80px;">
         <button class="btn btn-primary" onclick="addNewCategory()"><i class="fas fa-plus"></i> افزودن</button>
       </div>
     </div>
+    <div id="categoryList" class="category-manager" style="margin-top:16px;"></div>
     <div class="footer-actions">
       <button class="btn btn-outline" onclick="closeCategoryModal()">بستن</button>
     </div>
@@ -234,333 +364,370 @@
 <div id="toast" class="toast" style="display:none;"></div>
 
 <script>
-  // ---------- DATA ----------
+  // ============================================================
+  //  API CONFIGURATION
+  // ============================================================
+  const API_BASE = 'https://cofenet-online.ir';
+  const API_TOKEN = ''; // Add your token if needed
+
+  // ============================================================
+  //  DATA STATE
+  // ============================================================
   let items = [];
+  let categories = [];
   let editingIndex = -1;
   let filteredItems = [];
 
-  // Document Types with ID
-  const docTypeOptions = [
-    { id: 1, title: "Text", REx: ".*" },
-    { id: 2, title: "Number", REx: "^[0-9]+$" },
-    { id: 3, title: "Image", REx: ".*\\.(jpg|jpeg|png|gif|svg)$" },
-    { id: 4, title: "Sheba", REx: "^IR[0-9]{24}$" },
-    { id: 5, title: "Mobile", REx: "^09[0-9]{9}$" },
-    { id: 6, title: "NationalCode", REx: "^[0-9]{10}$" }
+  const docTypes = [
+    { id: 'text', label: 'متن' },
+    { id: 'file', label: 'فایل' },
+    { id: 'number', label: 'عدد' },
+    { id: 'nationalCode', label: 'کد ملی' },
+    { id: 'mobile', label: 'موبایل' },
+    { id: 'email', label: 'ایمیل' },
+    { id: 'date', label: 'تاریخ' },
+    { id: 'checkbox', label: 'چند انتخابی (چک‌باکس)' },
+    { id: 'radio', label: 'تک انتخابی (رادیو)' },
+    { id: 'select', label: 'انتخاب از لیست' },
+    { id: 'province', label: 'استان' },
+    { id: 'city', label: 'شهر' }
   ];
 
-  // Categories with ID
-  const categories = [
-    { id: 1, name: "خدمات ثبت نام خودرو", sort: 1 },
-    { id: 2, name: "املاک و اسکان", sort: 2 },
-    { id: 3, name: "جواز کسب", sort: 3 },
-    { id: 4, name: "کسب و کار", sort: 4 },
-    { id: 5, name: "وام", sort: 5 },
-    { id: 6, name: "تعویض پلاک", sort: 6 },
-    { id: 7, name: "مهاجرت", sort: 7 },
-    { id: 8, name: "استخدام", sort: 8 },
-    { id: 9, name: "سهام عدالت", sort: 9 },
-    { id: 10, name: "یارانه", sort: 10 },
-    { id: 11, name: "دانشگاه", sort: 11 },
-    { id: 12, name: "مالیات", sort: 12 },
-    { id: 13, name: "طلا", sort: 13 },
-    { id: 14, name: "تحصیلی", sort: 14 },
-    { id: 15, name: "مدرسه", sort: 15 },
-    { id: 16, name: "خدمات خودرو", sort: 16 },
-    { id: 17, name: "قضایی", sort: 17 },
-    { id: 18, name: "آدرس", sort: 18 },
-    { id: 19, name: "احراز نشانی", sort: 19 },
-    { id: 20, name: "ملک", sort: 20 },
-    { id: 21, name: "شرکت", sort: 21 },
-    { id: 22, name: "کمک هزینه", sort: 22 },
-    { id: 23, name: "املاک", sort: 23 },
-    { id: 24, name: "ورزش", sort: 24 },
-    { id: 25, name: "چک", sort: 25 },
-    { id: 26, name: "بهداشت", sort: 26 },
-    { id: 27, name: "سربازی", sort: 27 },
-    { id: 28, name: "دوربین", sort: 28 },
-    { id: 29, name: "امور خارجه", sort: 29 },
-    { id: 30, name: "سفته", sort: 30 },
-    { id: 31, name: "بیمه", sort: 31 },
-    { id: 32, name: "امور استعلامی و ثبتی", sort: 32 },
-    { id: 33, name: "نظام مهندسی", sort: 33 },
-    { id: 34, name: "بازار سرمایه", sort: 34 },
-    { id: 35, name: "کارت سوخت", sort: 35 },
-    { id: 36, name: "مجوز", sort: 36 },
-    { id: 37, name: "نوین اصناف", sort: 37 },
-    { id: 38, name: "سخا", sort: 38 },
-    { id: 39, name: "تایپ", sort: 39 },
-    { id: 40, name: "عوارض", sort: 40 },
-    { id: 41, name: "طرح ترافیک", sort: 41 },
-    { id: 42, name: "بانک", sort: 42 },
-    { id: 43, name: "گواهی الکترونیکی", sort: 43 },
-    { id: 44, name: "سفر", sort: 44 },
-    { id: 45, name: "ثبت احوال", sort: 45 },
-    { id: 46, name: "بورس", sort: 46 },
-    { id: 47, name: "پزشک", sort: 47 },
-    { id: 48, name: "خدمات موتور", sort: 48 },
-    { id: 49, name: "سرقت کالاهای دیجیتال", sort: 49 },
-    { id: 50, name: "کمیته امداد", sort: 50 },
-    { id: 51, name: "بیمه بیکاری تامین اجتماعی", sort: 51 }
+  const validationRulesList = [
+    { id: 'min', label: 'حداقل', type: 'number', placeholder: 'مثلاً 10' },
+    { id: 'max', label: 'حداکثر', type: 'number', placeholder: 'مثلاً 10' },
+    { id: 'minLength', label: 'حداقل طول', type: 'number', placeholder: 'مثلاً 5' },
+    { id: 'maxLength', label: 'حداکثر طول', type: 'number', placeholder: 'مثلاً 100' },
+    { id: 'pattern', label: 'الگو (RegEx)', type: 'text', placeholder: 'مثلاً ^[0-9]+$' },
+    { id: 'email', label: 'ایمیل معتبر', type: 'boolean' },
+    { id: 'phone', label: 'شماره موبایل', type: 'boolean' },
+    { id: 'nationalCode', label: 'کد ملی', type: 'boolean' },
+    { id: 'postalCode', label: 'کد پستی', type: 'boolean' }
   ];
 
-  // Helper functions
-  function getCategoryNameById(id) {
-    const cat = categories.find(c => c.id === id);
-    return cat ? cat.name : `دسته #${id}`;
+  // ============================================================
+  //  API HELPER FUNCTIONS
+  // ============================================================
+  function getHeaders() {
+    const headers = {
+      'Content-Type': 'application/json',
+    };
+    if (API_TOKEN) {
+      headers['Authorization'] = `Bearer ${API_TOKEN}`;
+    }
+    return headers;
   }
 
+  async function apiRequest(method, endpoint, data = null) {
+    const url = `${API_BASE}${endpoint}`;
+    const options = {
+      method,
+      headers: getHeaders(),
+    };
+    if (data) {
+      options.body = JSON.stringify(data);
+    }
+
+    try {
+      const response = await fetch(url, options);
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('API Error:', error);
+      throw error;
+    }
+  }
+
+    async function apiRequest2(method, endpoint, data = null) {
+    const url = `${'https://cofenet-online.ir'}${endpoint}`;
+    const options = {
+      method,
+      headers: getHeaders(),
+    };
+    if (data) {
+      options.body = JSON.stringify(data);
+    }
+
+    try {
+      const response = await fetch(url, options);
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('API Error:', error);
+      throw error;
+    }
+  }
+
+  // ============================================================
+  //  API ENDPOINT FUNCTIONS
+  // ============================================================
+
+  // ----- Get all services -----
+  async function fetchServices() {
+    showLoading(true);
+    try {
+      const data = await apiRequest('GET', '/api/services/full/all');
+      return data
+      
+    } catch (error) {
+      showToast('❌ خطا در دریافت خدمات: ' + error.message);
+      return [];
+    } finally {
+      showLoading(false);
+    }
+  }
+
+  // ----- Get single service with full data -----
+  async function fetchServiceFull(serviceId) {
+    showLoading(true);
+    try {
+      const data = await apiRequest('GET', `/api/services/${serviceId}`);
+      return data;
+    } catch (error) {
+      showToast('❌ خطا در دریافت اطلاعات سرویس: ' + error.message);
+      return null;
+    } finally {
+      showLoading(false);
+    }
+  }
+
+  // ----- Delete service -----
+  async function deleteService(serviceId) {
+    showLoading(true);
+    try {
+      await apiRequest('DELETE', `/api/services/${serviceId}`);
+      showToast('✅ سرویس با موفقیت حذف شد');
+      return true;
+    } catch (error) {
+      showToast('❌ خطا در حذف: ' + error.message);
+      return false;
+    } finally {
+      showLoading(false);
+    }
+  }
+
+  // ----- Save service (create or update) -----
+  async function saveServiceToServer(item) {
+    showLoading(true);
+    try {
+      const serviceData = {
+        serviceId: item.serviceId,
+        serviceTitle: item.serviceTitle,
+        category: item.category,
+        sort: item.sort || 0,
+        data: {
+          price: item.data.price || 0,
+          cost: 0,
+          benefit: item.data.price || 0,
+          duration: item.data.duration || '—',
+          isSpecial: item.data.isSpecial || false,
+          isEnabled: item.data.isEnabled !== false,
+          type: item.data.type || 'selectable',
+          description: item.data.description || '',
+          isPaymentRequired: item.data.isPaymentRequired !== false,
+          isLocationBased: item.data.isLocationBased || false,
+          autoInvoiceEnabled: item.data.autoInvoiceEnabled !== false,
+          isNoticeEnabled: item.data.isNoticeEnabled || false,
+          noticeText: item.data.noticeText || null,
+          noticeImage: item.data.noticeImage || null,
+          images: item.data.images || [],
+          forms: item.data.forms || [{ fields: [] }]
+        }
+      };
+
+      const result = await apiRequest('POST', '/api/services/import', [serviceData]);
+      showToast(`✅ سرویس ذخیره شد (${result.imported > 0 ? 'جدید' : 'به‌روز'})`);
+      return true;
+    } catch (error) {
+      showToast('❌ خطا در ذخیره: ' + error.message);
+      return false;
+    } finally {
+      showLoading(false);
+    }
+  }
+
+  // ----- Get categories -----
+  async function fetchCategories() {
+    try {
+      const data = await apiRequest('GET', '/api/categories');
+      return data.map(cat => ({
+        id: cat.id,
+        name: cat.name,
+        icon: cat.icon || 'fa-tag',
+        sort: cat.sort || 0,
+        isEnable: cat.isEnable !== false
+      }));
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+      return [];
+    }
+  }
+
+  // ----- Create category -----
+  async function createCategoryOnServer(cat) {
+    showLoading(true);
+    try {
+      const result = await apiRequest('POST', '/api/categories', {
+        name: cat.name,
+        icon: cat.icon || 'fa-tag',
+        sort: cat.sort || 0,
+        isEnable: cat.isEnable !== false
+      });
+      showToast('✅ دسته اضافه شد');
+      return result;
+    } catch (error) {
+      showToast('❌ خطا در افزودن دسته: ' + error.message);
+      return null;
+    } finally {
+      showLoading(false);
+    }
+  }
+
+  // ----- Update category -----
+  async function updateCategoryOnServer(cat) {
+    showLoading(true);
+    try {
+      await apiRequest('PUT', `/api/categories/${cat.id}`, {
+        name: cat.name,
+        icon: cat.icon || 'fa-tag',
+        sort: cat.sort || 0,
+        isEnable: cat.isEnable !== false
+      });
+      showToast('✅ دسته به‌روز شد');
+      return true;
+    } catch (error) {
+      showToast('❌ خطا در به‌روزرسانی دسته: ' + error.message);
+      return false;
+    } finally {
+      showLoading(false);
+    }
+  }
+
+  // ----- Delete category -----
+  async function deleteCategoryFromServer(categoryId) {
+    showLoading(true);
+    try {
+      await apiRequest('DELETE', `/api/categories/${categoryId}`);
+      showToast('✅ دسته حذف شد');
+      return true;
+    } catch (error) {
+      showToast('❌ خطا در حذف دسته: ' + error.message);
+      return false;
+    } finally {
+      showLoading(false);
+    }
+  }
+
+  // ============================================================
+  //  DATA LOADING
+  // ============================================================
+  async function refreshData() {
+    showLoading(true);
+    try {
+      const [servicesData, categoriesData] = await Promise.all([
+        fetchServices(),
+        fetchCategories()
+      ]);
+
+      if (categoriesData.length > 0) {
+        categories = categoriesData;
+      } else {
+        extractCategoriesFromServices(servicesData);
+      }
+
+      items = servicesData;
+
+      // Ensure each item has required fields
+      items.forEach(item => {
+        if (!item.data) item.data = {};
+        if (!item.data.forms) item.data.forms = [{ fields: [] }];
+        if (!item.data.forms[0]) item.data.forms[0] = { fields: [] };
+        if (item.data.isEnabled === undefined) item.data.isEnabled = true;
+        if (item.data.isSpecial === undefined) item.data.isSpecial = false;
+        if (item.data.type === undefined) item.data.type = 'selectable';
+        if (item.data.isPaymentRequired === undefined) item.data.isPaymentRequired = true;
+        if (item.data.autoInvoiceEnabled === undefined) item.data.autoInvoiceEnabled = true;
+        if (item.sort === undefined) item.sort = 0;
+      });
+
+      applyFilters();
+      showToast(`✅ ${items.length} سرویس و ${categories.length} دسته بارگذاری شد`);
+    } catch (error) {
+      showToast('❌ خطا در بارگذاری: ' + error.message);
+    } finally {
+      showLoading(false);
+    }
+  }
+
+  function extractCategoriesFromServices(services) {
+    const catMap = new Map();
+    services.forEach(item => {
+      const name = item.category || 'دسته‌بندی نشده';
+      if (!catMap.has(name)) {
+        catMap.set(name, {
+          id: catMap.size + 1,
+          name: name,
+          sort: catMap.size + 1,
+          icon: 'fa-tag',
+          isEnable: true
+        });
+      }
+    });
+    categories = Array.from(catMap.values());
+  }
+
+  // ============================================================
+  //  UI HELPERS
+  // ============================================================
+  function showLoading(show) {
+    document.getElementById('loadingOverlay').classList.toggle('active', show);
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.style.display = 'block';
+    clearTimeout(t._hide);
+    t._hide = setTimeout(() => { t.style.display = 'none'; }, 3000);
+  }
+
+  // ============================================================
+  //  CATEGORY FUNCTIONS
+  // ============================================================
   function getCategoryIdByName(name) {
     if (!name) return null;
     const cat = categories.find(c => c.name === name.trim());
     return cat ? cat.id : null;
   }
 
-  function convertCategoriesToIds(categoriesInput) {
-    if (!categoriesInput) return [];
-    if (Array.isArray(categoriesInput)) {
-      return categoriesInput.filter(id => categories.some(c => c.id === id));
-    }
-    if (typeof categoriesInput === 'string') {
-      const names = categoriesInput.split(',').map(s => s.trim()).filter(Boolean);
-      const ids = [];
-      names.forEach(name => {
-        const id = getCategoryIdByName(name);
-        if (id !== null && !ids.includes(id)) {
-          ids.push(id);
-        }
-      });
-      return ids;
-    }
-    return [];
-  }
-
-  function getCategoryNames(ids) {
-    if (!ids || !Array.isArray(ids) || ids.length === 0) return 'بدون دسته';
-    return ids.map(id => getCategoryNameById(id)).join('، ');
-  }
-
-  function parseDocumentsToArray(docStr) {
-    if (!docStr || docStr === 'N/A' || docStr === '') return [];
-    return docStr.split('|').map(s => s.trim()).filter(s => s.length > 0).map(title => {
-      return { title, typeId: 1 };
-    });
-  }
-
   function getAllCategories() {
-    return categories.slice().sort((a, b) => a.sort - b.sort);
+    return categories.slice().sort((a, b) => (a.sort || 0) - (b.sort || 0));
   }
 
-  function updateCategoryFilterOptions() {
-    const select = document.getElementById('categoryFilter');
-    const currentVal = select.value;
-    const cats = getAllCategories();
-    select.innerHTML = '<option value="">همه دسته‌بندی‌ها</option>' + cats.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
-    if (currentVal) select.value = currentVal;
+  function getCategoryIcon(catName) {
+    const cat = categories.find(c => c.name === catName);
+    return cat && cat.icon ? cat.icon : 'fa-tag';
   }
 
-  // ---------- FILTER & SEARCH ----------
-  function applyFilters() {
-    const searchTerm = document.getElementById('searchInput').value.trim().toLowerCase();
-    const categoryFilter = document.getElementById('categoryFilter').value;
-
-    filteredItems = items.filter(item => {
-      const titleMatch = item.Title && item.Title.toLowerCase().includes(searchTerm);
-      const catNames = item.Categories && Array.isArray(item.Categories) 
-        ? item.Categories.map(id => getCategoryNameById(id)).join(' ').toLowerCase()
-        : '';
-      const catMatch = catNames.includes(searchTerm);
-      const docMatch = Array.isArray(item.documents) && item.documents.some(d => d.title && d.title.toLowerCase().includes(searchTerm));
-      const searchMatch = !searchTerm || titleMatch || catMatch || docMatch;
-
-      let catFilterMatch = true;
-      if (categoryFilter) {
-        const filterId = parseInt(categoryFilter);
-        catFilterMatch = (item.Categories && Array.isArray(item.Categories) && item.Categories.includes(filterId));
-      }
-      return searchMatch && catFilterMatch;
-    });
-
-    filteredItems.sort((a, b) => {
-      const seqA = a.Sort || 999;
-      const seqB = b.Sort || 999;
-      if (seqA !== seqB) return seqA - seqB;
-      return (a.Id || 0) - (b.Id || 0);
-    });
-
-    document.getElementById('filterResultCount').textContent = `(${filteredItems.length} مورد)`;
-    renderFilteredTable();
+  function downloadCategories() {
+    const exportData = categories.map(cat => ({
+      id: cat.id, name: cat.name, icon: cat.icon || 'fa-tag',
+      sort: cat.sort || 0, isEnable: cat.isEnable !== false
+    }));
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'categories-export.json';
+    a.click();
+    showToast('خروجی دسته‌ها دانلود شد');
   }
 
-  function clearFilters() {
-    document.getElementById('searchInput').value = '';
-    document.getElementById('categoryFilter').value = '';
-    applyFilters();
-  }
-
-  function renderFilteredTable() {
-    const tbody = document.getElementById('itemsTableBody');
-    const displayItems = filteredItems.length > 0 ? filteredItems : items;
-
-    if (!displayItems.length) {
-      tbody.innerHTML = `<tr><td colspan="11" style="text-align:center; padding:40px; color:#94a3b8;">هیچ آیتمی با این فیلترها یافت نشد.</td></tr>`;
-      updateStats();
-      return;
-    }
-
-    let html = '';
-    displayItems.forEach((item, idx) => {
-      const origIdx = items.indexOf(item);
-      const isActive = item.IsActive !== undefined ? item.IsActive : true;
-      const isTop10 = item.IsTop10 === true;
-      const sort = item.Sort || 0;
-      const catSeq = item.CategourySequence || 0;
-
-      if (!Array.isArray(item.documents)) {
-        if (Array.isArray(item.Documents)) item.documents = item.Documents;
-        else if (typeof item.Documents === 'string') item.documents = parseDocumentsToArray(item.Documents);
-        else item.documents = [];
-      }
-
-      const docHtml = item.documents.map((d, i) => {
-        const title = d.title || 'بدون عنوان';
-        const typeId = d.typeId || 1;
-        return `<span class="doc-item">
-          <span>${title}</span>
-          <select class="inline-edit-select" onchange="updateDocType(${origIdx}, ${i}, this.value)">
-            ${docTypeOptions.map(opt => `<option value="${opt.id}" ${opt.id===typeId?'selected':''}>${opt.title}</option>`).join('')}
-          </select>
-          <i class="fas fa-pen" onclick="editDocTitle(${origIdx}, ${i})"></i>
-          <i class="fas fa-trash" onclick="removeDocItem(${origIdx}, ${i})"></i>
-        </span>`;
-      }).join(' ');
-      const addBtn = `<span class="add-doc-btn" onclick="addDocItem(${origIdx})"><i class="fas fa-plus"></i> مدرک</span>`;
-
-      html += `<tr>
-        <td>${item.Id || origIdx+1}</td>
-        <td><strong>${item.Title || 'بدون عنوان'}</strong></td>
-        <td class="price-cell">${item.Price ? parseInt(item.Price).toLocaleString() : '0'}</td>
-        <td>${item.Discount ? parseInt(item.Discount).toLocaleString() : '0'}</td>
-        <td>
-          <select multiple style="width:150px; height:60px; border-radius:12px; border:1px solid #d0d8e0; padding:4px;" onchange="updateCategories(${origIdx}, this)">
-            ${categories.map(c => `<option value="${c.id}" ${(item.Categories && Array.isArray(item.Categories) && item.Categories.includes(c.id))?'selected':''}>${c.name}</option>`).join('')}
-          </select>
-          <span style="font-size:0.65rem; color:#64748b; display:block;">(Ctrl+Click برای چندگانه)</span>
-        </td>
-        <td>
-          <select onchange="updateTop10(${origIdx}, this.value)" style="border:1px solid #cbd5e1; border-radius:30px; padding:2px 6px; font-size:0.7rem;">
-            <option value="false" ${!isTop10?'selected':''}>خیر</option>
-            <option value="true" ${isTop10?'selected':''}>بله</option>
-          </select>
-        </td>
-        <td>
-          <input type="number" class="inline-edit-input" value="${sort}" 
-                 onchange="updateSort(${origIdx}, this.value)" min="0" step="1">
-        </td>
-        <td>
-          <input type="number" class="inline-edit-input" value="${catSeq}" 
-                 onchange="updateCategorySequence(${origIdx}, this.value)" min="0" step="1">
-        </td>
-        <td><div class="tag-input-group">${docHtml} ${addBtn}</div></td>
-        <td><span class="status-badge ${isActive ? '' : 'status-inactive'}">${isActive ? 'فعال' : 'غیرفعال'}</span></td>
-        <td>
-          <i class="fas fa-edit action-icon" onclick="openEditModal(${origIdx})" title="ویرایش کامل"></i>
-          <i class="fas fa-copy action-icon" onclick="duplicateItem(${origIdx})" title="کپی"></i>
-          <i class="fas fa-trash action-icon" style="color:#b91c1c;" onclick="deleteItem(${origIdx})" title="حذف"></i>
-        </td>
-      </tr>`;
-    });
-    tbody.innerHTML = html;
-    updateStats();
-  }
-
-  function updateStats() {
-    document.getElementById('totalItems').textContent = items.length;
-    const active = items.filter(it => it.IsActive !== false).length;
-    document.getElementById('activeItems').textContent = active;
-    document.getElementById('categoryCount').textContent = categories.length;
-    const top10 = items.filter(it => it.IsTop10 === true).length;
-    document.getElementById('top10Count').textContent = top10;
-    updateCategoryFilterOptions();
-  }
-
-  // ---------- INLINE UPDATES ----------
-  function updateCategories(idx, select) {
-    if (items[idx]) {
-      const selected = Array.from(select.selectedOptions).map(opt => parseInt(opt.value));
-      items[idx].Categories = selected;
-      showToast('دسته‌بندی‌ها به‌روز شدند');
-      applyFilters();
-    }
-  }
-
-  function updateTop10(idx, value) {
-    if (items[idx]) {
-      items[idx].IsTop10 = value === 'true';
-      showToast('تاپ ۱۰ به‌روز شد');
-      applyFilters();
-    }
-  }
-
-  function updateSort(idx, value) {
-    if (items[idx]) {
-      const num = parseInt(value);
-      if (!isNaN(num) && num >= 0) {
-        items[idx].Sort = num;
-        showToast('ترتیب به‌روز شد');
-        applyFilters();
-      }
-    }
-  }
-
-  function updateCategorySequence(idx, value) {
-    if (items[idx]) {
-      const num = parseInt(value);
-      if (!isNaN(num) && num >= 0) {
-        items[idx].CategourySequence = num;
-        showToast('ترتیب دسته به‌روز شد');
-        applyFilters();
-      }
-    }
-  }
-
-  function updateDocType(idx, docIdx, newTypeId) {
-    const item = items[idx];
-    if (!item || !Array.isArray(item.documents) || !item.documents[docIdx]) return;
-    item.documents[docIdx].typeId = parseInt(newTypeId);
-    showToast('نوع مدرک تغییر کرد');
-    applyFilters();
-  }
-
-  function editDocTitle(idx, docIdx) {
-    const item = items[idx];
-    if (!item || !Array.isArray(item.documents) || !item.documents[docIdx]) return;
-    const current = item.documents[docIdx].title;
-    const newTitle = prompt('عنوان مدرک:', current);
-    if (newTitle !== null) {
-      item.documents[docIdx].title = newTitle.trim() || 'مدرک';
-      applyFilters();
-      showToast('عنوان مدرک به‌روز شد');
-    }
-  }
-
-  function addDocItem(idx) {
-    const item = items[idx];
-    if (!Array.isArray(item.documents)) item.documents = [];
-    item.documents.push({ title: 'مدرک جدید', typeId: 1 });
-    applyFilters();
-    showToast('مدرک اضافه شد');
-  }
-
-  function removeDocItem(idx, docIdx) {
-    const item = items[idx];
-    if (!Array.isArray(item.documents)) return;
-    item.documents.splice(docIdx, 1);
-    applyFilters();
-    showToast('مدرک حذف شد');
-  }
-
-  // ---------- CATEGORY MANAGEMENT ----------
   function openCategoryModal() {
     document.getElementById('categoryModal').classList.add('active');
     renderCategoryList();
@@ -579,172 +746,428 @@
     }
     let html = '';
     cats.forEach(cat => {
-      html += `<span class="cat-item">
+      const icon = cat.icon || 'fa-tag';
+      const isEnable = cat.isEnable !== false;
+      html += `<div class="cat-item">
+        <span class="cat-preview"><i class="fas ${icon}"></i> ${cat.name}</span>
         <input type="text" value="${cat.name}" class="cat-edit-input" data-catid="${cat.id}" onchange="renameCategory(this)" placeholder="نام جدید">
+        <input type="text" value="${icon}" class="cat-icon-input" data-catid="${cat.id}" onchange="updateCategoryIconInline(this)" placeholder="آیکون">
+        <select data-catid="${cat.id}" onchange="updateCategoryEnable(this)">
+          <option value="true" ${isEnable?'selected':''}>فعال</option>
+          <option value="false" ${!isEnable?'selected':''}>غیرفعال</option>
+        </select>
         <input type="number" value="${cat.sort || 0}" class="cat-seq-input" data-catid="${cat.id}" onchange="updateCategorySort(this)" placeholder="ترتیب">
-        <i class="fas fa-trash" onclick="deleteCategory(${cat.id})" title="حذف"></i>
-      </span>`;
+        <button class="delete-btn" onclick="deleteCategory(${cat.id})">حذف</button>
+      </div>`;
     });
     container.innerHTML = html;
   }
 
-  function renameCategory(input) {
+  async function renameCategory(input) {
     const id = parseInt(input.dataset.catid);
     const newName = input.value.trim();
     if (!newName) { showToast('نام معتبر وارد کنید'); return; }
     const cat = categories.find(c => c.id === id);
     if (!cat) return;
+    const oldName = cat.name;
     cat.name = newName;
+    items.forEach(item => { if (item.category === oldName) item.category = newName; });
+    await updateCategoryOnServer(cat);
     showToast(`دسته‌بندی به "${newName}" تغییر یافت`);
-    applyFilters();
     renderCategoryList();
+    applyFilters();
   }
 
-  function updateCategorySort(input) {
+  async function updateCategoryIconInline(input) {
+    const id = parseInt(input.dataset.catid);
+    const icon = input.value.trim() || 'fa-tag';
+    const cat = categories.find(c => c.id === id);
+    if (!cat) return;
+    cat.icon = icon;
+    await updateCategoryOnServer(cat);
+    showToast('آیکون به‌روز شد');
+    renderCategoryList();
+    applyFilters();
+  }
+
+  async function updateCategoryEnable(select) {
+    const id = parseInt(select.dataset.catid);
+    const value = select.value === 'true';
+    const cat = categories.find(c => c.id === id);
+    if (!cat) return;
+    cat.isEnable = value;
+    await updateCategoryOnServer(cat);
+    showToast(`وضعیت دسته به ${value ? 'فعال' : 'غیرفعال'} تغییر یافت`);
+    renderCategoryList();
+    applyFilters();
+  }
+
+  async function updateCategorySort(input) {
     const id = parseInt(input.dataset.catid);
     const newSort = parseInt(input.value);
     if (isNaN(newSort) || newSort < 0) { showToast('عدد معتبر وارد کنید'); return; }
     const cat = categories.find(c => c.id === id);
     if (!cat) return;
     cat.sort = newSort;
-    showToast(`ترتیب دسته به ${newSort} تغییر یافت`);
-    applyFilters();
+    await updateCategoryOnServer(cat);
+    showToast(`ترتیب به ${newSort} تغییر یافت`);
     renderCategoryList();
+    applyFilters();
   }
 
-  function deleteCategory(id) {
+  async function deleteCategory(id) {
     const cat = categories.find(c => c.id === id);
     if (!cat) return;
     if (!confirm(`آیا از حذف دسته‌بندی "${cat.name}" اطمینان دارید؟`)) return;
-    const index = categories.indexOf(cat);
-    if (index > -1) categories.splice(index, 1);
-    items.forEach(item => {
-      if (item.Categories && Array.isArray(item.Categories)) {
-        item.Categories = item.Categories.filter(cid => cid !== id);
-      }
-    });
-    showToast(`دسته‌بندی "${cat.name}" حذف شد`);
-    applyFilters();
-    renderCategoryList();
+
+    const success = await deleteCategoryFromServer(id);
+    if (success) {
+      const index = categories.indexOf(cat);
+      if (index > -1) categories.splice(index, 1);
+      items.forEach(item => { if (item.category === cat.name) item.category = 'بدون دسته'; });
+      showToast(`دسته‌بندی "${cat.name}" حذف شد`);
+      renderCategoryList();
+      applyFilters();
+    }
   }
 
-  function addNewCategory() {
-    const nameInput = document.getElementById('newCategoryInput');
+  async function addNewCategory() {
+    const nameInput = document.getElementById('newCategoryName');
+    const iconInput = document.getElementById('newCategoryIcon');
+    const enableSelect = document.getElementById('newCategoryEnable');
     const seqInput = document.getElementById('newCategorySeq');
     const name = nameInput.value.trim();
+    const icon = iconInput.value.trim() || 'fa-tag';
+    const isEnable = enableSelect.value === 'true';
     const sort = parseInt(seqInput.value) || 0;
     if (!name) { showToast('لطفاً نام دسته‌بندی را وارد کنید'); return; }
-    const newId = categories.length ? Math.max(...categories.map(c => c.id)) + 1 : 1;
-    categories.push({ id: newId, name, sort });
-    showToast(`دسته‌بندی "${name}" با ID ${newId} اضافه شد`);
-    nameInput.value = '';
-    seqInput.value = '100';
-    renderCategoryList();
+    if (categories.some(c => c.name === name)) { showToast('این دسته قبلاً وجود دارد'); return; }
+
+    const newCat = { id: categories.length ? Math.max(...categories.map(c => c.id)) + 1 : 1, name, sort, icon, isEnable };
+    const result = await createCategoryOnServer(newCat);
+    if (result) {
+      categories.push(newCat);
+      showToast(`دسته‌بندی "${name}" اضافه شد`);
+      nameInput.value = ''; iconInput.value = 'fa-tag'; enableSelect.value = 'true'; seqInput.value = '100';
+      renderCategoryList();
+      applyFilters();
+    }
+  }
+
+  // ============================================================
+  //  FILTER & SEARCH
+  // ============================================================
+function applyFilters() {
+  const searchTerm = document.getElementById('searchInput').value.trim().toLowerCase();
+  const categoryFilter = document.getElementById('categoryFilter').value;
+  const specialFilter = document.getElementById('specialFilter').value;
+  
+  filteredItems = items.filter(item => {
+    const title = item.serviceTitle || item.Title || '';
+    const catName = item.category || '';
+    const fields = item.data?.forms?.flatMap(f => f.fields?.map(fld => fld.label || '') || []) || [];
+    
+    const searchMatch = !searchTerm || 
+      title.toLowerCase().includes(searchTerm) ||
+      catName.toLowerCase().includes(searchTerm) ||
+      fields.some(f => f.toLowerCase().includes(searchTerm));
+    
+    let catFilterMatch = true;
+    if (categoryFilter) {
+      const filterId = parseInt(categoryFilter);
+      const selectedCategory = categories.find(c => c.id === filterId);
+      if (selectedCategory) {
+        catFilterMatch = (catName === selectedCategory.name);
+      } else {
+        catFilterMatch = false;
+      }
+    }
+    
+    let specialFilterMatch = true;
+    if (specialFilter !== '') {
+      const isSpecial = item.data?.isSpecial === true;
+      specialFilterMatch = (isSpecial === (specialFilter === 'true'));
+    }
+    
+    return searchMatch && catFilterMatch && specialFilterMatch;
+  });
+  
+  document.getElementById('filterResultCount').textContent = `(${filteredItems.length} مورد)`;
+  renderFilteredTable();
+} 
+
+function clearFilters() {
+    document.getElementById('searchInput').value = '';
+    document.getElementById('categoryFilter').value = '';
     applyFilters();
   }
 
-  // ---------- ADD NEW ITEM ----------
+  function renderFilteredTable() {
+    const tbody = document.getElementById('itemsTableBody');
+    const displayItems = filteredItems.length > 0 ? filteredItems : items;
+    if (!displayItems.length) {
+      tbody.innerHTML = `<tr><td colspan="12" style="text-align:center; padding:40px; color:#94a3b8;">هیچ آیتمی با این فیلترها یافت نشد.</td></tr>`;
+      updateStats();
+      return;
+    }
+    let html = '';
+    displayItems.forEach((item, idx) => {
+      const origIdx = items.indexOf(item);
+      const isActive = item.data?.isEnabled !== undefined ? item.data.isEnabled : true;
+      const isSpecial = item.data?.isSpecial === true;
+      const title = item.serviceTitle || item.Title || 'بدون عنوان';
+      const category = item.category || 'بدون دسته';
+      const sort = item.sort || 0;
+      const price = item.data?.price || item.data?.cost || 0;
+      const duration = item.data?.duration || '—';
+      const type = item.data?.type || '—';
+      const isPaymentRequired = item.data?.isPaymentRequired !== false;
+      const catIcon = getCategoryIcon(category);
+      
+      const fields = item.data?.forms?.flatMap(f => f.fields?.map(fld => ({
+        label: fld.label || '',
+        type: fld.type || 'text',
+        options: fld.options || [],
+        validationRules: fld.validationRules || {}
+      })) || []) || [];
+      
+      const fieldsHtml = fields.map((f, fIdx) => {
+        let extraInfo = '';
+        if (f.options && f.options.length > 0) {
+          extraInfo += ` <span class="options-badge"><i class="fas fa-list"></i> ${f.options.length}</span>`;
+        }
+        if (f.validationRules && typeof f.validationRules === 'object' && Object.keys(f.validationRules).length > 0) {
+          const rules = Object.keys(f.validationRules).map(k => getValidationLabel(k)).join('، ');
+          extraInfo += ` <span class="validation-badge"><i class="fas fa-shield-alt"></i> ${rules}</span>`;
+        }
+        return `<span class="doc-item">
+          <span>${f.label}</span>
+          <span class="field-type-badge">${getDocTypeLabel(f.type)}</span>
+          ${extraInfo}
+        </span>`;
+      }).join(' ');
+
+      const catOptions = categories.map(c =>
+        `<option value="${c.name}" ${c.name===category?'selected':''}>${c.name}</option>`
+      ).join('');
+
+      html += `<tr>
+        <td class="id-col"><span class="service-id" title="${item.serviceId || ''}">${(item.serviceId || '').slice(0, 8)}...</span></td>
+        <td class="title-col">
+          <input type="text" class="inline-title-input" value="${title}" 
+                 onchange="updateTitle(${origIdx}, this.value)" placeholder="عنوان">
+        </td>
+        <td>
+          <select class="inline-cat-select" onchange="updateCategory(${origIdx}, this.value)">
+            <option value="">بدون دسته</option>
+            ${catOptions}
+          </select>
+          <span style="font-size:0.6rem; color:#94a3b8; display:block;"><i class="fas ${catIcon}"></i> ${category}</span>
+        </td>
+        <td class="sort-col">
+          <input type="number" class="inline-sort-input" value="${sort}" 
+                 onchange="updateSort(${origIdx}, this.value)" min="0">
+        </td>
+        <td>
+          <input type="number" class="inline-price-input" value="${price}" 
+                 onchange="updatePrice(${origIdx}, this.value)" min="0" step="1000">
+        </td>
+        <td>${duration}</td>
+        <td>
+          <select onchange="updateSpecial(${origIdx}, this.value)" style="border:1px solid #cbd5e1; border-radius:30px; padding:2px 6px; font-size:0.7rem;">
+            <option value="false" ${!isSpecial?'selected':''}>خیر</option>
+            <option value="true" ${isSpecial?'selected':''}>بله</option>
+          </select>
+        </td>
+        <td>
+          <select onchange="updateEnabled(${origIdx}, this.value)" style="border:1px solid #cbd5e1; border-radius:30px; padding:2px 6px; font-size:0.7rem;">
+            <option value="true" ${isActive?'selected':''}>فعال</option>
+            <option value="false" ${!isActive?'selected':''}>غیرفعال</option>
+          </select>
+        </td>
+        <td style="font-size:0.7rem;">${type}</td>
+        <td style="font-size:0.7rem;">
+          <span class="${isPaymentRequired ? 'badge-true' : 'badge-false'}">${isPaymentRequired ? '✅ نیاز دارد' : '❌ نیاز ندارد'}</span>
+        </td>
+        <td><div class="tag-input-group">${fieldsHtml || 'بدون فیلد'}</div></td>
+        <td>
+          <i class="fas fa-edit action-icon" onclick="openEditModal(${origIdx})" title="ویرایش کامل"></i>
+          <i class="fas fa-copy action-icon" onclick="duplicateItem(${origIdx})" title="کپی"></i>
+          <i class="fas fa-trash action-icon" style="color:#b91c1c;" onclick="deleteItem(${origIdx})" title="حذف"></i>
+        </td>
+      </tr>`;
+    });
+    tbody.innerHTML = html;
+    updateStats();
+  }
+
+  function updateStats() {
+    document.getElementById('totalItems').textContent = items.length;
+    const active = items.filter(it => it.data?.isEnabled !== false).length;
+    document.getElementById('activeItems').textContent = active;
+    document.getElementById('categoryCount').textContent = categories.length;
+    const special = items.filter(it => it.data?.isSpecial === true).length;
+    document.getElementById('specialCount').textContent = special;
+    updateCategoryFilterOptions();
+  }
+
+  function updateCategoryFilterOptions() {
+    const select = document.getElementById('categoryFilter');
+    const currentVal = select.value;
+    const cats = getAllCategories();
+    select.innerHTML = '<option value="">همه دسته‌بندی‌ها</option>' + cats.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+    if (currentVal) select.value = currentVal;
+  }
+
+  // ============================================================
+  //  HELPER FUNCTIONS
+  // ============================================================
+  function getDocTypeLabel(typeId) {
+    const found = docTypes.find(d => d.id === typeId);
+    return found ? found.label : typeId;
+  }
+
+  function getValidationLabel(ruleId) {
+    const found = validationRulesList.find(r => r.id === ruleId);
+    return found ? found.label : ruleId;
+  }
+
+  // ============================================================
+  //  INLINE UPDATES
+  // ============================================================
+  async function updateTitle(idx, value) {
+    if (items[idx]) {
+      const newTitle = value.trim() || 'بدون عنوان';
+      items[idx].serviceTitle = newTitle;
+      items[idx].Title = newTitle;
+      if (items[idx].data) items[idx].data.title = newTitle;
+      await saveServiceToServer(items[idx]);
+      showToast('عنوان به‌روز شد');
+      applyFilters();
+    }
+  }
+
+  async function updatePrice(idx, value) {
+    if (items[idx]) {
+      const newPrice = parseInt(value);
+      if (!isNaN(newPrice) && newPrice >= 0) {
+        if (!items[idx].data) items[idx].data = {};
+        items[idx].data.price = newPrice;
+        items[idx].data.cost = 0;
+        items[idx].data.benefit = newPrice;
+        items[idx].Price = newPrice;
+        await saveServiceToServer(items[idx]);
+        showToast('قیمت به‌روز شد');
+        applyFilters();
+      } else {
+        showToast('لطفاً عدد معتبر وارد کنید');
+      }
+    }
+  }
+
+  async function updateSort(idx, value) {
+    if (items[idx]) {
+      const newSort = parseInt(value);
+      if (!isNaN(newSort) && newSort >= 0) {
+        items[idx].sort = newSort;
+        await saveServiceToServer(items[idx]);
+        showToast('ترتیب به‌روز شد');
+        applyFilters();
+      } else {
+        showToast('لطفاً عدد معتبر وارد کنید');
+      }
+    }
+  }
+
+  async function updateCategory(idx, value) {
+    if (items[idx]) {
+      const catName = value || 'بدون دسته';
+      items[idx].category = catName;
+      if (!categories.some(c => c.name === catName) && catName !== 'بدون دسته') {
+        const newCat = { id: categories.length + 1, name: catName, sort: categories.length + 1, icon: 'fa-tag', isEnable: true };
+        await createCategoryOnServer(newCat);
+        categories.push(newCat);
+      }
+      if (items[idx].data && items[idx].data.category) items[idx].data.category.title = catName;
+      await saveServiceToServer(items[idx]);
+      showToast('دسته به‌روز شد');
+      applyFilters();
+    }
+  }
+
+  async function updateSpecial(idx, value) {
+    if (items[idx]) {
+      if (!items[idx].data) items[idx].data = {};
+      items[idx].data.isSpecial = value === 'true';
+      await saveServiceToServer(items[idx]);
+      showToast('ویژه به‌روز شد');
+      applyFilters();
+    }
+  }
+
+  async function updateEnabled(idx, value) {
+    if (items[idx]) {
+      if (!items[idx].data) items[idx].data = {};
+      items[idx].data.isEnabled = value === 'true';
+      await saveServiceToServer(items[idx]);
+      showToast('وضعیت فعال‌سازی به‌روز شد');
+      applyFilters();
+    }
+  }
+
+  // ============================================================
+  //  CRUD OPERATIONS
+  // ============================================================
+  async function deleteItem(idx) {
+    if (!confirm('آیا از حذف این آیتم اطمینان دارید؟')) return;
+    const item = items[idx];
+    if (!item) return;
+
+    const success = await deleteService(item.serviceId);
+    if (success) {
+      items.splice(idx, 1);
+      applyFilters();
+      showToast('✅ آیتم حذف شد');
+    }
+  }
+
+  function duplicateItem(idx) {
+    const original = items[idx];
+    const copy = JSON.parse(JSON.stringify(original));
+    copy.serviceId = 'copy_' + Date.now();
+    copy.serviceTitle = (copy.serviceTitle || copy.Title || '') + ' (کپی)';
+    copy.data.id = 'copy_' + Date.now();
+    copy.data.title = copy.serviceTitle;
+    copy.sort = (original.sort || 0) + 1;
+    items.splice(idx+1, 0, copy);
+    applyFilters();
+    showToast('کپی شد (برای ذخیره روی سرور، روی ذخیره کلیک کنید)');
+  }
+
+  // ============================================================
+  //  MODAL
+  // ============================================================
   function openAddModal() {
     editingIndex = -1;
     document.getElementById('modalTitle').innerHTML = '<i class="fas fa-plus"></i> افزودن آیتم جدید';
-    const catOptions = categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
-    const form = document.getElementById('modalForm');
-    form.innerHTML = `
-      <div class="form-row"><label>شناسه</label><input type="number" id="editId" value="${items.length+1}"></div>
-      <div class="form-row"><label>عنوان *</label><input type="text" id="editTitle" placeholder="عنوان سرویس"></div>
-      <div class="form-row"><label>قیمت</label><input type="number" id="editPrice" value="0"></div>
-      <div class="form-row"><label>تخفیف</label><input type="number" id="editDiscount" value="0"></div>
-      <div class="form-row"><label>دسته‌بندی‌ها (چندگانه - Ctrl+Click)</label>
-        <select multiple id="editCategories" style="height:100px; border-radius:16px; border:1px solid #d0d8e0; padding:8px;">
-          ${catOptions}
-        </select>
-      </div>
-      <div class="form-row">
-        <div class="inline-group">
-          <div><label>تاپ ۱۰</label><select id="editTop10"><option value="false">خیر</option><option value="true">بله</option></select></div>
-          <div><label>ترتیب</label><input type="number" id="editSort" value="1" min="0"></div>
-          <div><label>ترتیب دسته</label><input type="number" id="editCatSeq" value="1" min="0"></div>
-        </div>
-      </div>
-      <div class="form-row"><label>وضعیت</label>
-        <select id="editActive"><option value="true" selected>فعال</option><option value="false">غیرفعال</option></select>
-      </div>
-      <div class="form-row"><label>مدارک (title + نوع)</label>
-        <div class="doc-editor" id="docEditorContainer">
-          <div class="doc-line"><input type="text" placeholder="عنوان مدرک" class="doc-title-input" value="مدرک نمونه">
-            <select class="doc-type-select">${docTypeOptions.map(opt => `<option value="${opt.id}">${opt.title}</option>`).join('')}</select>
-          </div>
-          <button class="add-doc-btn" onclick="addDocField()" type="button"><i class="fas fa-plus"></i> افزودن مدرک</button>
-        </div>
-      </div>
-      <div class="form-row"><label>URL</label><input type="text" id="editUrl" placeholder="https://..."></div>
-    `;
+    renderModalForm(null);
     document.getElementById('editModal').classList.add('active');
   }
 
-  function addDocField() {
-    const container = document.getElementById('docEditorContainer');
-    const line = document.createElement('div');
-    line.className = 'doc-line';
-    line.innerHTML = `<input type="text" placeholder="عنوان مدرک" class="doc-title-input" value="مدرک جدید">
-      <select class="doc-type-select">${docTypeOptions.map(opt => `<option value="${opt.id}">${opt.title}</option>`).join('')}</select>`;
-    container.insertBefore(line, container.lastElementChild);
-  }
-
-  // ---------- EDIT MODAL ----------
-  function openEditModal(idx) {
+  async function openEditModal(idx) {
     editingIndex = idx;
-    document.getElementById('modalTitle').innerHTML = '<i class="fas fa-pen"></i> ویرایش آیتم';
     const item = items[idx];
     if (!item) return;
-    if (!Array.isArray(item.documents)) {
-      if (Array.isArray(item.Documents)) item.documents = item.Documents;
-      else if (typeof item.Documents === 'string') item.documents = parseDocumentsToArray(item.Documents);
-      else item.documents = [];
+    console.log(item);
+    // Get full service data from server using /api/services/{service_id}
+    const fullData = await fetchServiceFull(item.serviceId);
+    if (fullData) {
+      // Update the local item with full data from server
+      items[idx] = fullData;
     }
-    const catOptions = categories.map(c => `<option value="${c.id}" ${(item.Categories && Array.isArray(item.Categories) && item.Categories.includes(c.id))?'selected':''}>${c.name}</option>`).join('');
-    const form = document.getElementById('modalForm');
-    let docEditorHtml = item.documents.map((d, i) => `
-      <div class="doc-line">
-        <input type="text" value="${d.title || ''}" placeholder="عنوان مدرک" data-docidx="${i}" class="doc-title-input">
-        <select data-docidx="${i}" class="doc-type-select">
-          ${docTypeOptions.map(opt => `<option value="${opt.id}" ${opt.id===d.typeId?'selected':''}>${opt.title}</option>`).join('')}
-        </select>
-        <i class="fas fa-times action-icon" onclick="removeDocItem(${idx}, ${i}); applyFilters(); openEditModal(${idx});" style="color:#b91c1c;"></i>
-      </div>
-    `).join('');
-
-    form.innerHTML = `
-      <div class="form-row"><label>شناسه</label><input type="number" id="editId" value="${item.Id || ''}"></div>
-      <div class="form-row"><label>عنوان</label><input type="text" id="editTitle" value="${item.Title || ''}"></div>
-      <div class="form-row"><label>قیمت</label><input type="number" id="editPrice" value="${item.Price || 0}"></div>
-      <div class="form-row"><label>تخفیف</label><input type="number" id="editDiscount" value="${item.Discount || 0}"></div>
-      <div class="form-row"><label>دسته‌بندی‌ها (چندگانه)</label>
-        <select multiple id="editCategories" style="height:100px; border-radius:16px; border:1px solid #d0d8e0; padding:8px;">
-          ${catOptions}
-        </select>
-      </div>
-      <div class="form-row">
-        <div class="inline-group">
-          <div><label>تاپ ۱۰</label><select id="editTop10"><option value="false" ${item.IsTop10!==true?'selected':''}>خیر</option><option value="true" ${item.IsTop10===true?'selected':''}>بله</option></select></div>
-          <div><label>ترتیب</label><input type="number" id="editSort" value="${item.Sort || 0}" min="0"></div>
-          <div><label>ترتیب دسته</label><input type="number" id="editCatSeq" value="${item.CategourySequence || 0}" min="0"></div>
-        </div>
-      </div>
-      <div class="form-row"><label>وضعیت</label>
-        <select id="editActive">
-          <option value="true" ${item.IsActive!==false?'selected':''}>فعال</option>
-          <option value="false" ${item.IsActive===false?'selected':''}>غیرفعال</option>
-        </select>
-      </div>
-      <div class="form-row"><label>مدارک (title + نوع)</label>
-        <div class="doc-editor" id="docEditorContainer">
-          ${docEditorHtml}
-          <button class="add-doc-btn" onclick="addDocField()" type="button"><i class="fas fa-plus"></i> افزودن مدرک</button>
-        </div>
-      </div>
-      <div class="form-row"><label>URL</label><input type="text" id="editUrl" value="${item.URL || ''}"></div>
-    `;
+    
+    document.getElementById('modalTitle').innerHTML = '<i class="fas fa-pen"></i> ویرایش آیتم';
+    renderModalForm(items[idx]);
     document.getElementById('editModal').classList.add('active');
   }
 
@@ -753,69 +1176,601 @@
     editingIndex = -1;
   }
 
-  function saveItemFromModal() {
+  // ============================================================
+  //  RENDER MODAL FORM
+  // ============================================================
+  function renderModalForm(item) {
+    const isNew = !item;
+    
+    // Get data from the correct location
+    let data = isNew ? {} : (item.data || {});
+    let category = isNew ? '' : (item.category || '');
+    let serviceId = isNew ? 'svc_' + Date.now() : (item.serviceId || '');
+    let title = isNew ? '' : (item.serviceTitle || item.Title || '');
+    let sort = isNew ? 0 : (item.sort || 0);
+    let price = isNew ? 0 : (data.price || 0);
+    let duration = isNew ? '' : (data.duration || '');
+    let isSpecial = isNew ? false : (data.isSpecial === true);
+    let isEnabled = isNew ? true : (data.isEnabled !== false);
+    let type = isNew ? 'selectable' : (data.type || 'selectable');
+    let isPaymentRequired = isNew ? true : (data.isPaymentRequired !== false);
+    let description = isNew ? '' : (data.description || '');
+    let isLocationBased = isNew ? false : (data.isLocationBased === true);
+    let autoInvoiceEnabled = isNew ? true : (data.autoInvoiceEnabled !== false);
+    let isNoticeEnabled = isNew ? false : (data.isNoticeEnabled === true);
+    let noticeText = isNew ? '' : (data.noticeText || '');
+    let images = isNew ? [] : (data.images || []);
+    let forms = isNew ? [{ fields: [] }] : (data.forms || [{ fields: [] }]);
+
+    // If forms is not an array, make it one
+    if (!Array.isArray(forms)) {
+      forms = [{ fields: [] }];
+    }
+    // If forms has no fields, ensure each form has fields array
+    forms = forms.map(f => ({
+      ...f,
+      fields: Array.isArray(f.fields) ? f.fields : []
+    }));
+
+    const catOptions = categories.map(c => 
+      `<option value="${c.name}" ${c.name===category?'selected':''}>${c.name}</option>`
+    ).join('');
+
+    let fieldsHtml = '';
+    forms.forEach((form, formIdx) => {
+      const formFields = form.fields || [];
+      fieldsHtml += `<div class="field-group" id="fieldGroup_${formIdx}">
+        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
+          <input type="text" value="${form.title || ''}" placeholder="عنوان فرم" style="flex:1; padding:6px 12px; border-radius:20px; border:1px solid #d0d8e0; font-size:0.8rem;" onchange="updateFormTitle(${formIdx}, this.value)">
+          <input type="text" value="${form.description || ''}" placeholder="توضیحات فرم" style="flex:2; padding:6px 12px; border-radius:20px; border:1px solid #d0d8e0; font-size:0.8rem;" onchange="updateFormDesc(${formIdx}, this.value)">
+          <button class="btn-sm btn-danger-sm" onclick="removeForm(${formIdx})">حذف فرم</button>
+        </div>
+        <div id="fieldsContainer_${formIdx}">
+          ${formFields.map((f, fIdx) => {
+            const supportsOptions = ['checkbox', 'radio', 'select'].includes(f.type || 'text');
+            const options = Array.isArray(f.options) ? f.options : [];
+            const validationRules = (f.validationRules && typeof f.validationRules === 'object') ? f.validationRules : {};
+            return `
+            <div class="field-row" id="fieldRow_${formIdx}_${fIdx}">
+              <input type="text" value="${f.label || ''}" placeholder="برچسب" style="flex:0.8; min-width:80px;" onchange="updateField(${formIdx}, ${fIdx}, 'label', this.value)">
+              <select onchange="updateFieldTypeInModal(${formIdx}, ${fIdx}, this.value)" style="flex:0.6; min-width:100px;">
+                ${docTypes.map(d => `<option value="${d.id}" ${d.id===f.type?'selected':''}>${d.label}</option>`).join('')}
+              </select>
+              <div class="field-controls" style="flex:3;">
+                <div class="ctrl-group" style="${supportsOptions ? '' : 'opacity:0.5;'}">
+                  <i class="fas fa-list" style="color:#6366f1; font-size:0.7rem;"></i>
+                  <div class="options-container" id="optionsContainer_${formIdx}_${fIdx}" style="${supportsOptions ? '' : 'pointer-events:none;'}">
+                    ${options.map(opt => `<span class="option-tag">${opt} <i class="fas fa-times" onclick="removeOption(${formIdx}, ${fIdx}, '${opt}')"></i></span>`).join('')}
+                    <div class="options-input-wrapper">
+                      <input type="text" placeholder="گزینه جدید..." ${supportsOptions ? '' : 'disabled'}
+                             onkeydown="if(event.key==='Enter'){addOption(${formIdx}, ${fIdx}, this)}">
+                    </div>
+                  </div>
+                </div>
+                <div class="ctrl-group">
+                  <i class="fas fa-shield-alt" style="color:#2563eb; font-size:0.7rem;"></i>
+                  <div class="validation-selector" id="validationContainer_${formIdx}_${fIdx}">
+                    ${Object.keys(validationRules).map(ruleId => {
+                      const val = validationRules[ruleId];
+                      const displayVal = val !== undefined && val !== true ? `: ${val}` : '';
+                      return `
+                        <span class="validation-rule-tag">
+                          ${getValidationLabel(ruleId)}${displayVal}
+                          <i class="fas fa-times" onclick="removeValidationRule(${formIdx}, ${fIdx}, '${ruleId}')"></i>
+                        </span>
+                      `;
+                    }).join('')}
+                    <select onchange="addValidationRule(${formIdx}, ${fIdx}, this)" style="height:24px; font-size:0.65rem; padding:0 6px;">
+                      <option value="">افزودن قانون...</option>
+                      ${validationRulesList.filter(r => !Object.keys(validationRules).includes(r.id)).map(r => 
+                        `<option value="${r.id}">${r.label}</option>`
+                      ).join('')}
+                    </select>
+                    <div id="validationValue_${formIdx}_${fIdx}" style="display:none; gap:4px; align-items:center;">
+                      <input type="text" id="valInput_${formIdx}_${fIdx}" placeholder="مقدار" style="width:60px; height:24px; font-size:0.65rem; padding:0 6px;">
+                      <button class="btn-sm" style="padding:0 8px; height:24px; font-size:0.6rem;" onclick="confirmValidationRule(${formIdx}, ${fIdx})">ثبت</button>
+                    </div>
+                  </div>
+                </div>
+                <label style="display:flex; align-items:center; gap:3px; font-size:0.65rem; white-space:nowrap;">
+                  <input type="checkbox" ${f.isRequired !== false ? 'checked' : ''} onchange="updateField(${formIdx}, ${fIdx}, 'isRequired', this.checked)">
+                  اجباری
+                </label>
+                ${supportsOptions ? `
+                <label style="display:flex; align-items:center; gap:3px; font-size:0.65rem; white-space:nowrap;">
+                  <input type="checkbox" ${f.hasOther === true ? 'checked' : ''} onchange="updateField(${formIdx}, ${fIdx}, 'hasOther', this.checked)">
+                  "سایر"
+                </label>
+                ` : ''}
+                <input type="text" value="${f.placeholder || ''}" placeholder="متن راهنما" style="flex:1; min-width:80px; font-size:0.75rem;" onchange="updateField(${formIdx}, ${fIdx}, 'placeholder', this.value)">
+              </div>
+              <button class="btn-sm btn-danger-sm" onclick="removeField(${formIdx}, ${fIdx})">✕</button>
+            </div>`;
+          }).join('')}
+        </div>
+        <button class="btn-sm" onclick="addField(${formIdx})" style="margin-top:4px;">+ افزودن فیلد</button>
+      </div>`;
+    });
+
+    const imagesHtml = images.map(img => `
+      <div style="display:flex; align-items:center; gap:8px; border:1px solid #e2e8f0; border-radius:12px; padding:8px;">
+        <img src="${img.url}" alt="${img.originalName}" style="width:60px; height:60px; object-fit:cover; border-radius:8px;">
+        <span style="font-size:0.7rem;">${img.originalName}</span>
+        <i class="fas fa-trash action-icon" style="color:#b91c1c;" onclick="this.parentElement.remove()"></i>
+      </div>
+    `).join('');
+
+    const formHtml = `
+      <div class="form-row">
+        <label>شناسه سرویس</label>
+        <input type="text" id="editServiceId" value="${serviceId}">
+      </div>
+      <div class="form-row">
+        <label>عنوان سرویس *</label>
+        <input type="text" id="editTitle" value="${title}" placeholder="عنوان سرویس">
+      </div>
+      <div class="form-row">
+        <label>دسته‌بندی</label>
+        <select id="editCategory">${catOptions}</select>
+      </div>
+      <div class="form-row">
+        <div class="inline-group">
+          <div><label>ترتیب</label><input type="number" id="editSort" value="${sort}" min="0"></div>
+          <div><label>قیمت (تومان)</label><input type="number" id="editPrice" value="${price}" min="0"></div>
+          <div><label>مدت زمان</label><input type="text" id="editDuration" value="${duration}" placeholder="مثلاً 45 دقیقه"></div>
+        </div>
+      </div>
+      <div class="form-row">
+        <label>توضیحات</label>
+        <textarea id="editDescription" rows="2" placeholder="توضیحات سرویس">${description}</textarea>
+      </div>
+      <div class="form-row">
+        <div class="inline-group">
+          <div><label>نوع سرویس</label>
+            <select id="editType">
+              <option value="selectable" ${type==='selectable'?'selected':''}>انتخابی</option>
+              <option value="informative" ${type==='informative'?'selected':''}>اطلاعاتی</option>
+              <option value="interactive" ${type==='interactive'?'selected':''}>تعاملی</option>
+            </select>
+          </div>
+          <div><label>ویژه</label>
+            <select id="editSpecial">
+              <option value="false" ${!isSpecial?'selected':''}>خیر</option>
+              <option value="true" ${isSpecial?'selected':''}>بله</option>
+            </select>
+          </div>
+          <div><label>فعال</label>
+            <select id="editActive">
+              <option value="true" ${isEnabled?'selected':''}>فعال</option>
+              <option value="false" ${!isEnabled?'selected':''}>غیرفعال</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="inline-group">
+          <div><label>نیاز به پرداخت</label>
+            <select id="editPaymentRequired">
+              <option value="true" ${isPaymentRequired?'selected':''}>بله</option>
+              <option value="false" ${!isPaymentRequired?'selected':''}>خیر</option>
+            </select>
+          </div>
+          <div><label>مکان‌محور</label>
+            <select id="editLocationBased">
+              <option value="true" ${isLocationBased?'selected':''}>بله</option>
+              <option value="false" ${!isLocationBased?'selected':''}>خیر</option>
+            </select>
+          </div>
+          <div><label>فاکتور خودکار</label>
+            <select id="editAutoInvoice">
+              <option value="true" ${autoInvoiceEnabled?'selected':''}>فعال</option>
+              <option value="false" ${!autoInvoiceEnabled?'selected':''}>غیرفعال</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="inline-group">
+          <div><label>اعلان فعال</label>
+            <select id="editNoticeEnabled">
+              <option value="true" ${isNoticeEnabled?'selected':''}>بله</option>
+              <option value="false" ${!isNoticeEnabled?'selected':''}>خیر</option>
+            </select>
+          </div>
+          <div><label>متن اعلان</label>
+            <input type="text" id="editNoticeText" value="${noticeText}" placeholder="متن اعلان">
+          </div>
+        </div>
+      </div>
+      <div class="form-row">
+        <label>تصاویر</label>
+        <div id="imagePreview" class="image-preview">${imagesHtml || '<span style="color:#94a3b8;">هیچ تصویری وجود ندارد</span>'}</div>
+        <div class="image-upload-area" onclick="document.getElementById('imageUploadInput').click()">
+          <i class="fas fa-cloud-upload-alt"></i> برای آپلود تصویر کلیک کنید
+          <input type="file" id="imageUploadInput" accept="image/*" multiple onchange="handleImageUpload(event)">
+        </div>
+      </div>
+      <div class="form-row">
+        <label>فرم‌ها و فیلدها</label>
+        <div id="formsContainer">${fieldsHtml}</div>
+        <button class="btn-sm" onclick="addForm()" style="margin-top:8px; padding:8px 16px; background:#e2e8f0; border:none; border-radius:30px; cursor:pointer;">+ افزودن فرم جدید</button>
+      </div>
+    `;
+    document.getElementById('modalForm').innerHTML = formHtml;
+  }
+
+  // ============================================================
+  //  MODAL FIELD OPERATIONS
+  // ============================================================
+  function addForm() {
+    const container = document.getElementById('formsContainer');
+    const formIdx = container.querySelectorAll('.field-group').length;
+    const html = `
+      <div class="field-group" id="fieldGroup_${formIdx}">
+        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
+          <input type="text" placeholder="عنوان فرم" style="flex:1; padding:6px 12px; border-radius:20px; border:1px solid #d0d8e0; font-size:0.8rem;" onchange="updateFormTitle(${formIdx}, this.value)">
+          <input type="text" placeholder="توضیحات فرم" style="flex:2; padding:6px 12px; border-radius:20px; border:1px solid #d0d8e0; font-size:0.8rem;" onchange="updateFormDesc(${formIdx}, this.value)">
+          <button class="btn-sm btn-danger-sm" onclick="removeForm(${formIdx})">حذف فرم</button>
+        </div>
+        <div id="fieldsContainer_${formIdx}"></div>
+        <button class="btn-sm" onclick="addField(${formIdx})" style="margin-top:4px;">+ افزودن فیلد</button>
+      </div>
+    `;
+    container.insertAdjacentHTML('beforeend', html);
+  }
+
+  function removeForm(formIdx) {
+    const group = document.getElementById(`fieldGroup_${formIdx}`);
+    if (group) group.remove();
+  }
+
+  function addField(formIdx) {
+    const container = document.getElementById(`fieldsContainer_${formIdx}`);
+    if (!container) return;
+    const fIdx = container.querySelectorAll('.field-row').length;
+    const html = `
+      <div class="field-row" id="fieldRow_${formIdx}_${fIdx}">
+        <input type="text" placeholder="برچسب" style="flex:0.8; min-width:80px;" onchange="updateField(${formIdx}, ${fIdx}, 'label', this.value)">
+        <select onchange="updateFieldTypeInModal(${formIdx}, ${fIdx}, this.value)" style="flex:0.6; min-width:100px;">
+          ${docTypes.map(d => `<option value="${d.id}">${d.label}</option>`).join('')}
+        </select>
+        <div class="field-controls" style="flex:3;">
+          <div class="ctrl-group">
+            <i class="fas fa-list" style="color:#6366f1; font-size:0.7rem;"></i>
+            <div class="options-container" id="optionsContainer_${formIdx}_${fIdx}">
+              <div class="options-input-wrapper">
+                <input type="text" placeholder="گزینه جدید..." onkeydown="if(event.key==='Enter'){addOption(${formIdx}, ${fIdx}, this)}">
+              </div>
+            </div>
+          </div>
+          <div class="ctrl-group">
+            <i class="fas fa-shield-alt" style="color:#2563eb; font-size:0.7rem;"></i>
+            <div class="validation-selector" id="validationContainer_${formIdx}_${fIdx}">
+              <select onchange="addValidationRule(${formIdx}, ${fIdx}, this)" style="height:24px; font-size:0.65rem; padding:0 6px;">
+                <option value="">افزودن قانون...</option>
+                ${validationRulesList.map(r => `<option value="${r.id}">${r.label}</option>`).join('')}
+              </select>
+              <div id="validationValue_${formIdx}_${fIdx}" style="display:none; gap:4px; align-items:center;">
+                <input type="text" id="valInput_${formIdx}_${fIdx}" placeholder="مقدار" style="width:60px; height:24px; font-size:0.65rem; padding:0 6px;">
+                <button class="btn-sm" style="padding:0 8px; height:24px; font-size:0.6rem;" onclick="confirmValidationRule(${formIdx}, ${fIdx})">ثبت</button>
+              </div>
+            </div>
+          </div>
+          <label style="display:flex; align-items:center; gap:3px; font-size:0.65rem; white-space:nowrap;">
+            <input type="checkbox" checked onchange="updateField(${formIdx}, ${fIdx}, 'isRequired', this.checked)">
+            اجباری
+          </label>
+          <input type="text" placeholder="متن راهنما" style="flex:1; min-width:80px; font-size:0.75rem;" onchange="updateField(${formIdx}, ${fIdx}, 'placeholder', this.value)">
+        </div>
+        <button class="btn-sm btn-danger-sm" onclick="removeField(${formIdx}, ${fIdx})">✕</button>
+      </div>
+    `;
+    container.insertAdjacentHTML('beforeend', html);
+  }
+
+  function removeField(formIdx, fIdx) {
+    const row = document.getElementById(`fieldRow_${formIdx}_${fIdx}`);
+    if (row) row.remove();
+  }
+
+  function updateFormTitle(formIdx, value) {
+    if (!window._tempFormData) window._tempFormData = {};
+    if (!window._tempFormData[formIdx]) window._tempFormData[formIdx] = {};
+    window._tempFormData[formIdx].title = value;
+  }
+
+  function updateFormDesc(formIdx, value) {
+    if (!window._tempFormData) window._tempFormData = {};
+    if (!window._tempFormData[formIdx]) window._tempFormData[formIdx] = {};
+    window._tempFormData[formIdx].description = value;
+  }
+
+  function updateField(formIdx, fIdx, key, value) {
+    if (!window._tempFieldData) window._tempFieldData = {};
+    if (!window._tempFieldData[formIdx]) window._tempFieldData[formIdx] = {};
+    if (!window._tempFieldData[formIdx][fIdx]) window._tempFieldData[formIdx][fIdx] = {};
+    window._tempFieldData[formIdx][fIdx][key] = value;
+  }
+
+  function addOption(formIdx, fIdx, input) {
+    const value = input.value.trim();
+    if (!value) return;
+    const container = document.getElementById(`optionsContainer_${formIdx}_${fIdx}`);
+    if (!container) return;
+    const wrapper = container.querySelector('.options-input-wrapper');
+    const tag = document.createElement('span');
+    tag.className = 'option-tag';
+    tag.innerHTML = `${value} <i class="fas fa-times" onclick="removeOption(${formIdx}, ${fIdx}, '${value}')"></i>`;
+    container.insertBefore(tag, wrapper);
+    input.value = '';
+    if (!window._tempOptionData) window._tempOptionData = {};
+    if (!window._tempOptionData[formIdx]) window._tempOptionData[formIdx] = {};
+    if (!window._tempOptionData[formIdx][fIdx]) window._tempOptionData[formIdx][fIdx] = [];
+    window._tempOptionData[formIdx][fIdx].push(value);
+  }
+
+  function removeOption(formIdx, fIdx, value) {
+    const container = document.getElementById(`optionsContainer_${formIdx}_${fIdx}`);
+    if (!container) return;
+    const tags = container.querySelectorAll('.option-tag');
+    tags.forEach(tag => {
+      if (tag.textContent.trim() === value) tag.remove();
+    });
+    if (window._tempOptionData && window._tempOptionData[formIdx] && window._tempOptionData[formIdx][fIdx]) {
+      const idx = window._tempOptionData[formIdx][fIdx].indexOf(value);
+      if (idx > -1) window._tempOptionData[formIdx][fIdx].splice(idx, 1);
+    }
+  }
+
+  function updateFieldTypeInModal(formIdx, fIdx, value) {
+    if (!window._tempFieldData) window._tempFieldData = {};
+    if (!window._tempFieldData[formIdx]) window._tempFieldData[formIdx] = {};
+    if (!window._tempFieldData[formIdx][fIdx]) window._tempFieldData[formIdx][fIdx] = {};
+    window._tempFieldData[formIdx][fIdx].type = value;
+    
+    const row = document.getElementById(`fieldRow_${formIdx}_${fIdx}`);
+    if (!row) return;
+    const supportsOptions = ['checkbox', 'radio', 'select'].includes(value);
+    const optContainer = row.querySelector('.options-container');
+    if (optContainer) {
+      optContainer.style.opacity = supportsOptions ? '1' : '0.5';
+      const input = optContainer.querySelector('input');
+      if (input) input.disabled = !supportsOptions;
+    }
+  }
+
+  function addValidationRule(formIdx, fIdx, select) {
+    const ruleId = select.value;
+    if (!ruleId) return;
+    const rule = validationRulesList.find(r => r.id === ruleId);
+    if (!rule) return;
+    
+    const valContainer = document.getElementById(`validationContainer_${formIdx}_${fIdx}`);
+    if (!valContainer) return;
+    
+    const valDiv = document.getElementById(`validationValue_${formIdx}_${fIdx}`);
+    if (rule.type === 'number' || rule.type === 'text') {
+      valDiv.style.display = 'flex';
+      document.getElementById(`valInput_${formIdx}_${fIdx}`).value = '';
+      document.getElementById(`valInput_${formIdx}_${fIdx}`).focus();
+      valDiv.dataset.pendingRule = ruleId;
+    } else {
+      if (!window._tempValidationData) window._tempValidationData = {};
+      if (!window._tempValidationData[formIdx]) window._tempValidationData[formIdx] = {};
+      if (!window._tempValidationData[formIdx][fIdx]) window._tempValidationData[formIdx][fIdx] = {};
+      window._tempValidationData[formIdx][fIdx][ruleId] = true;
+      addValidationTag(formIdx, fIdx, ruleId, true);
+      select.value = '';
+    }
+  }
+
+  function confirmValidationRule(formIdx, fIdx) {
+    const valDiv = document.getElementById(`validationValue_${formIdx}_${fIdx}`);
+    const ruleId = valDiv.dataset.pendingRule;
+    if (!ruleId) return;
+    const input = document.getElementById(`valInput_${formIdx}_${fIdx}`);
+    const value = input.value.trim();
+    if (!value) { showToast('لطفاً مقدار را وارد کنید'); return; }
+    
+    if (!window._tempValidationData) window._tempValidationData = {};
+    if (!window._tempValidationData[formIdx]) window._tempValidationData[formIdx] = {};
+    if (!window._tempValidationData[formIdx][fIdx]) window._tempValidationData[formIdx][fIdx] = {};
+    window._tempValidationData[formIdx][fIdx][ruleId] = isNaN(value) ? value : Number(value);
+    
+    addValidationTag(formIdx, fIdx, ruleId, window._tempValidationData[formIdx][fIdx][ruleId]);
+    valDiv.style.display = 'none';
+    valDiv.dataset.pendingRule = '';
+    
+    const select = document.querySelector(`#validationContainer_${formIdx}_${fIdx} select`);
+    if (select) select.value = '';
+  }
+
+  function addValidationTag(formIdx, fIdx, ruleId, value) {
+    const valContainer = document.getElementById(`validationContainer_${formIdx}_${fIdx}`);
+    if (!valContainer) return;
+    const select = valContainer.querySelector('select');
+    const tag = document.createElement('span');
+    tag.className = 'validation-rule-tag';
+    const label = getValidationLabel(ruleId);
+    const displayValue = value === true ? '' : `: ${value}`;
+    tag.innerHTML = `${label}${displayValue} <i class="fas fa-times" onclick="removeValidationRule(${formIdx}, ${fIdx}, '${ruleId}')"></i>`;
+    valContainer.insertBefore(tag, select);
+  }
+
+  function removeValidationRule(formIdx, fIdx, ruleId) {
+    const valContainer = document.getElementById(`validationContainer_${formIdx}_${fIdx}`);
+    if (!valContainer) return;
+    const tags = valContainer.querySelectorAll('.validation-rule-tag');
+    tags.forEach(tag => {
+      if (tag.textContent.includes(getValidationLabel(ruleId))) tag.remove();
+    });
+    if (window._tempValidationData && window._tempValidationData[formIdx] && window._tempValidationData[formIdx][fIdx]) {
+      delete window._tempValidationData[formIdx][fIdx][ruleId];
+    }
+  }
+
+  function handleImageUpload(event) {
+    const files = event.target.files;
+    const preview = document.getElementById('imagePreview');
+    Array.from(files).forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const imgHtml = `
+          <div style="display:flex; align-items:center; gap:8px; border:1px solid #e2e8f0; border-radius:12px; padding:8px;">
+            <img src="${e.target.result}" style="width:60px; height:60px; object-fit:cover; border-radius:8px;">
+            <span style="font-size:0.7rem;">${file.name}</span>
+            <i class="fas fa-trash action-icon" style="color:#b91c1c;" onclick="this.parentElement.remove()"></i>
+          </div>
+        `;
+        if (preview.querySelector('span')) preview.innerHTML = imgHtml;
+        else preview.insertAdjacentHTML('beforeend', imgHtml);
+      };
+      reader.readAsDataURL(file);
+    });
+    event.target.value = '';
+  }
+
+  function collectFormData() {
+    const forms = [];
+    const groups = document.querySelectorAll('.field-group');
+    groups.forEach((group, idx) => {
+      const title = group.querySelector('input[placeholder="عنوان فرم"]')?.value || '';
+      const description = group.querySelector('input[placeholder="توضیحات فرم"]')?.value || '';
+      const fields = [];
+      const fieldRows = group.querySelectorAll('.field-row');
+      fieldRows.forEach(row => {
+        const label = row.querySelector('input[placeholder="برچسب"]')?.value || '';
+        const typeSelect = row.querySelector('select');
+        const type = typeSelect?.value || 'text';
+        const placeholder = row.querySelector('input[placeholder="متن راهنما"]')?.value || '';
+        const isRequired = row.querySelector('input[type="checkbox"]')?.checked !== false;
+        const hasOther = row.querySelector('label:has(input[type="checkbox"])')?.querySelector('input[type="checkbox"]')?.checked || false;
+        
+        const options = [];
+        const optionsContainer = row.querySelector('.options-container');
+        if (optionsContainer) {
+          const optionTags = optionsContainer.querySelectorAll('.option-tag');
+          optionTags.forEach(tag => {
+            const text = tag.textContent.trim();
+            if (text) options.push(text);
+          });
+        }
+        
+        const validationRules = {};
+        const valContainer = row.querySelector('.validation-selector');
+        if (valContainer) {
+          const tags = valContainer.querySelectorAll('.validation-rule-tag');
+          tags.forEach(tag => {
+            const text = tag.textContent.trim();
+            const matchedRule = validationRulesList.find(r => text.startsWith(r.label));
+            if (matchedRule) {
+              const rest = text.replace(matchedRule.label, '').trim();
+              if (rest.startsWith(':')) {
+                const val = rest.substring(1).trim();
+                validationRules[matchedRule.id] = isNaN(val) ? val : (val === 'true' ? true : (val === 'false' ? false : Number(val)));
+              } else {
+                validationRules[matchedRule.id] = true;
+              }
+            }
+          });
+        }
+        
+        if (label) {
+          const fieldData = {
+            id: 'fld_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+            label: label,
+            key: 'text_' + label.replace(/\s/g, '_').toLowerCase(),
+            type: type,
+            isRequired: isRequired,
+            placeholder: placeholder || label + ' را وارد کنید'
+          };
+          if (options.length > 0) fieldData.options = options;
+          if (hasOther) fieldData.hasOther = true;
+          if (Object.keys(validationRules).length > 0) fieldData.validationRules = validationRules;
+          fields.push(fieldData);
+        }
+      });
+      forms.push({ 
+        id: 'form_' + Date.now() + '_' + idx,
+        title: title || 'فرم ' + (idx + 1),
+        description: description,
+        fields: fields,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      });
+    });
+    return forms.length ? forms : [{ fields: [] }];
+  }
+
+  // ============================================================
+  //  SAVE ITEM FROM MODAL
+  // ============================================================
+  async function saveItemFromModal() {
     const isNew = (editingIndex === -1);
     let item;
-    if (isNew) {
-      item = { IsActive: true, IsTop10: false, documents: [], Categories: [] };
-      items.push(item);
-      editingIndex = items.length - 1;
+    if (isNew) { 
+      item = { data: {} }; 
+      items.push(item); 
+      editingIndex = items.length - 1; 
     }
     const idx = editingIndex;
     item = items[idx];
 
-    item.Id = parseInt(document.getElementById('editId').value) || idx+1;
-    item.Title = document.getElementById('editTitle').value.trim() || 'بدون عنوان';
-    item.Price = parseInt(document.getElementById('editPrice').value) || 0;
-    item.Discount = parseInt(document.getElementById('editDiscount').value) || 0;
+    item.serviceId = document.getElementById('editServiceId').value.trim() || 'svc_' + Date.now();
+    item.serviceTitle = document.getElementById('editTitle').value.trim() || 'بدون عنوان';
+    item.category = document.getElementById('editCategory').value.trim() || 'دسته‌بندی نشده';
+    item.sort = parseInt(document.getElementById('editSort').value) || 0;
+    item.Title = item.serviceTitle;
     
-    const catSelect = document.getElementById('editCategories');
-    const selectedCats = Array.from(catSelect.selectedOptions).map(opt => parseInt(opt.value));
-    item.Categories = selectedCats;
+    if (!item.data) item.data = {};
+    const data = item.data;
+    
+    data.price = parseInt(document.getElementById('editPrice').value) || 0;
+    data.cost = 0;
+    data.benefit = data.price;
+    data.duration = document.getElementById('editDuration').value.trim() || '—';
+    data.isSpecial = document.getElementById('editSpecial').value === 'true';
+    data.isEnabled = document.getElementById('editActive').value === 'true';
+    data.type = document.getElementById('editType').value || 'selectable';
+    data.isPaymentRequired = document.getElementById('editPaymentRequired').value === 'true';
+    data.isLocationBased = document.getElementById('editLocationBased').value === 'true';
+    data.autoInvoiceEnabled = document.getElementById('editAutoInvoice').value === 'true';
+    data.isNoticeEnabled = document.getElementById('editNoticeEnabled').value === 'true';
+    data.noticeText = document.getElementById('editNoticeText').value.trim() || null;
+    data.description = document.getElementById('editDescription').value.trim() || '';
+    data.title = item.serviceTitle;
+    data.id = item.serviceId;
 
-    item.IsTop10 = document.getElementById('editTop10').value === 'true';
-    item.Sort = parseInt(document.getElementById('editSort').value) || 0;
-    item.CategourySequence = parseInt(document.getElementById('editCatSeq').value) || 0;
-    item.IsActive = document.getElementById('editActive').value === 'true';
-    item.URL = document.getElementById('editUrl').value.trim() || '';
+    data.forms = collectFormData();
 
-    const titleInputs = document.querySelectorAll('.doc-title-input');
-    const typeSelects = document.querySelectorAll('.doc-type-select');
-    const newDocs = [];
-    titleInputs.forEach((input, i) => {
-      const title = input.value.trim();
-      const typeId = typeSelects[i] ? parseInt(typeSelects[i].value) : 1;
-      if (title) newDocs.push({ title, typeId });
-    });
-    item.documents = newDocs;
+    const imagePreviews = document.querySelectorAll('#imagePreview img');
+    data.images = Array.from(imagePreviews).map((img, idx) => ({
+      id: 'img_' + Date.now() + '_' + idx,
+      url: img.src,
+      size: 0,
+      originalName: 'image_' + idx + '.jpg',
+      createdAt: new Date().toISOString()
+    }));
 
+    if (!categories.some(c => c.name === item.category) && item.category !== 'دسته‌بندی نشده') {
+      const newCat = { id: categories.length + 1, name: item.category, sort: categories.length + 1, icon: 'fa-tag', isEnable: true };
+      await createCategoryOnServer(newCat);
+      categories.push(newCat);
+    }
+
+    data.updatedAt = new Date().toISOString();
+    if (isNew) data.createdAt = new Date().toISOString();
+
+    await saveServiceToServer(item);
+    extractCategoriesFromServices(items);
     applyFilters();
     closeModal();
-    showToast(isNew ? 'آیتم جدید اضافه شد' : 'آیتم به‌روز شد');
+    showToast(isNew ? '✅ آیتم جدید اضافه شد' : '✅ آیتم به‌روز شد');
   }
 
-  // ---------- CRUD ----------
-  function deleteItem(idx) {
-    if (!confirm('حذف شود؟')) return;
-    items.splice(idx, 1);
-    applyFilters();
-    showToast('حذف شد');
-  }
-
-  function duplicateItem(idx) {
-    const original = items[idx];
-    const copy = JSON.parse(JSON.stringify(original));
-    copy.Id = Date.now();
-    copy.Title = copy.Title + ' (کپی)';
-    if (Array.isArray(copy.documents)) copy.documents = copy.documents.map(d => ({ ...d }));
-    else copy.documents = [];
-    if (!Array.isArray(copy.Categories)) copy.Categories = [];
-    items.splice(idx+1, 0, copy);
-    applyFilters();
-    showToast('کپی شد');
-  }
-
-  // ---------- JSON IMPORT / EXPORT ----------
+  // ============================================================
+  //  JSON IMPORT / EXPORT
+  // ============================================================
   function loadJSON(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -825,183 +1780,106 @@
         const json = JSON.parse(e.target.result);
         if (Array.isArray(json)) {
           items = json.map(item => {
-            // Convert categories to IDs if needed
-            if (item.Categories !== undefined) {
-              item.Categories = convertCategoriesToIds(item.Categories);
-            } else {
-              item.Categories = [];
-            }
-
-            if (Array.isArray(item.documents)) {
-              item.documents = item.documents.map(d => ({
-                title: d.title || d.text || 'مدرک',
-                typeId: d.typeId || d.type || 1
-              }));
-            } else if (Array.isArray(item.Documents)) {
-              item.documents = item.Documents.map(d => ({
-                title: d.title || d.text || 'مدرک',
-                typeId: d.typeId || d.type || 1
-              }));
-            } else if (typeof item.Documents === 'string') {
-              item.documents = parseDocumentsToArray(item.Documents);
-            } else {
-              item.documents = [];
-            }
-            if (item.IsTop10 === undefined) item.IsTop10 = false;
-            if (item.Sort === undefined) item.Sort = 0;
-            if (item.CategourySequence === undefined) item.CategourySequence = 0;
-            if (item.IsActive === undefined) item.IsActive = true;
-            if (item.Discount === undefined) item.Discount = 0;
-            if (item.Price === undefined) item.Price = 0;
+            if (!item.data) item.data = {};
+            if (!item.serviceId) item.serviceId = item.Id || 'svc_' + Date.now();
+            if (!item.serviceTitle) item.serviceTitle = item.Title || 'بدون عنوان';
+            if (!item.category) item.category = item.category || item.Category || 'دسته‌بندی نشده';
+            if (item.sort === undefined) item.sort = item.Sort || 0;
+            if (!item.data.forms) item.data.forms = [{ fields: [] }];
+            if (!item.data.forms[0]) item.data.forms[0] = { fields: [] };
+            if (item.data.price === undefined) item.data.price = item.Price || 0;
+            if (item.data.isEnabled === undefined) item.data.isEnabled = true;
+            if (item.data.isSpecial === undefined) item.data.isSpecial = false;
+            if (item.data.type === undefined) item.data.type = 'selectable';
+            if (item.data.isPaymentRequired === undefined) item.data.isPaymentRequired = true;
+            if (item.data.autoInvoiceEnabled === undefined) item.data.autoInvoiceEnabled = true;
+            item.data.forms.forEach(form => {
+              if (form.fields) {
+                form.fields.forEach(field => {
+                  if (!field.options) field.options = [];
+                  if (!field.validationRules) field.validationRules = {};
+                });
+              }
+            });
             return item;
           });
+          extractCategoriesFromServices(items);
           applyFilters();
-          showToast(`بارگذاری شد: ${items.length} آیتم`);
-        } else {
-          alert('JSON باید آرایه باشد');
-        }
-      } catch (err) {
-        alert('خطا: ' + err.message);
-      }
+          showToast(`✅ بارگذاری شد: ${items.length} آیتم`);
+        } else alert('JSON باید آرایه باشد');
+      } catch (err) { alert('خطا: ' + err.message); }
     };
     reader.readAsText(file);
     event.target.value = '';
   }
 
-  function exportJSON() {
-    const exportItems = items.map(item => {
-      const copy = {
-        Id: item.Id || 0,
-        Title: item.Title || '',
-        Price: typeof item.Price === 'number' ? item.Price : (parseInt(item.Price) || 0),
-        Discount: typeof item.Discount === 'number' ? item.Discount : (parseInt(item.Discount) || 0),
-        Categories: Array.isArray(item.Categories) ? item.Categories : [],
-        IsTop10: item.IsTop10 === true,
-        IsActive: item.IsActive !== false,
-        Sort: item.Sort || 0,
-        URL: item.URL || '',
-        Documents: Array.isArray(item.documents) ? item.documents.map(d => ({
-          title: d.title || 'مدرک',
-          typeId: d.typeId || 1
-        })) : []
+  async function exportJSON() {
+    showLoading(true);
+    try {
+      const data = await apiRequest('GET', '/api/services');
+      
+      const exportData = {
+        exported_at: new Date().toISOString(),
+        total: data.items.length,
+        services: data.items.map(item => ({
+          serviceId: item.serviceId,
+          serviceTitle: item.serviceTitle,
+          category: item.category,
+          sort: item.sort || 0,
+          price: item.price || 0,
+          duration: item.duration || '—',
+          isSpecial: item.isSpecial || false,
+          isEnabled: item.isEnabled !== false,
+          type: item.type || 'selectable',
+          description: item.description || ''
+        })),
+        categories: categories.map(cat => ({
+          id: cat.id,
+          name: cat.name,
+          icon: cat.icon || 'fa-tag',
+          sort: cat.sort || 0,
+          isEnable: cat.isEnable !== false
+        }))
       };
-      return copy;
-    });
-    const blob = new Blob([JSON.stringify(exportItems, null, 2)], { type: 'application/json' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'cofenet-items.json';
-    a.click();
-    showToast('خروجی JSON');
+      
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `cofenet-services-${new Date().toISOString().slice(0,10)}.json`;
+      a.click();
+      showToast(`✅ ${exportData.total} سرویس خروجی گرفته شد`);
+    } catch (error) {
+      showToast('❌ خطا در خروجی گرفتن: ' + error.message);
+    } finally {
+      showLoading(false);
+    }
   }
 
-  function saveChanges() {
-    items.forEach(item => {
-      if (!Array.isArray(item.documents)) item.documents = [];
-      if (item.IsTop10 === undefined) item.IsTop10 = false;
-      if (item.Sort === undefined) item.Sort = 0;
-      if (item.CategourySequence === undefined) item.CategourySequence = 0;
-      if (item.IsActive === undefined) item.IsActive = true;
-      if (item.Discount === undefined) item.Discount = 0;
-      if (item.Price === undefined) item.Price = 0;
-      if (!Array.isArray(item.Categories)) item.Categories = [];
-    });
-    applyFilters();
-    showToast('همگام‌سازی شد');
-  }
-
-  // ---------- TOAST ----------
-  function showToast(msg) {
-    const t = document.getElementById('toast');
-    t.textContent = msg;
-    t.style.display = 'block';
-    clearTimeout(t._hide);
-    t._hide = setTimeout(() => { t.style.display = 'none'; }, 3000);
-  }
-
-  // ---------- INIT SAMPLE ----------
-  function initSample() {
-    const sample = [
-      {
-        Id: 1,
-        Title: "ثبت نام ایران خودرو",
-        Price: 199000,
-        Discount: 10000,
-        Categories: [1],
-        IsTop10: false,
-        IsActive: true,
-        Sort: 1,
-        URL: "https://cafeneti.com/services/iran-khodro",
-        Documents: [
-          { title: "کد ملی و اطلاعات هویتی متقاضی", typeId: 1 },
-          { title: "شماره تلفن همراه به نام متقاضی", typeId: 1 },
-          { title: "شماره شبای بانکی", typeId: 1 },
-          { title: "اطلاعات حساب بانکی", typeId: 1 },
-          { title: "آدرس محل سکونت", typeId: 1 }
-        ]
-      },
-      {
-        Id: 2,
-        Title: "ثبت خودروی فرسوده در سامانه اسقاط",
-        Price: 250000,
-        Discount: 0,
-        Categories: [1],
-        IsTop10: false,
-        IsActive: true,
-        Sort: 2,
-        URL: "https://cafeneti.com/services/scrap-car-registration",
-        Documents: [
-          { title: "سند یا کارت شناسایی خودرو", typeId: 1 },
-          { title: "کارت ملی مالک", typeId: 1 },
-          { title: "مشخصات کامل خودرو شامل شماره موتور و شاسی", typeId: 1 },
-          { title: "شماره تماس معتبر برای پیگیری", typeId: 1 }
-        ]
-      },
-      {
-        Id: 3,
-        Title: "ثبت نام وام ازدواج فوری",
-        Price: 280000,
-        Discount: 50000,
-        Categories: [5],
-        IsTop10: true,
-        IsActive: true,
-        Sort: 1,
-        URL: "https://cafeneti.com/services/sabtenam-vam-ezdevaj",
-        Documents: [
-          { title: "کد ملی زوج و زوجه", typeId: 1 },
-          { title: "شماره شناسنامه زوجین", typeId: 1 },
-          { title: "تاریخ عقد و شماره عقدنامه", typeId: 1 },
-          { title: "کد پستی محل سکونت", typeId: 1 },
-          { title: "شماره تماس معتبر", typeId: 1 },
-          { title: "انتخاب بانک مورد نظر", typeId: 1 }
-        ]
+  async function saveChanges() {
+    showLoading(true);
+    try {
+      let saved = 0;
+      for (const item of items) {
+        const success = await saveServiceToServer(item);
+        if (success) saved++;
       }
-    ];
-    items = sample.map(item => {
-      item.documents = item.Documents || [];
-      if (item.IsTop10 === undefined) item.IsTop10 = false;
-      if (item.Sort === undefined) item.Sort = 0;
-      if (item.CategourySequence === undefined) item.CategourySequence = 0;
-      if (item.IsActive === undefined) item.IsActive = true;
-      if (item.Discount === undefined) item.Discount = 0;
-      if (item.Price === undefined) item.Price = 0;
-      if (!Array.isArray(item.Categories)) item.Categories = [];
-      return item;
-    });
-    applyFilters();
+      showToast(`✅ ${saved} از ${items.length} آیتم ذخیره شد`);
+      await refreshData();
+    } catch (error) {
+      showToast('❌ خطا در ذخیره: ' + error.message);
+    } finally {
+      showLoading(false);
+    }
   }
 
-  initSample();
+  // ============================================================
+  //  INIT
+  // ============================================================
+  async function init() {
+    await refreshData();
+  }
 
   // Make functions globally accessible
-  window.addDocItem = addDocItem;
-  window.removeDocItem = removeDocItem;
-  window.editDocTitle = editDocTitle;
-  window.updateDocType = updateDocType;
-  window.updateCategories = updateCategories;
-  window.updateTop10 = updateTop10;
-  window.updateSort = updateSort;
-  window.updateCategorySequence = updateCategorySequence;
   window.openEditModal = openEditModal;
   window.openAddModal = openAddModal;
   window.closeModal = closeModal;
@@ -1011,15 +1889,42 @@
   window.exportJSON = exportJSON;
   window.loadJSON = loadJSON;
   window.saveChanges = saveChanges;
-  window.addDocField = addDocField;
+  window.applyFilters = applyFilters;
+  window.clearFilters = clearFilters;
+  window.updateSort = updateSort;
+  window.updateSpecial = updateSpecial;
+  window.updateEnabled = updateEnabled;
+  window.updateTitle = updateTitle;
+  window.updatePrice = updatePrice;
+  window.updateCategory = updateCategory;
   window.openCategoryModal = openCategoryModal;
   window.closeCategoryModal = closeCategoryModal;
   window.renameCategory = renameCategory;
   window.deleteCategory = deleteCategory;
   window.addNewCategory = addNewCategory;
   window.updateCategorySort = updateCategorySort;
-  window.applyFilters = applyFilters;
-  window.clearFilters = clearFilters;
+  window.updateCategoryIconInline = updateCategoryIconInline;
+  window.updateCategoryEnable = updateCategoryEnable;
+  window.downloadCategories = downloadCategories;
+  window.addForm = addForm;
+  window.removeForm = removeForm;
+  window.addField = addField;
+  window.removeField = removeField;
+  window.updateFormTitle = updateFormTitle;
+  window.updateFormDesc = updateFormDesc;
+  window.updateField = updateField;
+  window.handleImageUpload = handleImageUpload;
+  window.collectFormData = collectFormData;
+  window.addOption = addOption;
+  window.removeOption = removeOption;
+  window.updateFieldTypeInModal = updateFieldTypeInModal;
+  window.addValidationRule = addValidationRule;
+  window.removeValidationRule = removeValidationRule;
+  window.confirmValidationRule = confirmValidationRule;
+  window.refreshData = refreshData;
+
+  // Start the app
+  init();
 </script>
 </body>
 </html>
