@@ -1281,7 +1281,7 @@ async def show_my_profile(query, context: ContextTypes.DEFAULT_TYPE) -> None:
         text += f"📞 شماره تماس: {phone_display}\n"
         text += f"🔑 کد معرف: {referral_code}\n"
         text += f"💰 موجودی: {balance} تومان\n"
-        text += f"💰 درآمد کد معرف: {referral_income}\n"
+        text += f"💰 درآمد کد معرف: {referral_income} تومان\n"
         text += f"📦 تعداد سرویس‌های خریداری‌شده: {purchased_services} عدد\n"
         text += f"🧾 تعداد فاکتورهای پرداخت‌شده: {paid_invoices} عدد\n"
         text += f"👥 تعداد زیرمجموعه‌های شما: {referrals_count} نفر\n"
