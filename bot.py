@@ -1226,52 +1226,76 @@ async def show_my_profile(query, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Show user profile information and actions."""
     try:
         await query.answer()
-        
+
         # Ensure user is authenticated
         if not await ensure_authenticated(query, context):
             await query.edit_message_text(
                 "❌ *خطا در احراز هویت*\n\n"
                 "لطفا مجددا /start را بزنید.",
-                parse_mode=ParseMode.MARKDOWN
+                parse_mode=None   
             )
             return
-        
+
         user_data = get_authenticated_user(context)
         if not user_data:
             await query.edit_message_text(
                 "❌ اطلاعات کاربر یافت نشد. لطفا مجددا /start را بزنید.",
-                parse_mode=ParseMode.MARKDOWN
+                parse_mode=None
             )
             return
-        
-        # Extract and clean fields
+
+        # Extract basic fields
         user_id = user_data.get('id', 'نامشخص')
         if isinstance(user_id, str) and user_id.startswith("tg_"):
             user_id = user_id[3:]  # remove "tg_" prefix
-        
-        first_name = user_data.get('first_name', '')
-        last_name = user_data.get('last_name', '')
-        username = user_data.get('username')
-        phone = user_data.get('phone')
-        
-        # Build profile text (using plain text, no Markdown backticks)
-        text = "👤 *پروفایل من*\n\n"
-        text += f"🆔 شناسه: {user_id}\n"
-        # text += f"👤 نام: {first_name} {last_name}\n"
-        if username:
-            text += f"👤 نام کاربری: @{username}\n"
-        # if phone:
-        #     text += f"📞 تلفن: {phone}\n"
-        # else:
-        # text += "📞 تلفن: تکمیل نشده\n"
+
+
+
+        # ----- Fetch full profile statistics -----
+        profile_stats = await get_user_full_profile(context)   # ✅ correct        # Expecting: registration_date, referral_income, balance,
+        print(f"Fetched profile stats: {profile_stats}")  # Debugging line
+        # purchased_services_count, paid_invoices_count,
+        # referrals_count, user_group, referral_code
+        first_name = profile_stats.get('firstName', '')
+        last_name = profile_stats.get('lastName', '')
+        username = profile_stats.get('username', '')
+        phone = profile_stats.get('phone', '')
+        reg_date = profile_stats.get('registrationDate', 'نامشخص')
+        referral_income = profile_stats.get('referralIncome', 0)
+        balance = profile_stats.get('balance', 0)
+        purchased_services = profile_stats.get('purchasedServicesCount', 0)
+        paid_invoices = profile_stats.get('paidInvoicesCount', 0)
+        referrals_count = profile_stats.get('referralsCount', 0)
+        user_group = profile_stats.get('userGroup', 'عادی')
+        referral_code = profile_stats.get('referralCode', 'ندارد')
+
+        # Format phone – show special message if not provided
+        phone_display = "ارسال نشده است"
+        logger.info(f"User {user_id} profile: {first_name} {last_name}, phone: {phone_display}, reg_date: {reg_date}, referral_code: {referral_code}, referral_income: {referral_income}, balance: {balance}, purchased_services: {purchased_services}, paid_invoices: {paid_invoices}, referrals_count: {referrals_count}, user_group: {user_group}")
+        date_obj = datetime.fromisoformat(reg_date.replace("Z", "+00:00"))
+        submitted_date = to_jalali(date_obj)  # This converts to Persian date
+        # Build profile text with all requested fields
+        text = "👤 پروفایل من\n\n"  # no asterisks
+        text += f"🆔 آیدی عددی: {user_id}\n"
+        text += f"👤 نام: {first_name}\n"
+        text += f"📞 شماره تماس: {phone_display}\n"
+        text += f"🔑 کد معرف: {referral_code}\n"
+        text += f"💰 موجودی: {balance} تومان\n"
+        text += f"💰 درآمد کد معرف: {referral_income}\n"
+        text += f"📦 تعداد سرویس‌های خریداری‌شده: {purchased_services} عدد\n"
+        text += f"🧾 تعداد فاکتورهای پرداخت‌شده: {paid_invoices} عدد\n"
+        text += f"👥 تعداد زیرمجموعه‌های شما: {referrals_count} نفر\n"
+        text += f"👤 گروه کاربری: {user_group}\n"
+        text += f"📅 زمان ثبت‌نام: {submitted_date}\n"
+
         text += "\n🔹"
-        
+
         keyboard = [
             [InlineKeyboardButton("📋 درخواست‌های من", callback_data="my_requests")],
             [InlineKeyboardButton("🔙 بازگشت به منو", callback_data="back_to_menu")]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        
+
         await query.edit_message_text(
             text,
             reply_markup=reply_markup,
@@ -1280,7 +1304,36 @@ async def show_my_profile(query, context: ContextTypes.DEFAULT_TYPE) -> None:
     except Exception as e:
         logger.error(f"Error in show_my_profile: {e}")
         logger.error(traceback.format_exc())
-        await query.edit_message_text("❌ خطا در نمایش پروفایل.")    
+        await query.edit_message_text("❌ خطا در نمایش پروفایل.")       
+        
+async def get_user_full_profile(context: ContextTypes.DEFAULT_TYPE) -> dict:
+    """
+    Fetch the full user profile from the FastAPI /api/users/profile endpoint.
+    Uses the stored JWT token from context.user_data.
+    Returns dict with all fields, or empty dict on error.
+    """
+    user_data = context.user_data.get('authenticated_user')
+    if not user_data:
+        return {}
+    
+    token = user_data.get('token')
+    if not token:
+        return {}
+    
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.get(
+                  f"{API_BASE.rstrip('/')}/api/users/profile",
+                headers={"Authorization": f"Bearer {token}"}
+            )
+            if resp.status_code == 200:
+                return resp.json()
+            else:
+                logger.error(f"Profile API error: {resp.status_code} - {resp.text}")
+                return {}
+    except Exception as e:
+        logger.error(f"Error calling profile API: {e}")
+        return {}      
 @handle_errors
 async def back_to_menu(query, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Return to main menu"""

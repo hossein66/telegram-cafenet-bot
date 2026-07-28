@@ -1,6 +1,9 @@
 # app.py - Fixed Version with Better Error Handling
 
 
+import random
+import string
+
 from fastapi import FastAPI, HTTPException, Depends, Response, status, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
@@ -332,16 +335,38 @@ def init_db():
                     created_at TEXT
                 )
             """)
+            cur.execute("""
+    CREATE TABLE IF NOT EXISTS wallets (
+        user_id TEXT PRIMARY KEY,
+        balance INTEGER DEFAULT 0,
+        referral_income INTEGER DEFAULT 0,
+        updated_at TEXT,
+        FOREIGN KEY (user_id) REFERENCES users(id)
+    )
+""")
 
+            cur.execute("""
+    CREATE TABLE IF NOT EXISTS user_groups (
+        user_id TEXT PRIMARY KEY,
+        group_name TEXT DEFAULT 'عادی',
+        FOREIGN KEY (user_id) REFERENCES users(id)
+    )
+""")
             # Add columns to requests if not exist
-            try:
-                cur.execute("ALTER TABLE requests ADD COLUMN referral_code TEXT")
-            except sqlite3.OperationalError:
-                pass
+
             try:
                 cur.execute("ALTER TABLE requests ADD COLUMN discount_code TEXT")
             except sqlite3.OperationalError:
                 pass
+            
+            try:
+                cur.execute("ALTER TABLE users ADD COLUMN referral_code TEXT")
+            except sqlite3.OperationalError:
+                 pass  # already exists
+            try:
+                cur.execute("ALTER TABLE users ADD COLUMN referrer_id TEXT")
+            except sqlite3.OperationalError:
+                 pass
             
             
             # ─── CREATE INDEXES ─────────────────────────────────────
@@ -794,6 +819,125 @@ def get_categories_cached():
         print(f"❌ Error in get_categories_cached: {e}")
         return []
 
+
+def generate_referral_code(length=6):
+    return ''.join(random.choices(string.ascii_uppercase + string.digits, k=length))
+
+def ensure_user_referral_code(user_id):
+    with get_db() as conn:
+        cur = conn.cursor()
+        cur.execute("SELECT referral_code FROM users WHERE id = ?", (user_id,))
+        row = cur.fetchone()
+        if row and row["referral_code"]:
+            return row["referral_code"]
+
+        # generate unique code
+        while True:
+            code = generate_referral_code()
+            cur.execute("SELECT 1 FROM users WHERE referral_code = ?", (code,))
+            if not cur.fetchone():
+                break
+
+        cur.execute("UPDATE users SET referral_code = ? WHERE id = ?", (code, user_id))
+        conn.commit()
+        return code
+       
+@app.get("/api/users/profile")
+def get_user_profile(user: dict = Depends(get_current_user)):
+    """
+    Get complete profile data for the authenticated user.
+    Includes referral code, balance, stats, etc.
+    """
+    try:
+        user_id = user["id"]
+        print(f"Fetching profile for user_id: {user_id}")
+        # Ensure referral code exists
+
+        with get_db() as conn:
+            cur = conn.cursor()
+
+            # 1. Basic user info
+            cur.execute("""
+                SELECT id, phone, first_name, last_name, username,
+                       telegram_id, is_premium, created_at, referral_code
+                FROM users WHERE id = ?
+            """, (user_id,))
+            row = cur.fetchone()
+            if not row:
+                raise HTTPException(404, "User not found")
+            user_row = dict(row)
+
+            # 2. Count purchased services (e.g., requests with status 'done')
+            cur.execute("""
+                SELECT COUNT(*) as purchased
+                FROM requests
+                WHERE id = ? AND status = 'done'
+            """, (user_id,))
+            purchased_services = cur.fetchone()["purchased"] or 0
+
+            # 3. Count paid invoices (if you have an invoices table; adjust as needed)
+            # For now, we can count requests with status 'done' as paid invoices
+            # If you have a separate invoices table, modify accordingly.
+            cur.execute("""
+                SELECT COUNT(*) as paid
+                FROM requests
+                WHERE id = ? AND status = 'done'
+            """, (user_id,))
+            paid_invoices = cur.fetchone()["paid"] or 0
+
+            # 4. Count referrals (users who used this user's referral code)
+            cur.execute("""
+                SELECT COUNT(*) as referrals
+                FROM users
+                WHERE referrer_id = ?
+            """, (user_id,))
+            referrals_count = cur.fetchone()["referrals"] or 0
+
+            # 5. Referral income and balance (from a 'wallets' table – you may need to create one)
+            # For now, we return 0 as placeholder. Create a 'wallets' table if needed.
+            cur.execute("""
+                SELECT referral_income, balance
+                FROM wallets
+                WHERE user_id = ?
+            """, (user_id,))
+            wallet = cur.fetchone()
+            referral_income = wallet["referral_income"] if wallet else 0
+            balance = wallet["balance"] if wallet else 0
+
+            # 6. User group – if you have a user_groups table, else default to 'عادی'
+            cur.execute("""
+                SELECT group_name FROM user_groups WHERE user_id = ?
+            """, (user_id,))
+            group_row = cur.fetchone()
+            user_group = group_row["group_name"] if group_row else "عادی"
+        # Build response
+            print(user_row)
+            print(f"User row: {user_row['referral_code']}")
+            # if not user_row["referral_code"]:
+            #     user_row["referral_code"] = ensure_user_referral_code(user_id)
+        return {
+            "userId": user_row["id"],
+            "firstName": user_row["first_name"] or "",
+            "lastName": user_row["last_name"] or "",
+            "username": user_row["username"] or "",
+            "phone": user_row["phone"] or "",
+            "registrationDate": user_row["created_at"],
+            "referralCode": user_row["referral_code"],
+            "referralIncome": referral_income,
+            "balance": balance,
+            "purchasedServicesCount": purchased_services,
+            "paidInvoicesCount": paid_invoices,
+            "referralsCount": referrals_count,
+            "userGroup": user_group
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Error in get_user_profile: {e}")
+        raise HTTPException(500, detail=str(e))
+    
+    
 @app.post("/api/categories")
 def create_category(cat: Category):
     try:
@@ -1659,27 +1803,64 @@ def telegram_login(req: TelegramLogin):
 
         with get_db() as conn:
             cur = conn.cursor()
-            cur.execute("""
-                INSERT OR REPLACE INTO users
-                    (id, phone, first_name, last_name, username, telegram_id, is_premium, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                user_id,
-                phone,
-                first_name,
-                last_name,
-                username,
-                tg_id,
-                1 if is_premium else 0,
-                datetime.utcnow().isoformat(),
-                datetime.utcnow().isoformat()
-            ))
+
+            # 1. Check if user already exists
+            cur.execute("SELECT referral_code FROM users WHERE id = ?", (user_id,))
+            existing = cur.fetchone()
+
+            if existing:
+                # Update existing user – keep referral_code unchanged
+                cur.execute("""
+                    UPDATE users 
+                    SET phone = ?, first_name = ?, last_name = ?, username = ?, 
+                        telegram_id = ?, is_premium = ?, updated_at = ?
+                    WHERE id = ?
+                """, (
+                    phone,
+                    first_name,
+                    last_name,
+                    username,
+                    tg_id,
+                    1 if is_premium else 0,
+                    datetime.utcnow().isoformat(),
+                    user_id
+                ))
+                referral_code = existing["referral_code"]  # preserve it
+            else:
+                # Generate a unique referral code for new user
+                while True:
+                    referral_code = generate_referral_code()
+                    cur.execute("SELECT 1 FROM users WHERE referral_code = ?", (referral_code,))
+                    if not cur.fetchone():
+                        break
+
+                # Insert new user with referral_code
+                cur.execute("""
+                    INSERT INTO users
+                        (id, phone, first_name, last_name, username, telegram_id, is_premium,
+                         referral_code, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    user_id,
+                    phone,
+                    first_name,
+                    last_name,
+                    username,
+                    tg_id,
+                    1 if is_premium else 0,
+                    referral_code,
+                    datetime.utcnow().isoformat(),
+                    datetime.utcnow().isoformat()
+                ))
+
             conn.commit()
 
+            # 2. Update token (always)
             token = create_token(user_id, phone)
             cur.execute("UPDATE users SET token = ? WHERE id = ?", (token, user_id))
             conn.commit()
 
+            # 3. Fetch final user data
             cur.execute("SELECT * FROM users WHERE id = ?", (user_id,))
             row = cur.fetchone()
 
@@ -1701,7 +1882,6 @@ def telegram_login(req: TelegramLogin):
     except Exception as e:
         print(f"❌ Error in telegram_login: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
 @app.get("/api/auth/me")
 def get_me(user: dict = Depends(get_current_user)):
     try:
@@ -2374,7 +2554,7 @@ def seed_data():
                 """, sample_codes)
 
                 sample_discount = [
-                    ("DISCOUNT20", 20000, None, 3, 0, 1, datetime.utcnow().isoformat()),
+                    ("DISCOUNT15", 20000, None, 3, 0, 1, datetime.utcnow().isoformat()),
                 ]
                 cur.executemany("""
                     INSERT INTO discount_codes (code, discount_amount, expires_at, max_uses, used_count, is_active, created_at)
