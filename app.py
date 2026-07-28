@@ -1756,12 +1756,32 @@ def verify_otp(req: OTPVerify):
 
         with get_db() as conn:
             cur = conn.cursor()
-            cur.execute("""
-                INSERT OR IGNORE INTO users (id, phone, created_at, updated_at)
-                VALUES (?, ?, ?, ?)
-            """, (user_id, req.phone, datetime.utcnow().isoformat(), datetime.utcnow().isoformat()))
-            cur.execute("UPDATE users SET token = ?, updated_at = ? WHERE id = ?",
-                        (token, datetime.utcnow().isoformat(), user_id))
+
+            # Check if user exists
+            cur.execute("SELECT referral_code FROM users WHERE id = ?", (user_id,))
+            existing = cur.fetchone()
+
+            if existing:
+                # Update existing – keep referral_code
+                cur.execute("""
+                    UPDATE users 
+                    SET phone = ?, token = ?, updated_at = ?
+                    WHERE id = ?
+                """, (req.phone, token, datetime.utcnow().isoformat(), user_id))
+            else:
+                # Generate unique code
+                while True:
+                    referral_code = generate_referral_code()
+                    cur.execute("SELECT 1 FROM users WHERE referral_code = ?", (referral_code,))
+                    if not cur.fetchone():
+                        break
+
+                cur.execute("""
+                    INSERT INTO users (id, phone, token, referral_code, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                """, (user_id, req.phone, token, referral_code,
+                      datetime.utcnow().isoformat(), datetime.utcnow().isoformat()))
+
             conn.commit()
 
             cur.execute("SELECT * FROM users WHERE id = ?", (user_id,))
@@ -1787,7 +1807,7 @@ def verify_otp(req: OTPVerify):
     except Exception as e:
         print(f"❌ Error in verify_otp: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
+    
 @app.post("/api/auth/telegram-login")
 def telegram_login(req: TelegramLogin):
     try:
@@ -1804,7 +1824,7 @@ def telegram_login(req: TelegramLogin):
         with get_db() as conn:
             cur = conn.cursor()
 
-            # 1. Check if user already exists
+            # Check if user exists
             cur.execute("SELECT referral_code FROM users WHERE id = ?", (user_id,))
             existing = cur.fetchone()
 
@@ -1825,9 +1845,9 @@ def telegram_login(req: TelegramLogin):
                     datetime.utcnow().isoformat(),
                     user_id
                 ))
-                referral_code = existing["referral_code"]  # preserve it
+                referral_code = existing["referral_code"]  # keep it
             else:
-                # Generate a unique referral code for new user
+                # Generate unique code for new user
                 while True:
                     referral_code = generate_referral_code()
                     cur.execute("SELECT 1 FROM users WHERE referral_code = ?", (referral_code,))
@@ -1855,12 +1875,12 @@ def telegram_login(req: TelegramLogin):
 
             conn.commit()
 
-            # 2. Update token (always)
+            # Update token (always)
             token = create_token(user_id, phone)
             cur.execute("UPDATE users SET token = ? WHERE id = ?", (token, user_id))
             conn.commit()
 
-            # 3. Fetch final user data
+            # Fetch final user data
             cur.execute("SELECT * FROM users WHERE id = ?", (user_id,))
             row = cur.fetchone()
 
