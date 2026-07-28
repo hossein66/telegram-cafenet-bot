@@ -1950,6 +1950,7 @@ async def process_referral_code(update: Update, context: ContextTypes.DEFAULT_TY
     context.user_data['referral_discount_value'] = discount_value
     context.user_data['referral_discount_type'] = discount_type
     context.user_data['referral_discount_amount'] = discount_amount   # original amount (fixed or percent)
+    context.user_data['code_type'] = "معرف"
 
     context.user_data.pop(AWAITING_REFERRAL, None)
     await update_payment_screen(update, context, discount_applied=discount_value, code_type="معرف", discount_type=discount_type)
@@ -2002,6 +2003,7 @@ async def process_discount_code(update: Update, context: ContextTypes.DEFAULT_TY
     context.user_data[DISCOUNT_APPLIED] = True
     context.user_data['discount_value'] = discount_value
     context.user_data['discount_type'] = discount_type
+    context.user_data['code_type'] = "تخفیف"
     context.user_data['discount_amount_original'] = discount_amount
 
     context.user_data.pop(AWAITING_DISCOUNT, None)
@@ -2039,6 +2041,7 @@ async def update_payment_screen(update, context, discount_applied, code_type, di
                 text += f"🎯 *{code_type} اعمال شد:* {percent}% تخفیف ({format_price(discount_applied)} تومان)\n"
         else:
             text += f"🎯 *{code_type} اعمال شد:* {format_price(discount_applied)} تومان تخفیف\n"
+   
     text += f"💰 مبلغ قابل پرداخت: {amount} تومان\n\n"
     text += "✅ لطفا مبلغ را به شماره کارت زیر واریز کنید:\n"
     text += f"🔹 شماره کارت: {card_number}\n"
@@ -2250,6 +2253,22 @@ async def handle_payment(query, context: ContextTypes.DEFAULT_TYPE) -> None:
 
         text = f"💰 *پرداخت*\n\n"
         text += f"سرویس: {service.get('Title', '')}\n"
+        discount_applied= context.user_data.get("discount_value", 0)
+        code_type = context.user_data.get('code_type', '')
+        if discount_applied > 0:
+            discount_type= context.user_data.get('discount_type', 'fixed')
+            if discount_type == "percent":
+                # Show the percentage and the value
+                original = context.user_data.get('original_price', final_price + discount_applied)
+                percent = context.user_data.get('discount_amount_original', 0) if code_type == "تخفیف" else context.user_data.get('referral_discount_amount', 0)
+                if code_type == "معرف":
+                    # For referral, we might have stored it; but we can show simply
+                    text += f"🎯 *{code_type} اعمال شد:* {percent}% تخفیف ({format_price(discount_applied)} تومان)\n"
+                else:
+                    text += f"🎯 *{code_type} اعمال شد:* {percent}% تخفیف ({format_price(discount_applied)} تومان)\n"
+            else:
+                text += f"🎯 *{code_type} اعمال شد:* {format_price(discount_applied)} تومان تخفیف\n"
+   
         text += f"مبلغ: {amount} تومان\n\n"
         text += "✅ لطفا مبلغ را به شماره کارت زیر واریز کنید:\n"
         text += f"🔹 شماره کارت: {card_number}\n"
