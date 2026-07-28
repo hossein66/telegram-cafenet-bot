@@ -2118,10 +2118,10 @@ if (requestState.referralApplied || requestState.discountApplied) {
 }
     return `<div class="receipt-info">
                 <h4>💳 اطلاعات پرداخت</h4>
-                // <div class="receipt-line"><span class="rk">مبلغ اصلی:</span><span class="rv">${formatPrice(requestState.originalPrice)} تومان</span></div>
+                <div class="receipt-line"><span class="rk">مبلغ اصلی:</span><span class="rv">${formatPrice(requestState.originalPrice)} تومان</span></div>
                 ${requestState.referralApplied || requestState.discountApplied ? 
                     `<div class="receipt-line"><span class="rk">تخفیف اعمال شده:</span><span class="rv" style="color:var(--success);">- ${formatPrice((requestState.referralDiscount || 0) + (requestState.discountDiscount || 0))} تومان</span></div>` : ''}
-                <div class="receipt-line" style="border-top:1px solid var(--border);padding-top:8px;"><span class="rk" style="font-weight:700;">مبلغ قابل پرداخت:</span><span class="rv" style="font-size:16px;">${formatPrice(displayPrice)} تومان <button class="receipt-copy-btn" onclick="copyText('${formatPrice(displayPrice)}', 'مبلغ کپی شد')">کپی</button></span></div>
+                <div class="receipt-line" style="border-top:1px solid var(--border);padding-top:8px;"><span class="rk" style="font-weight:700;">مبلغ قابل پرداخت:</span><span class="rv" style="font-size:16px;">${formatPrice(displayPrice)} تومان <button class="receipt-copy-btn" onclick="copyText('${formatPrice(displayPrice * 10)}', 'مبلغ کپی شد')">کپی</button></span></div>
                 <div class="receipt-line"><span class="rk">شماره کارت:</span><span class="rv">${cardNumber} <button class="receipt-copy-btn" onclick="copyText('${cardNumber}', 'شماره کارت کپی شد')">کپی</button></span></div>
                 <div class="receipt-line"><span class="rk">به نام:</span><span class="rv">${personName} </span></div>
             </div>
