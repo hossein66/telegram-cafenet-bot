@@ -1644,7 +1644,7 @@ async def show_document_summary_and_payment(query, context: ContextTypes.DEFAULT
                     ratio = 320
 
                 score = loan_amount_rials / ratio
-                score_price = score * 30 / 10
+                score_price = score * 31 / 10
                 fee = score * 2.1 / 10
                 instruction = f"شما می‌بایستی مبلغ {fmt(score_price)} را در حساب دستادس خود داشته باشد"
 
@@ -1656,7 +1656,7 @@ async def show_document_summary_and_payment(query, context: ContextTypes.DEFAULT
 
             else:  # is_mehr
                 score = loan_amount
-                score_price = score * 350000
+                score_price = score * 360000
                 fee = score * 10000
                 instruction = f"شما می‌بایستی مبلغ {fmt(score_price)} در زمان انتقال امتیاز به حساب فروشنده واریز نمایید"
 
