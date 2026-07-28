@@ -852,7 +852,7 @@ def get_user_profile(user: dict = Depends(get_current_user)):
         user_id = user["id"]
         print(f"Fetching profile for user_id: {user_id}")
         # Ensure referral code exists
-
+        ensure_user_referral_code(user_id)
         with get_db() as conn:
             cur = conn.cursor()
 
