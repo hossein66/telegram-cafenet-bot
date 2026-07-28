@@ -1921,8 +1921,8 @@ async def process_referral_code(update: Update, context: ContextTypes.DEFAULT_TY
         context.user_data.pop(AWAITING_REFERRAL, None)
         return
 
-    discount = await validate_referral_code(code, token)
-    if discount is None or discount <= 0:
+    result = await validate_referral_code(code, token)
+    if result is None:
         await update.message.reply_text(
             "❌ کد معرف نامعتبر است.\n"
             "لطفا مجددا تلاش کنید یا با پشتیبانی تماس بگیرید.",
@@ -1933,17 +1933,27 @@ async def process_referral_code(update: Update, context: ContextTypes.DEFAULT_TY
         )
         return
 
-    # Apply discount and mark as applied
-    original_price = context.user_data.get('final_price', 0)
-    new_price = max(0, original_price - discount)
+    discount_amount = result["discount"]
+    discount_type = result["discount_type"]
+    current_price = context.user_data.get('final_price', 0)
+
+    # Compute discount value
+    if discount_type == "percent":
+        discount_value = int(current_price * discount_amount / 100)
+    else:  # fixed
+        discount_value = discount_amount
+
+    new_price = max(0, current_price - discount_value)
     context.user_data['final_price'] = new_price
     context.user_data[REFERRAL_CODE] = code
     context.user_data[REFERRAL_APPLIED] = True
-    context.user_data['referral_discount'] = discount
+    context.user_data['referral_discount_value'] = discount_value
+    context.user_data['referral_discount_type'] = discount_type
+    context.user_data['referral_discount_amount'] = discount_amount   # original amount (fixed or percent)
 
     context.user_data.pop(AWAITING_REFERRAL, None)
-    await update_payment_screen(update, context, discount_applied=discount, code_type="معرف")
-    
+    await update_payment_screen(update, context, discount_applied=discount_value, code_type="معرف", discount_type=discount_type)
+
 async def process_discount_code(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if context.user_data.get(DISCOUNT_APPLIED, False):
         await update.message.reply_text(
@@ -1964,8 +1974,8 @@ async def process_discount_code(update: Update, context: ContextTypes.DEFAULT_TY
         context.user_data.pop(AWAITING_DISCOUNT, None)
         return
 
-    discount = await validate_discount_code(code, token)
-    if discount is None or discount <= 0:
+    result = await validate_discount_code(code, token)
+    if result is None:
         await update.message.reply_text(
             "❌ کد تخفیف نامعتبر است.\n"
             "لطفا مجددا تلاش کنید یا با پشتیبانی تماس بگیرید.",
@@ -1976,17 +1986,28 @@ async def process_discount_code(update: Update, context: ContextTypes.DEFAULT_TY
         )
         return
 
-    original_price = context.user_data.get('final_price', 0)
-    new_price = max(0, original_price - discount)
+    discount_amount = result["discount"]
+    discount_type = result["discount_type"]
+    current_price = context.user_data.get('final_price', 0)
+
+    # Compute discount value
+    if discount_type == "percent":
+        discount_value = int(current_price * discount_amount / 100)
+    else:
+        discount_value = discount_amount
+
+    new_price = max(0, current_price - discount_value)
     context.user_data['final_price'] = new_price
     context.user_data[DISCOUNT_CODE] = code
     context.user_data[DISCOUNT_APPLIED] = True
-    context.user_data['discount_amount'] = discount
+    context.user_data['discount_value'] = discount_value
+    context.user_data['discount_type'] = discount_type
+    context.user_data['discount_amount_original'] = discount_amount
 
     context.user_data.pop(AWAITING_DISCOUNT, None)
-    await update_payment_screen(update, context, discount_applied=discount, code_type="تخفیف")
-
-async def update_payment_screen(update, context, discount_applied, code_type):
+    await update_payment_screen(update, context, discount_applied=discount_value, code_type="تخفیف", discount_type=discount_type)
+    
+async def update_payment_screen(update, context, discount_applied, code_type, discount_type="fixed"):
     chat_id = context.user_data.get('payment_chat_id')
     message_id = context.user_data.get('payment_message_id')
     if not chat_id or not message_id:
@@ -2007,23 +2028,32 @@ async def update_payment_screen(update, context, discount_applied, code_type):
     text = f"💰 *پرداخت*\n\n"
     text += f"سرویس: {service.get('Title', '')}\n"
     if discount_applied > 0:
-        text += f"🎯 *{code_type} اعمال شد:* {format_price(discount_applied)} تومان تخفیف\n"
+        if discount_type == "percent":
+            # Show the percentage and the value
+            original = context.user_data.get('original_price', final_price + discount_applied)
+            percent = context.user_data.get('discount_amount_original', 0) if code_type == "تخفیف" else context.user_data.get('referral_discount_amount', 0)
+            if code_type == "معرف":
+                # For referral, we might have stored it; but we can show simply
+                text += f"🎯 *{code_type} اعمال شد:* {percent}% تخفیف ({format_price(discount_applied)} تومان)\n"
+            else:
+                text += f"🎯 *{code_type} اعمال شد:* {percent}% تخفیف ({format_price(discount_applied)} تومان)\n"
+        else:
+            text += f"🎯 *{code_type} اعمال شد:* {format_price(discount_applied)} تومان تخفیف\n"
     text += f"💰 مبلغ قابل پرداخت: {amount} تومان\n\n"
     text += "✅ لطفا مبلغ را به شماره کارت زیر واریز کنید:\n"
     text += f"🔹 شماره کارت: {card_number}\n"
     text += f"🔹 به نام: {account_holder}\n\n"
     text += "❗️ پس از پرداخت، تصویر رسید را ارسال کنید."
 
-    keyboard = []
+    keyboard =[]
+    keyboard.append([InlineKeyboardButton(" کپی شماره کارت", copy_text=CopyTextButton(card_number)),
+             InlineKeyboardButton(" کپی مبلغ", copy_text=CopyTextButton(final_price * 10))])
     row1 = get_referal_and_discount_button(context)
-
     keyboard.append(row1)
-
-    # Other buttons...
     keyboard.append([])
     keyboard.append([InlineKeyboardButton("✅  انجام شد", callback_data="payment_done")])
     keyboard.append([InlineKeyboardButton("🔙 بازگشت به خلاصه مدارک", callback_data="start_over")])
-    keyboard.append([InlineKeyboardButton("❌ لغو و بازگشت به منو", callback_data="back_to_menu")]) 
+    keyboard.append([InlineKeyboardButton("❌ لغو و بازگشت به منو", callback_data="back_to_menu")])
     reply_markup = InlineKeyboardMarkup(keyboard)
 
     try:
@@ -2034,25 +2064,32 @@ async def update_payment_screen(update, context, discount_applied, code_type):
             reply_markup=reply_markup,
             parse_mode=ParseMode.MARKDOWN
         )
-    # Send confirmation message with "بازگشت به پرداخت" button
         confirm_keyboard = [[InlineKeyboardButton("🔙 بازگشت به پرداخت", callback_data="pay_now")]]
         await update.message.reply_text(
-          f"✅ کد {code_type} با موفقیت اعمال شد! مبلغ جدید: {amount} تومان",
-          reply_markup=InlineKeyboardMarkup(confirm_keyboard)
-        )   
+            f"✅ کد {code_type} با موفقیت اعمال شد! مبلغ جدید: {amount} تومان",
+            reply_markup=InlineKeyboardMarkup(confirm_keyboard)
+        )
     except Exception as e:
         logger.error(f"Error updating payment message: {e}")
         await update.message.reply_text(text, reply_markup=reply_markup, parse_mode=ParseMode.MARKDOWN)
-
+        
 def get_referal_and_discount_button(context):
     row1 = []
     if context.user_data.get(REFERRAL_APPLIED, False):
-        row1.append(InlineKeyboardButton(" کد معرف اعمال شد", callback_data="dummy"))
+        discount_type = context.user_data.get('referral_discount_type', 'fixed')
+        label = "کد معرف اعمال شد"
+        if discount_type == "percent":
+            label += f" ({context.user_data.get('referral_discount_amount', 0)}%)"
+        row1.append(InlineKeyboardButton(f"🔑 {label}", callback_data="dummy"))
     else:
         row1.append(InlineKeyboardButton("🔑 کد معرف دارم", callback_data="apply_referral_code"))
 
     if context.user_data.get(DISCOUNT_APPLIED, False):
-        row1.append(InlineKeyboardButton(" کد تخفیف اعمال شد", callback_data="dummy"))
+        discount_type = context.user_data.get('discount_type', 'fixed')
+        label = "کد تخفیف اعمال شد"
+        if discount_type == "percent":
+            label += f" ({context.user_data.get('discount_amount_original', 0)}%)"
+        row1.append(InlineKeyboardButton(f"🎫 {label}", callback_data="dummy"))
     else:
         row1.append(InlineKeyboardButton("🎫 کد تخفیف دارم", callback_data="apply_discount_code"))
     return row1
@@ -2193,51 +2230,55 @@ async def handle_payment(query, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle payment processing"""
     try:
         await query.answer()
-        
         service = context.user_data.get('current_service')
         if not service:
             await query.edit_message_text("❌ خطا در دریافت اطلاعات سرویس.")
             return
-        
+
+        # Store original price for percentage calculations
+        original_price = service.get('Price', 0)
+        if 'final_price' not in context.user_data:
+            context.user_data['final_price'] = original_price
+        # Keep original price in context for display (if needed)
+        context.user_data['original_price'] = original_price
+
         payment_info = data_store.get_payment_info()
         card_number = payment_info.get("cardNumber", "5041721009167876")
-        logger.info('card_number',card_number);
         account_holder = payment_info.get("accountHolder", "محمد حسین نوابی")
-        bank_name = payment_info.get("bankName", "بانک رسالت")
-        final_price = context.user_data.get('final_price', service.get('Price', 0))
-        amount = format_price(final_price)        
+        final_price = context.user_data.get('final_price', original_price)
+        amount = format_price(final_price)
+
         text = f"💰 *پرداخت*\n\n"
         text += f"سرویس: {service.get('Title', '')}\n"
         text += f"مبلغ: {amount} تومان\n\n"
         text += "✅ لطفا مبلغ را به شماره کارت زیر واریز کنید:\n"
         text += f"🔹 شماره کارت: {card_number}\n"
         text += f"🔹 به نام: {account_holder}\n\n"
-        # text += f"🔹 بانک: {bank_name}\n\n"
         text += "❗️ پس از پرداخت، تصویر رسید را ارسال کنید."
-        
+
         keyboard = [
             [InlineKeyboardButton(" کپی شماره کارت", copy_text=CopyTextButton(card_number)),
-             InlineKeyboardButton(" کپی مبلغ", copy_text=CopyTextButton(final_price))],
-             get_referal_and_discount_button(context),
+             InlineKeyboardButton(" کپی مبلغ", copy_text=CopyTextButton(final_price * 10))],
+            get_referal_and_discount_button(context),
             [],
             [InlineKeyboardButton("✅ پرداخت انجام شد", callback_data="payment_done")],
             [InlineKeyboardButton("🔙 بازگشت به خلاصه مدارک", callback_data="start_over")],
             [InlineKeyboardButton("❌ لغو و بازگشت به منو", callback_data="back_to_menu")]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        
+
         await query.edit_message_text(
             text,
             reply_markup=reply_markup,
             parse_mode=ParseMode.MARKDOWN
         )
-        # Save the message info for later updates
         context.user_data['payment_chat_id'] = query.message.chat_id
         context.user_data['payment_message_id'] = query.message.message_id
     except Exception as e:
         logger.error(f"Error in handle_payment: {e}")
         logger.error(traceback.format_exc())
         await query.edit_message_text("❌ خطا در پردازش پرداخت. لطفا مجددا تلاش کنید.")
+        
 @handle_errors
 async def handle_payment_done(query, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle payment confirmation"""
@@ -2300,7 +2341,8 @@ async def handle_customer_stop(
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
-async def validate_referral_code(code: str, token: str) -> Optional[int]:
+async def validate_referral_code(code: str, token: str) -> Optional[Dict[str, Any]]:
+    """Validate referral code; returns dict with 'discount' and 'discount_type'."""
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
             resp = await client.post(
@@ -2310,13 +2352,17 @@ async def validate_referral_code(code: str, token: str) -> Optional[int]:
             )
             if resp.status_code == 200:
                 data = resp.json()
-                if data.get("success") and "discount" in data:
-                    return int(data["discount"])
+                if data.get("success"):
+                    return {
+                        "discount": int(data["discount"]),
+                        "discount_type": data.get("discount_type", "fixed")
+                    }
             return None
     except Exception:
         return None
 
-async def validate_discount_code(code: str, token: str) -> Optional[int]:
+async def validate_discount_code(code: str, token: str) -> Optional[Dict[str, Any]]:
+    """Validate discount code; returns dict with 'discount' and 'discount_type'."""
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
             resp = await client.post(
@@ -2326,11 +2372,35 @@ async def validate_discount_code(code: str, token: str) -> Optional[int]:
             )
             if resp.status_code == 200:
                 data = resp.json()
-                if data.get("success") and "discount" in data:
-                    return int(data["discount"])
+                if data.get("success"):
+                    return {
+                        "discount": int(data["discount"]),
+                        "discount_type": data.get("discount_type", "fixed")
+                    }
             return None
     except Exception:
         return None
+    
+async def validate_discount_code(code: str, token: str) -> Optional[Dict[str, Any]]:
+    """Validate discount code; returns dict with 'discount' and 'discount_type'."""
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.post(
+                f"{API_BASE.rstrip('/')}/api/discount/validate",
+                json={"code": code},
+                headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                if data.get("success"):
+                    return {
+                        "discount": int(data["discount"]),
+                        "discount_type": data.get("discount_type", "fixed")
+                    }
+            return None
+    except Exception:
+        return None
+    
 @handle_errors
 async def apply_referral_code_callback(query, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Prompt user to enter referral code."""

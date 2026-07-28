@@ -1511,7 +1511,11 @@ function setupScrollObserver() {
             discountDiscount: 0,
             referralApplied: false,
             discountApplied: false,
-            randomData: null
+            randomData: null,
+            referralType: null,          // 'fixed' or 'percent'
+            discountType: null,
+            referralOriginalAmount: 0,   // the raw discount value (e.g., 10 for 10%, or 5000)
+            discountOriginalAmount: 0,
         };
         renderRequestModal();
         document.getElementById('requestOverlay').classList.add('open');
@@ -2088,19 +2092,30 @@ function renderPaymentStep() {
     const personName = PAYMENT_INFO.personName;
 
     // Build discount summary if any applied
-    let discountSummary = '';
-    if (requestState.referralApplied || requestState.discountApplied) {
-        discountSummary = `<div style="background:#ECFDF5;border:1px solid #10B981;border-radius:8px;padding:10px 14px;margin-bottom:12px;">
-            <div style="font-size:13px;font-weight:600;color:#065F46;">✅ تخفیف‌های اعمال شده</div>`;
-        if (requestState.referralApplied) {
-            discountSummary += `<div style="font-size:12px;color:#065F46;">🔑 کد معرف: ${requestState.referralCode} (${formatPrice(requestState.referralDiscount)} تومان)</div>`;
+let discountSummary = '';
+if (requestState.referralApplied || requestState.discountApplied) {
+    discountSummary = `<div style="background:#ECFDF5;border:1px solid #10B981;border-radius:8px;padding:10px 14px;margin-bottom:12px;">
+        <div style="font-size:13px;font-weight:600;color:#065F46;">✅ تخفیف‌های اعمال شده</div>`;
+    if (requestState.referralApplied) {
+        let desc = `🔑 کد معرف: ${requestState.referralCode}`;
+        if (requestState.referralType === 'percent') {
+            desc += ` (${requestState.referralOriginalAmount}% تخفیف، ${formatPrice(requestState.referralDiscount)} تومان)`;
+        } else {
+            desc += ` (${formatPrice(requestState.referralDiscount)} تومان تخفیف)`;
         }
-        if (requestState.discountApplied) {
-            discountSummary += `<div style="font-size:12px;color:#065F46;">🎫 کد تخفیف: ${requestState.discountCode} (${formatPrice(requestState.discountDiscount)} تومان)</div>`;
-        }
-        discountSummary += `</div>`;
+        discountSummary += `<div style="font-size:12px;color:#065F46;">${desc}</div>`;
     }
-
+    if (requestState.discountApplied) {
+        let desc = `🎫 کد تخفیف: ${requestState.discountCode}`;
+        if (requestState.discountType === 'percent') {
+            desc += ` (${requestState.discountOriginalAmount}% تخفیف، ${formatPrice(requestState.discountDiscount)} تومان)`;
+        } else {
+            desc += ` (${formatPrice(requestState.discountDiscount)} تومان تخفیف)`;
+        }
+        discountSummary += `<div style="font-size:12px;color:#065F46;">${desc}</div>`;
+    }
+    discountSummary += `</div>`;
+}
     return `<div class="receipt-info">
                 <h4>💳 اطلاعات پرداخت</h4>
                 // <div class="receipt-line"><span class="rk">مبلغ اصلی:</span><span class="rv">${formatPrice(requestState.originalPrice)} تومان</span></div>
@@ -2316,20 +2331,24 @@ async function applyReferralCode(code) {
             body: JSON.stringify({ code })
         });
         if (result && result.success) {
-            const discount = result.discount;
-            requestState.referralDiscount = discount;
+            const discountAmount = result.discount;
+            const discountType = result.discount_type || 'fixed';
+            const currentPrice = requestState.finalPrice;
+            let discountValue;
+            if (discountType === 'percent') {
+                discountValue = Math.floor(currentPrice * discountAmount / 100);
+            } else {
+                discountValue = discountAmount;
+            }
+            const newPrice = Math.max(0, currentPrice - discountValue);
+            requestState.finalPrice = newPrice;
+            requestState.referralDiscount = discountValue;
             requestState.referralCode = code;
             requestState.referralApplied = true;
-            // Recalculate final price
-            requestState.finalPrice = Math.max(0, requestState.originalPrice - discount);
-            // Also adjust for discount code if already applied
-            if (requestState.discountApplied) {
-                requestState.finalPrice = Math.max(0, requestState.finalPrice - requestState.discountDiscount);
-            }
-            // Update service price for display
-            requestState.service.price = requestState.finalPrice;
-            showToast(`✅ کد معرف با ${formatPrice(discount)} تومان تخفیف اعمال شد`, 'success');
-            // Re-render payment step
+            requestState.referralType = discountType;
+            requestState.referralOriginalAmount = discountAmount;
+            requestState.service.price = newPrice;
+            showToast(`✅ کد معرف با ${formatPrice(discountValue)} تومان تخفیف اعمال شد`, 'success');
             renderRequestModal();
             return true;
         } else {
@@ -2353,17 +2372,24 @@ async function applyDiscountCode(code) {
             body: JSON.stringify({ code })
         });
         if (result && result.success) {
-            const discount = result.discount;
-            requestState.discountDiscount = discount;
+            const discountAmount = result.discount;
+            const discountType = result.discount_type || 'fixed';
+            const currentPrice = requestState.finalPrice;
+            let discountValue;
+            if (discountType === 'percent') {
+                discountValue = Math.floor(currentPrice * discountAmount / 100);
+            } else {
+                discountValue = discountAmount;
+            }
+            const newPrice = Math.max(0, currentPrice - discountValue);
+            requestState.finalPrice = newPrice;
+            requestState.discountDiscount = discountValue;
             requestState.discountCode = code;
             requestState.discountApplied = true;
-            // Recalculate final price
-            requestState.finalPrice = Math.max(0, requestState.originalPrice - discount);
-            if (requestState.referralApplied) {
-                requestState.finalPrice = Math.max(0, requestState.finalPrice - requestState.referralDiscount);
-            }
-            requestState.service.price = requestState.finalPrice;
-            showToast(`✅ کد تخفیف با ${formatPrice(discount)} تومان تخفیف اعمال شد`, 'success');
+            requestState.discountType = discountType;
+            requestState.discountOriginalAmount = discountAmount;
+            requestState.service.price = newPrice;
+            showToast(`✅ کد تخفیف با ${formatPrice(discountValue)} تومان تخفیف اعمال شد`, 'success');
             renderRequestModal();
             return true;
         } else {
@@ -2375,7 +2401,7 @@ async function applyDiscountCode(code) {
         return false;
     }
 }
-    async function checkPendingRequest() {
+async function checkPendingRequest() {
         const pending = sessionStorage.getItem('pendingRequest');
         if (!pending) return;
         try {

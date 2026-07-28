@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مدیریت کدهای تخفیف و معرف</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;600;700&display=swap">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Vazirmatn', system-ui, sans-serif;
+            background: #f1f5f9;
+            color: #0f172a;
+            padding: 24px;
+            direction: rtl;
+        }
+        .container { max-width: 1100px; margin: 0 auto; }
+        .header {
+            background: #1e293b;
+            color: white;
+            padding: 20px 28px;
+            border-radius: 16px;
+            margin-bottom: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header h1 { font-size: 22px; }
+        .logout-btn {
+            background: #ef4444;
+            border: none;
+            color: white;
+            padding: 8px 20px;
+            border-radius: 8px;
+            font-family: inherit;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .logout-btn:hover { background: #dc2626; }
+
+        .tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 24px;
+            background: white;
+            padding: 8px;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-family: inherit;
+            font-weight: 600;
+            font-size: 15px;
+            cursor: pointer;
+            background: transparent;
+            color: #64748b;
+            transition: 0.15s;
+        }
+        .tab-btn.active {
+            background: #2563eb;
+            color: white;
+            box-shadow: 0 4px 12px rgba(37,99,235,0.25);
+        }
+        .tab-btn:not(.active):hover { background: #e2e8f0; }
+
+        .panel { display: none; }
+        .panel.active { display: block; }
+
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            margin-bottom: 24px;
+        }
+        .card-title {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            color: #0f172a;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 16px;
+            align-items: end;
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .form-group label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #334155;
+        }
+        .form-group input, .form-group select {
+            padding: 8px 12px;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 14px;
+            background: #f8fafc;
+            transition: 0.15s;
+            width: 100%;
+        }
+        .form-group input:focus, .form-group select:focus {
+            border-color: #2563eb;
+            outline: none;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+        }
+
+        .code-input-wrapper {
+            display: flex;
+            gap: 6px;
+        }
+        .code-input-wrapper input {
+            flex: 1;
+        }
+        .btn-secondary {
+            padding: 6px 14px;
+            background: #f1f5f9;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: inherit;
+            font-weight: 600;
+            font-size: 13px;
+            white-space: nowrap;
+            transition: 0.15s;
+        }
+        .btn-secondary:hover {
+            background: #e2e8f0;
+            border-color: #94a3b8;
+        }
+
+        .btn-primary {
+            padding: 8px 20px;
+            background: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-family: inherit;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.15s;
+            font-size: 14px;
+        }
+        .btn-primary:hover { background: #1d4ed8; }
+        .btn-danger {
+            padding: 6px 14px;
+            background: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-family: inherit;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        .btn-danger:hover { background: #dc2626; }
+        .btn-warning {
+            padding: 6px 14px;
+            background: #f59e0b;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-family: inherit;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        .btn-warning:hover { background: #d97706; }
+
+        .table-wrap { overflow-x: auto; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+        th {
+            background: #f1f5f9;
+            text-align: right;
+            padding: 10px 12px;
+            font-weight: 700;
+            color: #334155;
+        }
+        td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        tr:hover td { background: #f8fafc; }
+        .badge {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .badge-success { background: #dcfce7; color: #166534; }
+        .badge-danger { background: #fee2e2; color: #991b1b; }
+        .badge-warning { background: #fef3c7; color: #92400e; }
+
+        .empty-row td { text-align: center; color: #94a3b8; padding: 30px 0; }
+
+        .toast-container {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 999;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            pointer-events: none;
+        }
+        .toast {
+            background: #0f172a;
+            color: white;
+            padding: 10px 24px;
+            border-radius: 10px;
+            font-weight: 500;
+            font-size: 14px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+            animation: slideUp 0.25s ease;
+            pointer-events: auto;
+        }
+        .toast.success { background: #10b981; }
+        .toast.error { background: #ef4444; }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* edit mode highlight */
+        .editing td { background: #fef9c3; }
+        .inline-edit {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .inline-edit input, .inline-edit select {
+            padding: 4px 8px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 13px;
+            width: 90px;
+        }
+        .inline-edit .btn-primary { font-size: 12px; padding: 4px 12px; }
+        .inline-edit .btn-danger { font-size: 12px; padding: 4px 12px; }
+
+        @media (max-width: 700px) {
+            .form-row { grid-template-columns: 1fr; }
+            .header { flex-direction: column; gap: 12px; align-items: stretch; text-align: center; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>🔐 مدیریت کدها</h1>
+        <button class="logout-btn" onclick="logout()">خروج</button>
+    </div>
+
+    <div class="tabs">
+        <button class="tab-btn active" data-tab="referral" onclick="switchTab('referral')">🔑 کدهای معرف</button>
+        <button class="tab-btn" data-tab="discount" onclick="switchTab('discount')">🎫 کدهای تخفیف</button>
+    </div>
+
+    <!-- Referral Panel -->
+    <div id="panel-referral" class="panel active">
+        <div class="card">
+            <div class="card-title">➕ افزودن کد معرف جدید</div>
+            <form id="referralForm" onsubmit="createCode('referral', event)" class="form-row">
+                <div class="form-group">
+                    <label>کد</label>
+                    <div class="code-input-wrapper">
+                        <input type="text" id="refCode" placeholder="مثلاً REF123" required>
+                        <button type="button" class="btn-secondary" onclick="generateCode('refCode')">🎲 تصادفی</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>مقدار تخفیف</label>
+                    <input type="number" id="refAmount" placeholder="عدد" required>
+                </div>
+                <div class="form-group">
+                    <label>نوع تخفیف</label>
+                    <select id="refType">
+                        <option value="fixed">ثابت (تومان)</option>
+                        <option value="percent">درصد</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>تاریخ انقضا (اختیاری)</label>
+                    <input type="datetime-local" id="refExpires">
+                </div>
+                <div class="form-group">
+                    <label>حداکثر استفاده</label>
+                    <input type="number" id="refMaxUses" value="1" min="1">
+                </div>
+                <div class="form-group">
+                    <label>فعال</label>
+                    <select id="refActive">
+                        <option value="1">بله</option>
+                        <option value="0">خیر</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <button type="submit" class="btn-primary">➕ افزودن</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="card">
+            <div class="card-title">📋 لیست کدهای معرف</div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>کد</th>
+                            <th>تخفیف</th>
+                            <th>نوع</th>
+                            <th>انقضا</th>
+                            <th>استفاده</th>
+                            <th>حداکثر</th>
+                            <th>وضعیت</th>
+                            <th>عملیات</th>
+                        </tr>
+                    </thead>
+                    <tbody id="referralTableBody">
+                        <tr class="empty-row"><td colspan="8">در حال بارگذاری...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Discount Panel -->
+    <div id="panel-discount" class="panel">
+        <div class="card">
+            <div class="card-title">➕ افزودن کد تخفیف جدید</div>
+            <form id="discountForm" onsubmit="createCode('discount', event)" class="form-row">
+                <div class="form-group">
+                    <label>کد</label>
+                    <div class="code-input-wrapper">
+                        <input type="text" id="disCode" placeholder="مثلاً SAVE10" required>
+                        <button type="button" class="btn-secondary" onclick="generateCode('disCode')">🎲 تصادفی</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>مقدار تخفیف</label>
+                    <input type="number" id="disAmount" placeholder="عدد" required>
+                </div>
+                <div class="form-group">
+                    <label>نوع تخفیف</label>
+                    <select id="disType">
+                        <option value="fixed">ثابت (تومان)</option>
+                        <option value="percent">درصد</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>تاریخ انقضا (اختیاری)</label>
+                    <input type="datetime-local" id="disExpires">
+                </div>
+                <div class="form-group">
+                    <label>حداکثر استفاده</label>
+                    <input type="number" id="disMaxUses" value="1" min="1">
+                </div>
+                <div class="form-group">
+                    <label>فعال</label>
+                    <select id="disActive">
+                        <option value="1">بله</option>
+                        <option value="0">خیر</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <button type="submit" class="btn-primary">➕ افزودن</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="card">
+            <div class="card-title">📋 لیست کدهای تخفیف</div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>کد</th>
+                            <th>تخفیف</th>
+                            <th>نوع</th>
+                            <th>انقضا</th>
+                            <th>استفاده</th>
+                            <th>حداکثر</th>
+                            <th>وضعیت</th>
+                            <th>عملیات</th>
+                        </tr>
+                    </thead>
+                    <tbody id="discountTableBody">
+                        <tr class="empty-row"><td colspan="8">در حال بارگذاری...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+// ─── CONFIG ──────────────────────────────────────────────────
+const API_BASE = window.CAFENET_API_BASE || 'https://cofenet-online.ir';
+// const API_BASE = 'http://127.0.0.1:8001';
+
+// ─── TOAST ──────────────────────────────────────────────────
+function showToast(msg, type = '') {
+    const container = document.getElementById('toastContainer');
+    const t = document.createElement('div');
+    t.className = 'toast ' + type;
+    t.textContent = msg;
+    container.appendChild(t);
+    setTimeout(() => t.remove(), 3500);
+}
+
+// ─── GENERATE RANDOM CODE ──────────────────────────────────
+function generateCode(inputId) {
+    const length = 6;
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let result = '';
+    for (let i = 0; i < length; i++) {
+        result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    const input = document.getElementById(inputId);
+    if (input) {
+        input.value = result;
+        input.style.borderColor = '#10b981';
+        setTimeout(() => input.style.borderColor = '', 800);
+    }
+}
+
+// ─── API HELPER ─────────────────────────────────────────────
+async function apiFetch(path, options = {}) {
+    const token = localStorage.getItem('cafenet_token');
+    const headers = {
+        'Content-Type': 'application/json',
+        ...(options.headers || {})
+    };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const res = await fetch(API_BASE + path, { ...options, headers });
+    if (!res.ok) {
+        let detail = `خطا (${res.status})`;
+        try { const j = await res.json(); if (j.detail) detail = j.detail; } catch(e) {}
+        const err = new Error(detail);
+        err.status = res.status;
+        throw err;
+    }
+    if (res.status === 204) return null;
+    return await res.json();
+}
+
+// ─── CHECK AUTH ─────────────────────────────────────────────
+function checkAuth() {
+    const token = localStorage.getItem('cafenet_token');
+    if (!token) {
+        showToast('⚠️ ابتدا وارد شوید. به صفحه اصلی بروید و وارد حساب شوید.', 'error');
+        setTimeout(() => window.location.href = '/', 2000);
+        return false;
+    }
+    return true;
+}
+
+// ─── LOGOUT ──────────────────────────────────────────────────
+async function logout() {
+    try {
+        await apiFetch('/api/auth/logout', { method: 'POST' });
+    } catch(e) {}
+    localStorage.removeItem('cafenet_token');
+    localStorage.removeItem('cafenet_user');
+    showToast('خارج شدید', '');
+    setTimeout(() => window.location.href = '/', 800);
+}
+
+// ─── TAB SWITCHING ──────────────────────────────────────────
+function switchTab(tab) {
+    document.querySelectorAll('.panel').forEach(el => el.classList.remove('active'));
+    document.getElementById('panel-' + tab).classList.add('active');
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelector(`.tab-btn[data-tab="${tab}"]`).classList.add('active');
+    loadTable(tab);
+}
+
+// ─── LOAD TABLE ─────────────────────────────────────────────
+async function loadTable(type) {
+    const bodyId = type === 'referral' ? 'referralTableBody' : 'discountTableBody';
+    const tbody = document.getElementById(bodyId);
+    if (!tbody) return;
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="8">⏳ در حال بارگذاری...</td></tr>';
+
+    try {
+        const data = await apiFetch(`/api/${type}-codes`);
+        if (!data || !data.length) {
+            tbody.innerHTML = '<tr class="empty-row"><td colspan="8">هیچ کدی یافت نشد.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = data.map(row => {
+            const isActive = row.is_active == 1;
+            const typeLabel = row.discount_type === 'percent' ? 'درصد' : 'تومان';
+            const expires = row.expires_at ? new Date(row.expires_at).toLocaleString('fa-IR') : '—';
+            const statusBadge = isActive ? 'badge-success' : 'badge-danger';
+            const statusText = isActive ? 'فعال' : 'غیرفعال';
+            return `
+                <tr id="${type}-row-${row.code}">
+                    <td><strong>${escapeHtml(row.code)}</strong></td>
+                    <td>${escapeHtml(String(row.discount_amount))}</td>
+                    <td>${typeLabel}</td>
+                    <td>${expires}</td>
+                    <td>${row.used_count || 0}</td>
+                    <td>${row.max_uses}</td>
+                    <td><span class="badge ${statusBadge}">${statusText}</span></td>
+                    <td>
+                        <button class="btn-warning" onclick="startEdit('${type}', '${row.code}')">✎</button>
+                        <button class="btn-danger" onclick="deleteCode('${type}', '${row.code}')">✕</button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    } catch (e) {
+        tbody.innerHTML = `<tr class="empty-row"><td colspan="8">❌ خطا: ${escapeHtml(e.message)}</td></tr>`;
+    }
+}
+
+// ─── CREATE CODE ────────────────────────────────────────────
+async function createCode(type, event) {
+    event.preventDefault();
+    const prefix = type === 'referral' ? 'ref' : 'dis';
+    const code = document.getElementById(prefix + 'Code').value.trim();
+    const amount = parseInt(document.getElementById(prefix + 'Amount').value);
+    const discount_type = document.getElementById(prefix + 'Type').value;
+    const expires = document.getElementById(prefix + 'Expires').value || null;
+    const max_uses = parseInt(document.getElementById(prefix + 'MaxUses').value) || 1;
+    const is_active = document.getElementById(prefix + 'Active').value === '1';
+
+    if (!code || isNaN(amount) || amount <= 0) {
+        showToast('لطفاً کد و مقدار معتبر وارد کنید.', 'error');
+        return;
+    }
+
+    try {
+        await apiFetch(`/api/${type}-codes`, {
+            method: 'POST',
+            body: JSON.stringify({ code, discount_amount: amount, discount_type, expires_at: expires, max_uses, is_active })
+        });
+        showToast(`✅ کد ${code} با موفقیت اضافه شد`, 'success');
+        // Clear form
+        document.getElementById(prefix + 'Code').value = '';
+        document.getElementById(prefix + 'Amount').value = '';
+        document.getElementById(prefix + 'Expires').value = '';
+        document.getElementById(prefix + 'MaxUses').value = '1';
+        loadTable(type);
+    } catch (e) {
+        showToast('⚠️ ' + e.message, 'error');
+    }
+}
+
+// ─── DELETE CODE ────────────────────────────────────────────
+async function deleteCode(type, code) {
+    if (!confirm(`آیا از حذف کد "${code}" مطمئن هستید؟`)) return;
+    try {
+        await apiFetch(`/api/${type}-codes/${encodeURIComponent(code)}`, { method: 'DELETE' });
+        showToast(`✅ کد ${code} حذف شد`, 'success');
+        loadTable(type);
+    } catch (e) {
+        showToast('⚠️ ' + e.message, 'error');
+    }
+}
+
+// ─── EDIT CODE (inline) ─────────────────────────────────────
+let editingType = null;
+let editingCode = null;
+
+function startEdit(type, code) {
+    // Close any previous edit
+    if (editingType && editingCode) {
+        cancelEdit(editingType, editingCode);
+    }
+    editingType = type;
+    editingCode = code;
+
+    const tbody = document.getElementById(type === 'referral' ? 'referralTableBody' : 'discountTableBody');
+    const row = document.getElementById(`${type}-row-${code}`);
+    if (!row) return;
+
+    const cells = row.querySelectorAll('td');
+    const currentDiscount = cells[1].textContent.trim();
+    const currentType = cells[2].textContent.trim();
+    const currentExpires = cells[3].textContent.trim() !== '—' ? cells[3].textContent.trim() : '';
+    const currentMaxUses = cells[5].textContent.trim();
+    const currentStatus = cells[6].textContent.trim();
+
+    const discountTypeOptions = `
+        <option value="fixed" ${currentType === 'تومان' ? 'selected' : ''}>تومان</option>
+        <option value="percent" ${currentType === 'درصد' ? 'selected' : ''}>درصد</option>
+    `;
+    const statusOptions = `
+        <option value="1" ${currentStatus === 'فعال' ? 'selected' : ''}>فعال</option>
+        <option value="0" ${currentStatus === 'غیرفعال' ? 'selected' : ''}>غیرفعال</option>
+    `;
+
+    const editHTML = `
+        <div class="inline-edit">
+            <input type="number" id="editAmount" value="${escapeHtml(currentDiscount)}" style="width:70px;">
+            <select id="editType">${discountTypeOptions}</select>
+            <input type="datetime-local" id="editExpires" value="${convertToLocalDatetime(currentExpires)}" style="width:150px;">
+            <input type="number" id="editMaxUses" value="${escapeHtml(currentMaxUses)}" style="width:60px;" min="1">
+            <select id="editActive">${statusOptions}</select>
+            <button class="btn-primary" onclick="saveEdit()">✔</button>
+            <button class="btn-danger" onclick="cancelEdit('${type}','${code}')">✕</button>
+        </div>
+    `;
+    cells[7].innerHTML = editHTML;
+    row.classList.add('editing');
+}
+
+function convertToLocalDatetime(dateStr) {
+    if (!dateStr || dateStr === '—') return '';
+    try {
+        const d = new Date(dateStr);
+        if (isNaN(d)) return '';
+        return d.toISOString().slice(0, 16);
+    } catch { return ''; }
+}
+
+async function saveEdit() {
+    const type = editingType;
+    const code = editingCode;
+    if (!type || !code) return;
+
+    const amount = parseInt(document.getElementById('editAmount').value);
+    const discount_type = document.getElementById('editType').value;
+    const expires = document.getElementById('editExpires').value || null;
+    const max_uses = parseInt(document.getElementById('editMaxUses').value) || 1;
+    const is_active = document.getElementById('editActive').value === '1';
+
+    if (isNaN(amount) || amount <= 0) {
+        showToast('مقدار تخفیف معتبر وارد کنید.', 'error');
+        return;
+    }
+
+    try {
+        await apiFetch(`/api/${type}-codes/${encodeURIComponent(code)}`, {
+            method: 'PUT',
+            body: JSON.stringify({ discount_amount: amount, discount_type, expires_at: expires, max_uses, is_active })
+        });
+        showToast(`✅ کد ${code} به‌روزرسانی شد`, 'success');
+        cancelEdit(type, code);
+        loadTable(type);
+    } catch (e) {
+        showToast('⚠️ ' + e.message, 'error');
+    }
+}
+
+function cancelEdit(type, code) {
+    const row = document.getElementById(`${type}-row-${code}`);
+    if (row) {
+        row.classList.remove('editing');
+        loadTable(type);
+    }
+    editingType = null;
+    editingCode = null;
+}
+
+// ─── HELPERS ─────────────────────────────────────────────────
+function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
+
+// ─── INIT ────────────────────────────────────────────────────
+if (checkAuth()) {
+    loadTable('referral');
+    // load discount table on tab switch
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const tab = this.dataset.tab;
+            switchTab(tab);
+        });
+    });
+}
+</script>
+</body>
+</html>

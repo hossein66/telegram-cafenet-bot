@@ -367,7 +367,17 @@ def init_db():
                 cur.execute("ALTER TABLE users ADD COLUMN referrer_id TEXT")
             except sqlite3.OperationalError:
                  pass
-            
+            # Inside init_db(), after creating the tables, add:
+
+            try:
+                cur.execute("ALTER TABLE referral_codes ADD COLUMN discount_type TEXT DEFAULT 'fixed'")
+            except sqlite3.OperationalError:
+                pass  # column already exists
+
+            try:
+                cur.execute("ALTER TABLE discount_codes ADD COLUMN discount_type TEXT DEFAULT 'fixed'")
+            except sqlite3.OperationalError:
+                pass
             
             # ─── CREATE INDEXES ─────────────────────────────────────
             print("📊 Creating indexes...")
@@ -617,68 +627,244 @@ def get_payment_info():
     except Exception as e:
         print(f"❌ Error in get_payment_info: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+# ─────────────────────────────────────────────────────────────
+#  ADMIN REFERRAL / DISCOUNT CODE CRUD
+# ─────────────────────────────────────────────────────────────
 
+def admin_required(user: dict = Depends(get_current_user)):
+    if user["id"] != adminUserId:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    return user
+
+# ─── REFERRAL CODES ─────────────────────────────────────────
+
+class ReferralCodeCreate(BaseModel):
+    code: str
+    discount_amount: int
+    discount_type: Literal["fixed", "percent"] = "fixed"
+    expires_at: Optional[str] = None
+    max_uses: int = 1
+    is_active: bool = True
+
+class ReferralCodeUpdate(BaseModel):
+    discount_amount: int
+    discount_type: Literal["fixed", "percent"] = "fixed"
+    expires_at: Optional[str] = None
+    max_uses: int = 1
+    is_active: bool = True
+
+@app.get("/api/referral-codes")
+def list_referral_codes(user: dict = Depends(admin_required)):
+    with get_db() as conn:
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM referral_codes ORDER BY created_at DESC")
+        rows = cur.fetchall()
+        return [dict(row) for row in rows]
+
+@app.post("/api/referral-codes")
+def create_referral_code(data: ReferralCodeCreate, user: dict = Depends(admin_required)):
+    with get_db() as conn:
+        cur = conn.cursor()
+        # Check if code already exists
+        cur.execute("SELECT 1 FROM referral_codes WHERE code = ?", (data.code,))
+        if cur.fetchone():
+            raise HTTPException(400, "Code already exists")
+        cur.execute("""
+            INSERT INTO referral_codes
+            (code, discount_amount, discount_type, expires_at, max_uses, used_count, is_active, created_at)
+            VALUES (?, ?, ?, ?, ?, 0, ?, ?)
+        """, (
+            data.code,
+            data.discount_amount,
+            data.discount_type,
+            data.expires_at,
+            data.max_uses,
+            1 if data.is_active else 0,
+            datetime.utcnow().isoformat()
+        ))
+        conn.commit()
+        return {"success": True, "code": data.code}
+
+@app.put("/api/referral-codes/{code}")
+def update_referral_code(code: str, data: ReferralCodeUpdate, user: dict = Depends(admin_required)):
+    with get_db() as conn:
+        cur = conn.cursor()
+        cur.execute("SELECT 1 FROM referral_codes WHERE code = ?", (code,))
+        if not cur.fetchone():
+            raise HTTPException(404, "Code not found")
+        cur.execute("""
+            UPDATE referral_codes
+            SET discount_amount = ?,
+                discount_type = ?,
+                expires_at = ?,
+                max_uses = ?,
+                is_active = ?
+            WHERE code = ?
+        """, (
+            data.discount_amount,
+            data.discount_type,
+            data.expires_at,
+            data.max_uses,
+            1 if data.is_active else 0,
+            code
+        ))
+        conn.commit()
+        return {"success": True}
+
+@app.delete("/api/referral-codes/{code}")
+def delete_referral_code(code: str, user: dict = Depends(admin_required)):
+    with get_db() as conn:
+        cur = conn.cursor()
+        cur.execute("DELETE FROM referral_codes WHERE code = ?", (code,))
+        conn.commit()
+        return {"success": True}
+
+# ─── DISCOUNT CODES ─────────────────────────────────────────
+
+class DiscountCodeCreate(BaseModel):
+    code: str
+    discount_amount: int
+    discount_type: Literal["fixed", "percent"] = "fixed"
+    expires_at: Optional[str] = None
+    max_uses: int = 1
+    is_active: bool = True
+
+class DiscountCodeUpdate(BaseModel):
+    discount_amount: int
+    discount_type: Literal["fixed", "percent"] = "fixed"
+    expires_at: Optional[str] = None
+    max_uses: int = 1
+    is_active: bool = True
+
+@app.get("/api/discount-codes")
+def list_discount_codes(user: dict = Depends(admin_required)):
+    with get_db() as conn:
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM discount_codes ORDER BY created_at DESC")
+        rows = cur.fetchall()
+        return [dict(row) for row in rows]
+
+@app.post("/api/discount-codes")
+def create_discount_code(data: DiscountCodeCreate, user: dict = Depends(admin_required)):
+    with get_db() as conn:
+        cur = conn.cursor()
+        cur.execute("SELECT 1 FROM discount_codes WHERE code = ?", (data.code,))
+        if cur.fetchone():
+            raise HTTPException(400, "Code already exists")
+        cur.execute("""
+            INSERT INTO discount_codes
+            (code, discount_amount, discount_type, expires_at, max_uses, used_count, is_active, created_at)
+            VALUES (?, ?, ?, ?, ?, 0, ?, ?)
+        """, (
+            data.code,
+            data.discount_amount,
+            data.discount_type,
+            data.expires_at,
+            data.max_uses,
+            1 if data.is_active else 0,
+            datetime.utcnow().isoformat()
+        ))
+        conn.commit()
+        return {"success": True, "code": data.code}
+
+@app.put("/api/discount-codes/{code}")
+def update_discount_code(code: str, data: DiscountCodeUpdate, user: dict = Depends(admin_required)):
+    with get_db() as conn:
+        cur = conn.cursor()
+        cur.execute("SELECT 1 FROM discount_codes WHERE code = ?", (code,))
+        if not cur.fetchone():
+            raise HTTPException(404, "Code not found")
+        cur.execute("""
+            UPDATE discount_codes
+            SET discount_amount = ?,
+                discount_type = ?,
+                expires_at = ?,
+                max_uses = ?,
+                is_active = ?
+            WHERE code = ?
+        """, (
+            data.discount_amount,
+            data.discount_type,
+            data.expires_at,
+            data.max_uses,
+            1 if data.is_active else 0,
+            code
+        ))
+        conn.commit()
+        return {"success": True}
+
+@app.delete("/api/discount-codes/{code}")
+def delete_discount_code(code: str, user: dict = Depends(admin_required)):
+    with get_db() as conn:
+        cur = conn.cursor()
+        cur.execute("DELETE FROM discount_codes WHERE code = ?", (code,))
+        conn.commit()
+        return {"success": True}
+    
 @app.post("/api/referral/validate")
 def validate_referral_code(payload: dict):
-    """
-    Validate a referral code. Returns discount amount if valid.
-    """
     code = payload.get("code")
-    print(f"Validating referral code: {code}")
     if not code:
-        raise HTTPException(status_code=400, detail="کد معرف الزامی است!")
+        raise HTTPException(400, "کد معرف الزامی است!")
     
     with get_db() as conn:
         cur = conn.cursor()
         cur.execute("""
-            SELECT discount_amount, expires_at, max_uses, used_count, is_active
+            SELECT discount_amount, discount_type, expires_at, max_uses, used_count, is_active
             FROM referral_codes
             WHERE code = ?
         """, (code,))
         row = cur.fetchone()
         
         if not row:
-            raise HTTPException(status_code=400, detail="کد معرف نامعتبر است!")
+            raise HTTPException(400, "کد معرف نامعتبر است!")
         if not row["is_active"]:
-            raise HTTPException(status_code=400, detail="کد معرف غیرفعال است!")
+            raise HTTPException(400, "کد معرف غیرفعال است!")
         if row["expires_at"] and datetime.fromisoformat(row["expires_at"]) < datetime.utcnow():
-            raise HTTPException(status_code=400, detail="کد معرف منقضی شده است!")
+            raise HTTPException(400, "کد معرف منقضی شده است!")
         if row["used_count"] >= row["max_uses"]:
-            raise HTTPException(status_code=400, detail="کد معرف به حداکثر استفاده رسیده است!")
+            raise HTTPException(400, "کد معرف به حداکثر استفاده رسیده است!")
         
-        # Optionally, you could check if this user already used this code, but we skip that for now.
-        return {"success": True, "discount": row["discount_amount"]}
-
+        return {
+            "success": True,
+            "discount": row["discount_amount"],
+            "discount_type": row["discount_type"]   # 'fixed' or 'percent'
+        }
+        
 @app.post("/api/discount/validate")
-def validate_discount_code(payload: dict):
-    """
-    Validate a discount code. Returns discount amount if valid.
-    """
+def validate_discount_code(payload: dict, user: dict = Depends(get_current_user)):
     code = payload.get("code")
-    print(f"Validating discount code: {code}")
     if not code:
-        raise HTTPException(status_code=400, detail="کد تخفیف الزامی است!")
+        raise HTTPException(400, "کد تخفیف الزامی است!")
     
     with get_db() as conn:
         cur = conn.cursor()
+        cur.execute(""" SELECT * FROM REQUESTS WHERE user_id = ? and status != 'rejected' AND discount_code = ? """, (user["id"], code)) 
+        existing_request = cur.fetchone()
+        if existing_request:
+            raise HTTPException(400, "شما قبلا از این کد تخفیف استفاده کرده‌اید!")
         cur.execute("""
-            SELECT discount_amount, expires_at, max_uses, used_count, is_active
+            SELECT discount_amount, discount_type, expires_at, max_uses, used_count, is_active
             FROM discount_codes
             WHERE code = ?
         """, (code,))
         row = cur.fetchone()
         
         if not row:
-            raise HTTPException(status_code=400, detail="کد تخفیف نامعتبر است!")
+            raise HTTPException(400, "کد تخفیف نامعتبر است!")
         if not row["is_active"]:
-            raise HTTPException(status_code=400, detail="کد تخفیف غیرفعال است!")
+            raise HTTPException(400, "کد تخفیف غیرفعال است!")
         if row["expires_at"] and datetime.fromisoformat(row["expires_at"]) < datetime.utcnow():
-            raise HTTPException(status_code=400, detail="کد تخفیف منقضی شده است!")
+            raise HTTPException(400, "کد تخفیف منقضی شده است!")
         if row["used_count"] >= row["max_uses"]:
-            raise HTTPException(status_code=400, detail="کد تخفیف به حداکثر استفاده رسیده است!")
+            raise HTTPException(400, "کد تخفیف به حداکثر استفاده رسیده است!")
         
-        return {"success": True, "discount": row["discount_amount"]}
-    
+        return {
+            "success": True,
+            "discount": row["discount_amount"],
+            "discount_type": row["discount_type"]
+        }
+           
 # Admin endpoint to update payment info
 @app.put("/api/payment/info")
 def update_payment_info(
@@ -1938,12 +2124,12 @@ def create_request(req: RequestCreate, user: dict = Depends(get_current_user)):
     try:
         req_id = f"req_{uuid.uuid4().hex[:16]}"
         now = datetime.utcnow().isoformat()
-
+        
         with get_db() as conn:
             cur = conn.cursor()
             cur.execute("""
                 INSERT INTO requests
-                    (id, user_id, service_id, service_title, price, documents, receipt_image, 
+                    (id, user_id, service_id, service_title, price, documents, receipt_image,
                      status, submitted_at, updated_at, referral_code, discount_code)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
@@ -1962,18 +2148,18 @@ def create_request(req: RequestCreate, user: dict = Depends(get_current_user)):
             ))
 
             # Increment usage counts for the codes if provided
-            # if req.referralCode:
-            #     cur.execute("""
-            #         UPDATE referral_codes
-            #         SET used_count = used_count + 1
-            #         WHERE code = ?
-            #     """, (req.referralCode,))
-            # if req.discountCode:
-            #     cur.execute("""
-            #         UPDATE discount_codes
-            #         SET used_count = used_count + 1
-            #         WHERE code = ?
-            #     """, (req.discountCode,))
+            if req.referralCode:
+                cur.execute("""
+                    UPDATE referral_codes
+                    SET used_count = used_count + 1
+                    WHERE code = ?
+                """, (req.referralCode,))
+            if req.discountCode:
+                cur.execute("""
+                    UPDATE discount_codes
+                    SET used_count = used_count + 1
+                    WHERE code = ?
+                """, (req.discountCode,))
             
             conn.commit()
 
@@ -2468,7 +2654,34 @@ def seed_data():
     try:
         with get_db() as conn:
             cur = conn.cursor()
+            cur.execute("SELECT COUNT(*) FROM discount_codes")
+            if cur.fetchone()[0] == 0:
+                # sample_codes = [
+                #     ("REF123", 50000, None, 10, 0, 1, datetime.utcnow().isoformat()),
+                #     ("SAVE10", 10000, None, 5, 0, 1, datetime.utcnow().isoformat()),
+                # ]
+                # cur.executemany("""
+                #     INSERT INTO referral_codes (code, discount_amount, expires_at, max_uses, used_count, is_active, created_at)
+                #     VALUES (?, ?, ?, ?, ?, ?, ?)
+                # """, sample_codes)
 
+                # sample_discount = [
+                #     ("DISCOUNT15", 20000, None, 3, 0, 1, datetime.utcnow().isoformat()),
+                # ]
+                # cur.executemany("""
+                #     INSERT INTO discount_codes (code, discount_amount, expires_at, max_uses, used_count, is_active, created_at)
+                #     VALUES (?, ?, ?, ?, ?, ?, ?)
+                # """, sample_discount)
+                
+                # Inside seed_data(), after the existing sample codes:
+
+                # Sample percentage discount code
+                cur.execute("""
+                    INSERT OR IGNORE INTO discount_codes
+                        (code, discount_amount, discount_type, expires_at, max_uses, used_count, is_active, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """, ("PERCENT15", 15, "percent", None, 2, 0, 1, datetime.utcnow().isoformat()))
+            conn.commit()
             # Check if data exists
             cur.execute("SELECT COUNT(*) FROM categories")
             if cur.fetchone()[0] > 0:
@@ -2562,25 +2775,7 @@ def seed_data():
                     datetime.utcnow().isoformat()
                 ))
                         # Seed some referral/discount codes
-            cur.execute("SELECT COUNT(*) FROM referral_codes")
-            if cur.fetchone()[0] == 0:
-                sample_codes = [
-                    ("REF123", 50000, None, 10, 0, 1, datetime.utcnow().isoformat()),
-                    ("SAVE10", 10000, None, 5, 0, 1, datetime.utcnow().isoformat()),
-                ]
-                cur.executemany("""
-                    INSERT INTO referral_codes (code, discount_amount, expires_at, max_uses, used_count, is_active, created_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
-                """, sample_codes)
 
-                sample_discount = [
-                    ("DISCOUNT15", 20000, None, 3, 0, 1, datetime.utcnow().isoformat()),
-                ]
-                cur.executemany("""
-                    INSERT INTO discount_codes (code, discount_amount, expires_at, max_uses, used_count, is_active, created_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
-                """, sample_discount)
-            conn.commit()
             print("✅ Seed complete!")
     except Exception as e:
         print(f"❌ Error in seed_data: {e}")
