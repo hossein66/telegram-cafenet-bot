@@ -1645,19 +1645,25 @@ async def show_document_summary_and_payment(query, context: ContextTypes.DEFAULT
 
                 score = loan_amount_rials / ratio
                 score_price = score * 31 / 10
-                fee = score * 2.1 / 10
+                fee = score * 1.8 / 10
+                if fee <500000:
+                    fee=485000
                 instruction = f"شما می‌بایستی مبلغ {fmt(score_price)} را در حساب دستادس خود داشته باشد"
 
             elif is_resalat:
                 score = loan_amount * refund_duration / 10
                 score_price = score * 135000
                 fee = score * 3000
+                if fee <500000:
+                   fee=485000
                 instruction = f"شما می‌بایستی مبلغ {fmt(score_price)} را در زمان انتقال امتیاز به حساب فروشنده واریز نمایید"
 
             else:  # is_mehr
                 score = loan_amount
                 score_price = score * 360000
                 fee = score * 10000
+                if fee <500000:
+                   fee=485000
                 instruction = f"شما می‌بایستی مبلغ {fmt(score_price)} در زمان انتقال امتیاز به حساب فروشنده واریز نمایید"
 
             # Add random fee to total price
@@ -2025,6 +2031,7 @@ async def update_payment_screen(update, context, discount_applied, code_type, di
     amount = format_price(final_price)
     payment_info = data_store.get_payment_info()
     card_number = payment_info.get("cardNumber", "5041721009167876")
+    card_number_dastadas='10121000121629414'
     account_holder = payment_info.get("accountHolder", "محمد حسین نوابی")
 
     text = f"💰 *پرداخت*\n\n"
@@ -2044,6 +2051,7 @@ async def update_payment_screen(update, context, discount_applied, code_type, di
    
     text += f"💰 مبلغ قابل پرداخت: {amount} تومان\n\n"
     text += "✅ لطفا مبلغ را به شماره کارت زیر واریز کنید:\n"
+    text += f"🔹 شماره حساب دستادس: {card_number_dastadas}\n"
     text += f"🔹 شماره کارت: {card_number}\n"
     text += f"🔹 به نام: {account_holder}\n\n"
     text += "❗️ پس از پرداخت، تصویر رسید را ارسال کنید."
@@ -2247,6 +2255,7 @@ async def handle_payment(query, context: ContextTypes.DEFAULT_TYPE) -> None:
 
         payment_info = data_store.get_payment_info()
         card_number = payment_info.get("cardNumber", "5041721009167876")
+        card_number_dastadas='10121000121629414'
         account_holder = payment_info.get("accountHolder", "محمد حسین نوابی")
         final_price = context.user_data.get('final_price', original_price)
         amount = format_price(final_price)
@@ -2271,6 +2280,7 @@ async def handle_payment(query, context: ContextTypes.DEFAULT_TYPE) -> None:
    
         text += f"مبلغ: {amount} تومان\n\n"
         text += "✅ لطفا مبلغ را به شماره کارت زیر واریز کنید:\n"
+        text += f"🔹 شماره حساب دستادس: {card_number_dastadas}\n"
         text += f"🔹 شماره کارت: {card_number}\n"
         text += f"🔹 به نام: {account_holder}\n\n"
         text += "❗️ پس از پرداخت، تصویر رسید را ارسال کنید."

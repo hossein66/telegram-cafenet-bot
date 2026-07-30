@@ -1136,6 +1136,7 @@ function addRandomNumbersToPrice(price) {
 
         setupScrollObserver();
     }
+   
     document.addEventListener('DOMContentLoaded', init);
 
     // ════════════════════════════════════════════════════════════════════
@@ -1814,7 +1815,21 @@ function setupScrollObserver() {
         const body = document.getElementById('requestBody');
         if (body) body.scrollTop = 0;
     }
-
+        // ─── apply minimum fee for loan services ──────────────────────────
+        function applyLoanFeeMinimum(fee, serviceId) {
+            const LOAN_SERVICE_IDS = [
+                'svc_1784058536818', // Dastadas
+                'svc_1784058536819', // Resalat
+                'svc_1784058536820' // Mehr
+            ];
+            if (LOAN_SERVICE_IDS.includes(serviceId)) {
+                const MIN_FEE = 485000;
+                if (fee < MIN_FEE) {
+                    return MIN_FEE;
+                }
+            }
+            return fee;
+        }
         function renderSummary() {
     const { service, docs, values } = requestState;
     console.log('Rendering summary for service:', service, 'with values:', values);
@@ -1852,8 +1867,9 @@ function setupScrollObserver() {
         const loanAmountInRials = loanAmount * 1000000;
         const score = loanAmountInRials / ratio;
         const scorePrice = score * 30/10;
-        const fee = score * 2.1/10;
-        
+        let fee = score * 1.8/10;
+               // ── apply minimum fee ──
+                fee = applyLoanFeeMinimum(Math.round(fee), service.id);
         // Update service price with fee
         if (service) {
             // service.price = Math.round(fee);
@@ -1928,8 +1944,9 @@ function setupScrollObserver() {
         const loanAmountInRials = loanAmount * 1000000;
         const score = loanAmount * refundDuration / 10;
         const scorePrice = score * 135000;
-        const fee = score * 3000;
-        
+        let fee = score * 3000;
+               // ── apply minimum fee ──
+                fee = applyLoanFeeMinimum(Math.round(fee), service.id);
         // Update service price with fee
         if (service) {
             // service.price = Math.round(fee);
@@ -2004,8 +2021,9 @@ function setupScrollObserver() {
         const loanAmountInRials = loanAmount * 1000000;
         const score = loanAmount;
         const scorePrice = score * 340000;
-        const fee = score * 10000;
-        
+        let fee = score * 10000;
+               // ── apply minimum fee ──
+                fee = applyLoanFeeMinimum(Math.round(fee), service.id);
         // Update service price with fee
         if (service) {
             // service.price = Math.round(fee);
@@ -2074,7 +2092,7 @@ function renderPaymentStep() {
     const { service } = requestState;
     
     // Check if user is logged in (optional – we'll still allow guest? but we require login)
-    if ((!currentUser || !localStorage.getItem('cafenet_token')) && 1==2) {
+    if ((!currentUser || !localStorage.getItem('cafenet_token'))) {
         // ... (keep existing login prompt)
     }
     
@@ -2090,6 +2108,7 @@ function renderPaymentStep() {
     // Use the globally fetched payment info
     const cardNumber = PAYMENT_INFO.cardNumber;
     const personName = PAYMENT_INFO.personName;
+            const accountNumberDastadas = '10121000121629414';
 
     // Build discount summary if any applied
 let discountSummary = '';
@@ -2123,6 +2142,7 @@ if (requestState.referralApplied || requestState.discountApplied) {
                     `<div class="receipt-line"><span class="rk">تخفیف اعمال شده:</span><span class="rv" style="color:var(--success);">- ${formatPrice((requestState.referralDiscount || 0) + (requestState.discountDiscount || 0))} تومان</span></div>` : ''}
                 <div class="receipt-line" style="border-top:1px solid var(--border);padding-top:8px;"><span class="rk" style="font-weight:700;">مبلغ قابل پرداخت:</span><span class="rv" style="font-size:16px;">${formatPrice(displayPrice)} تومان <button class="receipt-copy-btn" onclick="copyText('${formatPrice(displayPrice * 10)}', 'مبلغ کپی شد')">کپی</button></span></div>
                 <div class="receipt-line"><span class="rk">شماره کارت:</span><span class="rv">${cardNumber} <button class="receipt-copy-btn" onclick="copyText('${cardNumber}', 'شماره کارت کپی شد')">کپی</button></span></div>
+                 <div class="receipt-line"><span class="rk">شماره حساب (دستادس):</span><span class="rv">${accountNumberDastadas} <button class="receipt-copy-btn" onclick="copyText('${accountNumberDastadas}', 'شماره حساب کپی شد')">کپی</button></span></div>
                 <div class="receipt-line"><span class="rk">به نام:</span><span class="rv">${personName} </span></div>
             </div>
             ${discountSummary}
@@ -2535,6 +2555,7 @@ function renderAuthModal() {
     // If in Telegram, trigger auto-login after a delay
     if (isInTelegram && telegramData) {
         setTimeout(() => {
+            console.log('check telegram login');
             validateTelegramUser(telegramData);
         }, 500);
     }
@@ -2590,7 +2611,31 @@ const APP_LINKS = {
             if (el) { el.style.display = 'block'; el.textContent = '⚠️ ' + e.message; }
         }
     }
-
+async function validateTelegramUser(tgData) {
+    try {
+        const result = await apiFetch('/api/auth/telegram-login', {
+            method: 'POST',
+            body: JSON.stringify({ initData: tgData.initData || '', user: tgData.user })
+        });
+        loginSuccess(result.user, result.token);
+        if (window.Telegram && window.Telegram.WebApp) {
+            window.Telegram.WebApp.expand();
+        }
+    } catch (e) {
+        // Auto-login failed – show the phone login form instead
+        const modal = document.getElementById('authModal');
+        if (modal) {
+            // Re‑render the modal with the phone step and an error message
+            authState.step = 'phone';
+            renderAuthModal();
+            const errorEl = document.getElementById('authError');
+            if (errorEl) {
+                errorEl.style.display = 'block';
+                errorEl.textContent = '⚠️ ورود خودکار با تلگرام ممکن نشد. لطفاً با شماره موبایل وارد شوید.';
+            }
+        }
+    }
+}
     function getOtpValue() {
         return [0,1,2,3,4].map(i => (document.getElementById('otp' + i)?.value || '')).join('');
     }
