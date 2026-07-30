@@ -869,12 +869,21 @@ function convertInputToEnglish(input) {
         input.setSelectionRange(start, end);
     }
 }
-
+function getToken() {
+    let token = localStorage.getItem('cafenet_token');
+    if (!token) {
+        // Try to read from cookie
+        const match = document.cookie.match(/cafenet_token=([^;]+)/);
+        if (match) token = match[1];
+    }
+    return token;
+}
 // ════════════════════════════════════════════════════════════════════
 //  API HELPER
 // ════════════════════════════════════════════════════════════════════
 async function apiFetch(path, options = {}) {
-    const token = localStorage.getItem('cafenet_token');
+        const token = getToken();
+
     const headers = Object.assign({ 'Content-Type': 'application/json' }, options.headers || {});
     if (token) headers['Authorization'] = `Bearer ${token}`;
     let res;
@@ -2710,6 +2719,7 @@ async function validateTelegramUser(tgData) {
         currentUser = user;
         localStorage.setItem('cafenet_token', token);
         localStorage.setItem('cafenet_user', JSON.stringify(user));
+            document.cookie = `cafenet_token=${token}; domain=.cofenet-online.ir; path=/; max-age=86400; SameSite=Lax`;
         updateProfileBtn();
         closeAuth();
         const name = currentUser.firstName || currentUser.username || currentUser.phone || 'کاربر';
