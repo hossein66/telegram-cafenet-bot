@@ -1072,71 +1072,88 @@ function addRandomNumbersToPrice(price) {
 // ════════════════════════════════════════════════════════════════════
     //  BOOTSTRAP
     // ════════════════════════════════════════════════════════════════════
-    async function init() {
-        updateProfileBtn();
-        fetchPaymentInfo();
+async function init() {
+    console.log('🚀 init() started');
+
+    // 1. Initial UI update (shows login button)
+    updateProfileBtn();
+    fetchPaymentInfo();
+
+    // 2. Load static data
+    try {
+        const [cats, provinces, docTypes] = await Promise.all([
+            apiFetch('/api/categories'),
+            apiFetch('/api/provinces'),
+            apiFetch('/api/doc-types')
+        ]);
+        CATEGORIES = (cats || []).slice().sort((a, b) => (a.sort || 0) - (b.sort || 0));
+        PROVINCES = provinces || [];
+        (docTypes || []).forEach(d => DOCTYPE_MAP[d.Id] = d);
+        console.log('✅ Static data loaded');
+    } catch (e) {
+        console.error('❌ Failed to load static data:', e);
+        showToast('⚠️ اتصال به سرور برقرار نشد.', 'error');
+    }
+
+    buildSidebar();
+    await resetView();
+
+    // 3. Authentication – restore session if token exists
+    const token = localStorage.getItem('cafenet_token');
+    console.log('🔑 Token found?', !!token);
+
+    if (token) {
         try {
-            const [cats, provinces, docTypes] = await Promise.all([
-                apiFetch('/api/categories'),
-                apiFetch('/api/provinces'),
-                apiFetch('/api/doc-types')
-            ]);
-            CATEGORIES = (cats || []).slice().sort((a, b) => (a.sort || 0) - (b.sort || 0));
-            PROVINCES = provinces || [];
-            (docTypes || []).forEach(d => DOCTYPE_MAP[d.Id] = d);
+            console.log('🔍 Validating token with /api/auth/me...');
+            const me = await apiFetch('/api/auth/me');
+            console.log('✅ User data received:', me);
+            currentUser = me;
+            localStorage.setItem('cafenet_user', JSON.stringify(currentUser));
+            updateProfileBtn(); // update button to show user name
+            // Restore any pending request (if any)
+            checkPendingRequest();
         } catch (e) {
-            showToast('⚠️ اتصال به سرور برقرار نشد. آدرس API_BASE را بررسی کنید.', 'error');
+            console.warn('⚠️ Token validation failed:', e.message);
+            // Token is invalid or expired – clear everything
+            localStorage.removeItem('cafenet_token');
+            localStorage.removeItem('cafenet_user');
+            currentUser = null;
+            updateProfileBtn(); // show login button
+            showToast('نشست شما منقضی شده، لطفاً دوباره وارد شوید', 'error');
         }
-
-        buildSidebar();
-        await resetView();
- const urlParams = new URLSearchParams(window.location.search);
-    const serviceParam = urlParams.get('service');
-    if (serviceParam && serviceParam.trim() !== '') {
-        openServicePage(serviceParam.trim());
-    }
-        // Validate stored token / refresh user
-        if (localStorage.getItem('cafenet_token')) {
-            try {
-                const me = await apiFetch('/api/auth/me');
-                currentUser = me;
-                localStorage.setItem('cafenet_user', JSON.stringify(currentUser));
-            } catch (e) {
-                localStorage.removeItem('cafenet_token');
-                localStorage.removeItem('cafenet_user');
-                currentUser = null;
-            }
-            updateProfileBtn();
-        }
-
-        // Telegram Mini App auto-login
+    } else {
+        console.log('📱 No token found, trying Telegram auto-login...');
         tryTelegramAutoLogin();
-
-        // Search
-        let searchTimer;
-        const searchInput = document.getElementById('searchInput');
-        if (searchInput) {
-            searchInput.addEventListener('input', function () {
-                clearTimeout(searchTimer);
-                closeServicePage();
-                searchTimer = setTimeout(() => {
-                    const v = this.value.trim();
-                    if (v) startSearch(v); else clearSearch();
-                }, 300);
-            });
-        }
-
-        // Escape / overlay click handling
-        document.addEventListener('keydown', function (e) {
-            if (e.key !== 'Escape') return;
-            if (document.getElementById('requestOverlay').classList.contains('open')) closeRequest();
-            if (document.getElementById('authOverlay').classList.contains('open')) closeAuth();
-            if (document.getElementById('profileOverlay').classList.contains('open')) closeProfile();
-        });
-
-        setupScrollObserver();
     }
-   
+
+    // 4. Search with debouncing
+    let searchTimer;
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        searchInput.addEventListener('input', function () {
+            clearTimeout(searchTimer);
+            closeServicePage();
+            searchTimer = setTimeout(() => {
+                const v = this.value.trim();
+                if (v) startSearch(v);
+                else clearSearch();
+            }, 500);
+        });
+    }
+
+    // 5. Close modals with Escape
+    document.addEventListener('keydown', function (e) {
+        if (e.key !== 'Escape') return;
+        if (document.getElementById('requestOverlay').classList.contains('open')) closeRequest();
+        if (document.getElementById('authOverlay').classList.contains('open')) closeAuth();
+        if (document.getElementById('profileOverlay').classList.contains('open')) closeProfile();
+    });
+
+    // 6. Infinite scroll
+    setupScrollObserver();
+
+    console.log('🏁 init() finished');
+}
     document.addEventListener('DOMContentLoaded', init);
 
     // ════════════════════════════════════════════════════════════════════
