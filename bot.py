@@ -79,6 +79,12 @@ REFERRAL_CODE = "referral_code"
 DISCOUNT_CODE = "discount_code"
 REFERRAL_APPLIED = "referral_applied"
 DISCOUNT_APPLIED = "discount_applied"
+SPECIAL_SERVICE_ID_Dastadas = "svc_1784058536818"
+SPECIAL_SERVICE_LABEL_Dastadas = "خرید امتیاز دستادس"
+SPECIAL_SERVICE_ID_Resalat = "svc_1784058536819"
+SPECIAL_SERVICE_LABEL_Resalat = "خرید امتیاز رسالت"
+SPECIAL_SERVICE_ID_Mehr = "svc_1784058536820"
+SPECIAL_SERVICE_LABEL_Mehr = "خرید امتیاز مهر"
 # Helper functions
 def format_price(price: int) -> str:
     """Format price with Persian commas"""
@@ -388,7 +394,15 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         keyboard.append([
             InlineKeyboardButton("⭐ خدمات پر کاربرد", callback_data="top_services")
         ])
-        
+        # ─── Add special service button ───
+        # special_service = next((s for s in SERVICES if s.get("Id") == SPECIAL_SERVICE_ID and s.get("IsActive", False)), None)
+        # if special_service:
+        keyboard.append([
+            InlineKeyboardButton(f"🟢 {SPECIAL_SERVICE_LABEL_Mehr} ", callback_data=f"service_{SPECIAL_SERVICE_ID_Mehr}"),
+            InlineKeyboardButton(f"🟡 {SPECIAL_SERVICE_LABEL_Resalat} ", callback_data=f"service_{SPECIAL_SERVICE_ID_Resalat}"),
+            InlineKeyboardButton(f"🔵 {SPECIAL_SERVICE_LABEL_Dastadas} ", callback_data=f"service_{SPECIAL_SERVICE_ID_Dastadas}")
+        ])
+            #🔵🚀 V7 VIP Bot 🟡
         # Add category buttons in 2 columns (first page)
         row = []
         for cat_id in sorted_cats[:10]:
@@ -1605,9 +1619,9 @@ async def show_document_summary_and_payment(query, context: ContextTypes.DEFAULT
         random_fee = context.user_data['random_fee']
 
         # Detect loan services
-        is_dastadas = service_id == "svc_1784058536818"
-        is_resalat  = service_id == "svc_1784058536819"
-        is_mehr     = service_id == "svc_1784058536820"
+        is_dastadas = service_id == SPECIAL_SERVICE_ID_Dastadas
+        is_resalat  = service_id == SPECIAL_SERVICE_ID_Resalat
+        is_mehr     = service_id == SPECIAL_SERVICE_ID_Mehr
 
         def fmt(num):
             return format_price(int(round(num)))
@@ -2050,15 +2064,16 @@ async def update_payment_screen(update, context, discount_applied, code_type, di
             text += f"🎯 *{code_type} اعمال شد:* {format_price(discount_applied)} تومان تخفیف\n"
    
     text += f"💰 مبلغ قابل پرداخت: {amount} تومان\n\n"
-    text += "✅ لطفا مبلغ را به شماره کارت زیر واریز کنید:\n"
-    text += f"🔹 شماره حساب دستادس: {card_number_dastadas}\n"
+    text += "✅ لطفا مبلغ را به شماره کارت یا حساب زیر واریز کنید:\n"
+    text += f"🔹  حساب دستادس: {card_number_dastadas}\n"
     text += f"🔹 شماره کارت: {card_number}\n"
     text += f"🔹 به نام: {account_holder}\n\n"
     text += "❗️ پس از پرداخت، تصویر رسید را ارسال کنید."
 
     keyboard =[]
     keyboard.append([InlineKeyboardButton(" کپی شماره کارت", copy_text=CopyTextButton(card_number)),
-             InlineKeyboardButton(" کپی مبلغ", copy_text=CopyTextButton(final_price * 10))])
+                      InlineKeyboardButton(" کپی حساب", copy_text=CopyTextButton(card_number_dastadas)),
+                      InlineKeyboardButton(" کپی مبلغ", copy_text=CopyTextButton(final_price * 10))])
     row1 = get_referal_and_discount_button(context)
     keyboard.append(row1)
     keyboard.append([])
@@ -2279,14 +2294,15 @@ async def handle_payment(query, context: ContextTypes.DEFAULT_TYPE) -> None:
                 text += f"🎯 *{code_type} اعمال شد:* {format_price(discount_applied)} تومان تخفیف\n"
    
         text += f"مبلغ: {amount} تومان\n\n"
-        text += "✅ لطفا مبلغ را به شماره کارت زیر واریز کنید:\n"
-        text += f"🔹 شماره حساب دستادس: {card_number_dastadas}\n"
+        text += "✅ لطفا مبلغ را به شماره کارت یا حساب زیر واریز کنید:\n"
+        text += f"🔹  حساب دستادس: {card_number_dastadas}\n"
         text += f"🔹 شماره کارت: {card_number}\n"
         text += f"🔹 به نام: {account_holder}\n\n"
         text += "❗️ پس از پرداخت، تصویر رسید را ارسال کنید."
 
         keyboard = [
-            [InlineKeyboardButton(" کپی شماره کارت", copy_text=CopyTextButton(card_number)),
+            [InlineKeyboardButton(" کپی کارت", copy_text=CopyTextButton(card_number)),
+             InlineKeyboardButton(" کپی حساب", copy_text=CopyTextButton(card_number_dastadas)),
              InlineKeyboardButton(" کپی مبلغ", copy_text=CopyTextButton(final_price * 10))],
             get_referal_and_discount_button(context),
             [],
