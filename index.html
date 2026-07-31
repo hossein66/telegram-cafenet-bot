@@ -1087,7 +1087,11 @@ async function init() {
     // 1. Initial UI update (shows login button)
     updateProfileBtn();
     fetchPaymentInfo();
-
+ const urlParams = new URLSearchParams(window.location.search);
+    const serviceParam = urlParams.get('service');
+    if (serviceParam && serviceParam.trim() !== '') {
+        openServicePage(serviceParam.trim());
+    }
     // 2. Load static data
     try {
         const [cats, provinces, docTypes] = await Promise.all([
