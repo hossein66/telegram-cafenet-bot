@@ -872,7 +872,6 @@ function convertInputToEnglish(input) {
 function getToken() {
     let token = localStorage.getItem('cafenet_token');
     if (!token) {
-        // Try to read from cookie
         const match = document.cookie.match(/cafenet_token=([^;]+)/);
         if (match) token = match[1];
     }
@@ -2723,8 +2722,8 @@ async function validateTelegramUser(tgData) {
         currentUser = user;
         localStorage.setItem('cafenet_token', token);
         localStorage.setItem('cafenet_user', JSON.stringify(user));
-            document.cookie = `cafenet_token=${token}; domain=.cofenet-online.ir; path=/; max-age=86400; SameSite=Lax`;
-        updateProfileBtn();
+  // Set cookie for all subdomains (.cofenet-online.ir)
+    document.cookie = `cafenet_token=${token}; domain=.cofenet-online.ir; path=/; max-age=${60*60*24*7}; SameSite=Lax; Secure`;        updateProfileBtn();
         closeAuth();
         const name = currentUser.firstName || currentUser.username || currentUser.phone || 'کاربر';
         showToast(`✅ خوش آمدید ${name}!`, 'success');
@@ -2741,6 +2740,7 @@ async function validateTelegramUser(tgData) {
         currentUser = null;
         localStorage.removeItem('cafenet_token');
         localStorage.removeItem('cafenet_user');
+         document.cookie = 'cafenet_token=; domain=.cofenet-online.ir; path=/; max-age=0';
         updateProfileBtn();
         closeProfile();
         showToast('با موفقیت خارج شدید.', '');
