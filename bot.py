@@ -85,6 +85,8 @@ SPECIAL_SERVICE_ID_Resalat = "svc_1784058536819"
 SPECIAL_SERVICE_LABEL_Resalat = "خرید امتیاز رسالت"
 SPECIAL_SERVICE_ID_Mehr = "svc_1784058536820"
 SPECIAL_SERVICE_LABEL_Mehr = "خرید امتیاز مهر"
+ADMIN_CHAT_ID = 6054109606  # Replace with your admin's Telegram user ID
+
 # Helper functions
 def format_price(price: int) -> str:
     """Format price with Persian commas"""
@@ -2496,8 +2498,37 @@ async def retry_submit(query, context: ContextTypes.DEFAULT_TYPE):
             )
             return
 
-    success = await sendRequestDataToServer(context)
+    user = query.from_user
+    service = context.user_data.get('current_service')
+
+    try:
+        success = await sendRequestDataToServer(context)
+    except Exception as e:
+        error_msg = f"استثنا: {str(e)}"
+        logger.error(f"Exception in retry_submit: {e}")
+        # Notify admin about the exception
+        if service:
+            await notify_admin_error(context, user, service, error_msg)
+        # Show error to user
+        keyboard = [
+            [InlineKeyboardButton("🔄 تلاش مجدد", callback_data="retry_submit")],
+            [InlineKeyboardButton("❌ لغو و بازگشت به منو", callback_data="back_to_menu")]
+        ]
+        await query.edit_message_text(
+            "❌ *خطا در ثبت درخواست*\n\n"
+            "متاسفانه درخواست شما ثبت نشد.\n"
+            "لطفا مجددا تلاش کنید یا با پشتیبانی تماس بگیرید.",
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode=ParseMode.MARKDOWN
+        )
+        return
+
     if success:
+        # Notify admin of success
+        final_price = context.user_data.get('final_price', service.get('Price', 0)) if service else 0
+        if service:
+            await notify_admin(context, user, service, final_price)
+
         await query.edit_message_text(
             "✅ *درخواست شما با موفقیت ثبت شد!*\n\n"
             "📞 به زودی کارشناسان ما با شما تماس خواهند گرفت.\n\n"
@@ -2511,7 +2542,11 @@ async def retry_submit(query, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
     else:
-        # Still failed – show error again with retry option
+        # Submission returned False – notify admin with a generic error
+        error_msg = "ثبت درخواست با شکست مواجه شد (بدون استثنا)"
+        if service:
+            await notify_admin_error(context, user, service, error_msg)
+
         keyboard = [
             [InlineKeyboardButton("🔄 تلاش مجدد", callback_data="retry_submit")],
             [InlineKeyboardButton("❌ لغو و بازگشت به منو", callback_data="back_to_menu")]
@@ -2522,8 +2557,94 @@ async def retry_submit(query, context: ContextTypes.DEFAULT_TYPE):
             "لطفا مجددا تلاش کنید یا با پشتیبانی تماس بگیرید.",
             reply_markup=InlineKeyboardMarkup(keyboard),
             parse_mode=ParseMode.MARKDOWN
+        )        
+async def notify_admin(context: ContextTypes.DEFAULT_TYPE, user: Any, service: Dict, price: int) -> None:
+    """Send a notification to the admin about a new request."""
+    try:
+        user_id = user.id
+        username = f"@{user.username}" if user.username else "ندارد"
+        first_name = user.first_name or ""
+        last_name = user.last_name or ""
+        full_name = f"{first_name} {last_name}".strip()
+        service_title = service.get('Title', 'نامشخص')
+        price_str = format_price(price)
+
+        text = f"✅ *درخواست جدید ثبت شد!*\n\n"
+        text += f"👤 کاربر: {full_name}\n"
+        text += f"🆔 ID: `{user_id}`\n"
+        text += f"🔹 نام کاربری: {username}\n"
+        text += f"📋 سرویس: {service_title}\n"
+        text += f"💰 مبلغ: {price_str} تومان\n"
+
+        # Include referral/discount codes if applied
+        referral = context.user_data.get(REFERRAL_CODE, "")
+        discount = context.user_data.get(DISCOUNT_CODE, "")
+        if referral:
+            text += f"🔑 کد معرف: `{referral}`\n"
+        if discount:
+            text += f"🎫 کد تخفیف: `{discount}`\n"
+
+        # Documents summary
+        docs = context.user_data.get('documents_collected', {})
+        if docs:
+            text += "\n📄 *مدارک:*\n"
+            for key, value in docs.items():
+                # Truncate long base64 strings
+                if isinstance(value, str) and len(value) > 50:
+                    value = "تصویر ارسال شده"
+                text += f"  - {key}: {value}\n"
+
+        await context.bot.send_message(
+            chat_id=ADMIN_CHAT_ID,
+            text=text,
+            parse_mode=None
         )
-        
+        logger.info(f"Admin notification sent for user {user_id}")
+    except Exception as e:
+        logger.error(f"Failed to notify admin: {e}")
+async def notify_admin_error(context: ContextTypes.DEFAULT_TYPE, user: Any, service: Dict, error_msg: str) -> None:
+    """Send an error notification to the admin."""
+    try:
+        user_id = user.id
+        username = f"@{user.username}" if user.username else "ندارد"
+        first_name = user.first_name or ""
+        last_name = user.last_name or ""
+        full_name = f"{first_name} {last_name}".strip()
+        service_title = service.get('Title', 'نامشخص') if service else 'نامشخص'
+
+        text = f"❌ *خطا در ثبت درخواست!*\n\n"
+        text += f"👤 کاربر: {full_name}\n"
+        text += f"🆔 ID: `{user_id}`\n"
+        text += f"🔹 نام کاربری: {username}\n"
+        text += f"📋 سرویس: {service_title}\n"
+        text += f"⚠️ خطا: {error_msg}\n"
+
+        # Include context data if available (documents, codes, etc.)
+        docs = context.user_data.get('documents_collected', {})
+        if docs:
+            text += "\n📄 *مدارک ارسالی:*\n"
+            for key, value in docs.items():
+                if isinstance(value, str) and len(value) > 50:
+                    value = "تصویر ارسال شده"
+                text += f"  - {key}: {value}\n"
+
+        referral = context.user_data.get(REFERRAL_CODE, "")
+        discount = context.user_data.get(DISCOUNT_CODE, "")
+        if referral:
+            text += f"🔑 کد معرف: `{referral}`\n"
+        if discount:
+            text += f"🎫 کد تخفیف: `{discount}`\n"
+
+        await context.bot.send_message(
+            chat_id=ADMIN_CHAT_ID,
+            text=text,
+            parse_mode=None
+        )
+        logger.info(f"Admin error notification sent for user {user_id}")
+    except Exception as e:
+        logger.error(f"Failed to send admin error notification: {e}")                
+
+
 @handle_errors
 async def handle_payment_receipt(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle payment receipt image and submit the request."""
@@ -2558,9 +2679,34 @@ async def handle_payment_receipt(update: Update, context: ContextTypes.DEFAULT_T
                 return
 
         status_msg = await update.message.reply_text("⏳ در حال ثبت درخواست...")
-        success = await sendRequestDataToServer(context)
+        user = update.effective_user
+        service = context.user_data.get('current_service')
+
+        try:
+            success = await sendRequestDataToServer(context)
+        except Exception as e:
+            error_msg = f"استثنا: {str(e)}"
+            logger.error(f"Exception in handle_payment_receipt: {e}")
+            if service:
+                await notify_admin_error(context, user, service, error_msg)
+            keyboard = [
+                [InlineKeyboardButton("🔄 تلاش مجدد", callback_data="retry_submit")],
+                [InlineKeyboardButton("❌ لغو و بازگشت به منو", callback_data="back_to_menu")]
+            ]
+            await status_msg.edit_text(
+                "❌ *خطا در ثبت درخواست*\n\n"
+                "متاسفانه درخواست شما ثبت نشد.\n"
+                "لطفا مجددا تلاش کنید یا با پشتیبانی تماس بگیرید.",
+                reply_markup=InlineKeyboardMarkup(keyboard),
+                parse_mode=ParseMode.MARKDOWN
+            )
+            return
 
         if success:
+            final_price = context.user_data.get('final_price', service.get('Price', 0)) if service else 0
+            if service:
+                await notify_admin(context, user, service, final_price)
+
             await status_msg.edit_text(
                 "✅ *درخواست شما با موفقیت ثبت شد!*\n\n"
                 "📞 به زودی کارشناسان ما با شما تماس خواهند گرفت.\n\n"
@@ -2574,6 +2720,10 @@ async def handle_payment_receipt(update: Update, context: ContextTypes.DEFAULT_T
                 reply_markup=InlineKeyboardMarkup(keyboard)
             )
         else:
+            error_msg = "ثبت درخواست با شکست مواجه شد (بدون استثنا)"
+            if service:
+                await notify_admin_error(context, user, service, error_msg)
+
             keyboard = [
                 [InlineKeyboardButton("🔄 تلاش مجدد", callback_data="retry_submit")],
                 [InlineKeyboardButton("❌ لغو و بازگشت به منو", callback_data="back_to_menu")]
@@ -2590,6 +2740,11 @@ async def handle_payment_receipt(update: Update, context: ContextTypes.DEFAULT_T
         logger.error(f"Error in handle_payment_receipt: {e}")
         logger.error(traceback.format_exc())
         await update.message.reply_text("❌ خطا در دریافت رسید. لطفا مجددا تلاش کنید.")
+        # Also notify admin about this outer exception
+        user = update.effective_user
+        service = context.user_data.get('current_service')
+        if service:
+            await notify_admin_error(context, user, service, f"خطای کلی: {str(e)}")
 
 async def sendRequestDataToServer(context: ContextTypes.DEFAULT_TYPE) -> bool:
     """Send the collected request data to the /api/requests endpoint."""
