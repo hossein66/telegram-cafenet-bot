@@ -1371,7 +1371,14 @@ async def back_to_menu(query, context: ContextTypes.DEFAULT_TYPE) -> None:
         keyboard = [
             [InlineKeyboardButton("⭐ خدمات پر کاربرد", callback_data="top_services")]
         ]
-        
+                # ─── Add special service button ───
+        # special_service = next((s for s in SERVICES if s.get("Id") == SPECIAL_SERVICE_ID and s.get("IsActive", False)), None)
+        # if special_service:
+        keyboard.append([
+            InlineKeyboardButton(f"🟢 {SPECIAL_SERVICE_LABEL_Mehr} ", callback_data=f"service_{SPECIAL_SERVICE_ID_Mehr}"),
+            InlineKeyboardButton(f"🟡 {SPECIAL_SERVICE_LABEL_Resalat} ", callback_data=f"service_{SPECIAL_SERVICE_ID_Resalat}"),
+            InlineKeyboardButton(f"🔵 {SPECIAL_SERVICE_LABEL_Dastadas} ", callback_data=f"service_{SPECIAL_SERVICE_ID_Dastadas}")
+        ])
         row = []
         for cat_id in sorted_cats[:10]:
             cat_name = get_category_name(cat_id)
