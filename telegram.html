@@ -283,7 +283,7 @@
     </div>
 
     <!-- ═══════════════════════════════════════════════ -->
-    <!--  Telegram Login Widget  –  v2.0               -->
+    <!--  Telegram Login Widget  –  v2.0 (cleaned)     -->
     <!--  Docs: https://core.telegram.org/widgets/login -->
     <!-- ═══════════════════════════════════════════════ -->
 
@@ -295,7 +295,7 @@
         //     (Create one via @BotFather on Telegram.)
         // ──────────────────────────────────────────────
 
-        const BOT_USERNAME = 'cofenetonlinebot'; // <-- CHANGE THIS
+        const BOT_USERNAME = 'YOUR_BOT_USERNAME'; // <-- CHANGE THIS
 
         // ──────────────────────────────────────────────
         //  2.  CALLBACK –  called after successful login
@@ -328,33 +328,39 @@
         }
 
         // ──────────────────────────────────────────────
-        //  3.  INJECT THE WIDGET
+        //  3.  INJECT THE WIDGET (CLEANED VERSION)
+        //      - Removed deprecated 'data-request-access'
+        //      - Removed '?22' and added '?v=2' to bust cache
         // ──────────────────────────────────────────────
 
         function loadTelegramWidget() {
             const container = document.getElementById('telegramLoginContainer');
 
-            // Create the <script> tag that Telegram's widget expects
-            // We use data-onauth to point to our callback.
+            // Clear previous content (if any)
+            container.innerHTML = '';
+
+            // Create the <script> tag for the widget
             const script = document.createElement('script');
-            script.src = 'https://telegram.org/js/telegram-widget.js';
+            
+            // Use '?v=2' to force browsers to load the absolute latest version
+            script.src = 'https://telegram.org/js/telegram-widget.js?v=2';
+            
+            // Required attributes (NO 'data-request-access' – it's deprecated!)
             script.setAttribute('data-telegram-login', BOT_USERNAME);
             script.setAttribute('data-size', 'large');
             script.setAttribute('data-onauth', 'onTelegramAuth(user)');
-            // script.setAttribute('data-request-access', 'write');
             script.setAttribute('data-radius', '12');
+            
             script.async = true;
 
-            // Clear container and append the script
-            container.innerHTML = '';
+            // Append the script to the container
             container.appendChild(script);
 
-            // If the bot username is still the placeholder, show a warning
+            // If the bot username is still the placeholder, show a friendly warning
             if (BOT_USERNAME === 'YOUR_BOT_USERNAME') {
                 console.warn(
                     '⚠️  Telegram Login: Please set BOT_USERNAME to your actual bot username.'
                 );
-                // Show a friendly inline hint
                 const hint = document.createElement('p');
                 hint.style.cssText =
                     'font-size:13px;color:#b44;background:#fff0f0;padding:12px 16px;border-radius:12px;margin-top:6px;border:1px solid #ffd0d0;';
@@ -389,10 +395,9 @@
 
         document.addEventListener('DOMContentLoaded', loadTelegramWidget);
 
-        // If the script loads after DOMContentLoaded (e.g. from cache),
-        // call it directly.
+        // Safety net: if DOM is already loaded, load it now
         if (document.readyState === 'complete' || document.readyState === 'interactive') {
-            // But avoid double-injection
+            // Avoid double-injection
             if (!document.querySelector('#telegramLoginContainer script')) {
                 loadTelegramWidget();
             }
