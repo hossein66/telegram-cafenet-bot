@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login with Telegram</title>
+
+    <!-- Font Awesome for icons -->
+    <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
+    />
+
+    <style>
+        /* ── Reset & base ── */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(145deg, #e8f0fe 0%, #d4e0f0 100%);
+            padding: 20px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-radius: 42px;
+            box-shadow:
+                0 30px 60px -20px rgba(0, 20, 40, 0.35),
+                inset 0 1px 2px rgba(255, 255, 255, 0.7);
+            padding: 48px 40px 40px;
+            max-width: 460px;
+            width: 100%;
+            text-align: center;
+            transition: transform 0.25s ease;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+        }
+
+        /* ── Header ── */
+        .logo-icon {
+            font-size: 52px;
+            color: #0088cc;
+            background: rgba(0, 136, 204, 0.10);
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            border: 1px solid rgba(0, 136, 204, 0.15);
+        }
+
+        h1 {
+            font-size: 26px;
+            font-weight: 700;
+            color: #1a2634;
+            letter-spacing: -0.3px;
+            margin-bottom: 6px;
+        }
+
+        .subtitle {
+            font-size: 15px;
+            color: #5e6f88;
+            margin-bottom: 32px;
+            font-weight: 400;
+            line-height: 1.5;
+        }
+
+        /* ── Telegram button wrapper ── */
+        .telegram-btn-wrapper {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 28px;
+            min-height: 60px;
+            align-items: center;
+        }
+
+        /* ── User profile (after login) ── */
+        .user-profile {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            padding: 10px 0 6px;
+        }
+
+        .user-profile.visible {
+            display: flex;
+            animation: fadeUp 0.45s ease forwards;
+        }
+
+        .user-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid #0088cc;
+            box-shadow: 0 8px 24px rgba(0, 136, 204, 0.20);
+            margin-bottom: 14px;
+            background: #eef3f8;
+        }
+
+        .user-name {
+            font-size: 22px;
+            font-weight: 600;
+            color: #1a2634;
+        }
+
+        .user-username {
+            font-size: 15px;
+            color: #5e6f88;
+            margin-top: 2px;
+        }
+
+        .user-id {
+            font-size: 13px;
+            color: #8a9bb0;
+            margin-top: 4px;
+            background: rgba(0, 0, 0, 0.04);
+            padding: 4px 14px;
+            border-radius: 40px;
+            display: inline-block;
+            font-family: 'SF Mono', 'Menlo', monospace;
+        }
+
+        /* ── Logout button ── */
+        .logout-btn {
+            margin-top: 20px;
+            background: none;
+            border: 1px solid #d0dae8;
+            color: #4a5a72;
+            padding: 8px 28px;
+            border-radius: 40px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: rgba(255, 255, 255, 0.5);
+            backdrop-filter: blur(4px);
+        }
+
+        .logout-btn:hover {
+            background: #f0f4fa;
+            border-color: #b0c0d4;
+            color: #1a2634;
+        }
+
+        .logout-btn i {
+            margin-right: 8px;
+            font-size: 13px;
+        }
+
+        /* ── Divider ── */
+        .divider {
+            border: none;
+            height: 1px;
+            background: linear-gradient(to right, transparent, rgba(0, 0, 0, 0.06), transparent);
+            margin: 8px 0 22px;
+        }
+
+        /* ── Footer / hint ── */
+        .hint {
+            font-size: 13px;
+            color: #889bb2;
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .hint i {
+            color: #b0c4db;
+            font-size: 14px;
+        }
+
+        .badge {
+            display: inline-block;
+            background: rgba(0, 136, 204, 0.08);
+            color: #0088cc;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 2px 12px;
+            border-radius: 40px;
+            letter-spacing: 0.3px;
+            border: 1px solid rgba(0, 136, 204, 0.10);
+            margin-top: 4px;
+        }
+
+        /* ── Animation ── */
+        @keyframes fadeUp {
+            0% {
+                opacity: 0;
+                transform: translateY(12px);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* ── Responsive ── */
+        @media (max-width: 480px) {
+            .card {
+                padding: 32px 24px 28px;
+                border-radius: 32px;
+            }
+
+            h1 {
+                font-size: 22px;
+            }
+
+            .logo-icon {
+                width: 64px;
+                height: 64px;
+                font-size: 40px;
+            }
+
+            .user-avatar {
+                width: 68px;
+                height: 68px;
+            }
+
+            .telegram-btn-wrapper {
+                min-height: 50px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+
+        <!-- Icon -->
+        <div class="logo-icon">
+            <i class="fab fa-telegram-plane"></i>
+        </div>
+
+        <h1>Telegram Auth</h1>
+        <p class="subtitle">
+            Sign in securely with your Telegram account
+        </p>
+
+        <!-- ─── Telegram Login Widget ─── -->
+        <div class="telegram-btn-wrapper" id="loginWrapper">
+            <!-- The widget script will inject the button here -->
+            <div id="telegramLoginContainer"></div>
+        </div>
+
+        <hr class="divider" />
+
+        <!-- ─── User profile (hidden by default) ─── -->
+        <div class="user-profile" id="userProfile">
+            <img class="user-avatar" id="userAvatar" src="" alt="Avatar" />
+            <div class="user-name" id="userName">—</div>
+            <div class="user-username" id="userUsername">@ —</div>
+            <span class="user-id" id="userId">ID: —</span>
+            <button class="logout-btn" id="logoutBtn">
+                <i class="fas fa-sign-out-alt"></i> Sign out
+            </button>
+        </div>
+
+        <!-- Hint -->
+        <div class="hint">
+            <i class="fas fa-shield-alt"></i>
+            <span>Your data is kept private</span>
+            <span class="badge">secure</span>
+        </div>
+
+    </div>
+
+    <!-- ═══════════════════════════════════════════════ -->
+    <!--  Telegram Login Widget  –  v2.0               -->
+    <!--  Docs: https://core.telegram.org/widgets/login -->
+    <!-- ═══════════════════════════════════════════════ -->
+
+    <script>
+        // ──────────────────────────────────────────────
+        //  1.  CONFIGURATION
+        //     Replace 'YOUR_BOT_USERNAME' with the
+        //     username of your Telegram Bot.
+        //     (Create one via @BotFather on Telegram.)
+        // ──────────────────────────────────────────────
+
+        const BOT_USERNAME = 'cofenetonlinebot'; // <-- CHANGE THIS
+
+        // ──────────────────────────────────────────────
+        //  2.  CALLBACK –  called after successful login
+        // ──────────────────────────────────────────────
+
+        function onTelegramAuth(user) {
+            // user object contains:
+            //   id, first_name, last_name, username,
+            //   photo_url, auth_date, hash
+
+            console.log('✅ Telegram auth successful:', user);
+
+            // Hide login button, show profile
+            document.getElementById('loginWrapper').style.display = 'none';
+            const profile = document.getElementById('userProfile');
+            profile.classList.add('visible');
+
+            // Fill user data
+            document.getElementById('userAvatar').src =
+                user.photo_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(user.first_name) +
+                '&background=0088cc&color=fff&size=80';
+            document.getElementById('userName').textContent =
+                [user.first_name, user.last_name].filter(Boolean).join(' ') || 'User';
+            document.getElementById('userUsername').textContent =
+                user.username ? '@' + user.username : '(no username)';
+            document.getElementById('userId').textContent = 'ID: ' + user.id;
+
+            // You can send 'user' to your backend here
+            // e.g. fetch('/auth/telegram', { method: 'POST', body: JSON.stringify(user) })
+        }
+
+        // ──────────────────────────────────────────────
+        //  3.  INJECT THE WIDGET
+        // ──────────────────────────────────────────────
+
+        function loadTelegramWidget() {
+            const container = document.getElementById('telegramLoginContainer');
+
+            // Create the <script> tag that Telegram's widget expects
+            // We use data-onauth to point to our callback.
+            const script = document.createElement('script');
+            script.src = 'https://telegram.org/js/telegram-widget.js?22';
+            script.setAttribute('data-telegram-login', BOT_USERNAME);
+            script.setAttribute('data-size', 'large');
+            script.setAttribute('data-onauth', 'onTelegramAuth(user)');
+            script.setAttribute('data-request-access', 'write');
+            script.setAttribute('data-radius', '12');
+            script.async = true;
+
+            // Clear container and append the script
+            container.innerHTML = '';
+            container.appendChild(script);
+
+            // If the bot username is still the placeholder, show a warning
+            if (BOT_USERNAME === 'YOUR_BOT_USERNAME') {
+                console.warn(
+                    '⚠️  Telegram Login: Please set BOT_USERNAME to your actual bot username.'
+                );
+                // Show a friendly inline hint
+                const hint = document.createElement('p');
+                hint.style.cssText =
+                    'font-size:13px;color:#b44;background:#fff0f0;padding:12px 16px;border-radius:12px;margin-top:6px;border:1px solid #ffd0d0;';
+                hint.textContent =
+                    '⚠️  Replace "YOUR_BOT_USERNAME" with your Telegram bot username.';
+                container.appendChild(hint);
+            }
+        }
+
+        // ──────────────────────────────────────────────
+        //  4.  LOGOUT
+        // ──────────────────────────────────────────────
+
+        document.getElementById('logoutBtn').addEventListener('click', function() {
+            // Hide profile, show login button
+            document.getElementById('userProfile').classList.remove('visible');
+            document.getElementById('loginWrapper').style.display = 'flex';
+
+            // Clear user data from the DOM (optional)
+            document.getElementById('userAvatar').src = '';
+            document.getElementById('userName').textContent = '—';
+            document.getElementById('userUsername').textContent = '@ —';
+            document.getElementById('userId').textContent = 'ID: —';
+
+            // Re-inject the widget to get a fresh login button
+            loadTelegramWidget();
+        });
+
+        // ──────────────────────────────────────────────
+        //  5.  BOOT
+        // ──────────────────────────────────────────────
+
+        document.addEventListener('DOMContentLoaded', loadTelegramWidget);
+
+        // If the script loads after DOMContentLoaded (e.g. from cache),
+        // call it directly.
+        if (document.readyState === 'complete' || document.readyState === 'interactive') {
+            // But avoid double-injection
+            if (!document.querySelector('#telegramLoginContainer script')) {
+                loadTelegramWidget();
+            }
+        }
+    </script>
+
+</body>
+</html>
