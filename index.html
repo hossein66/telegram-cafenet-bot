@@ -4,10 +4,10 @@
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>کافی‌نت آنلاین – خدمات اداری و دولتی</title>
-          <!-- Standard favicon -->
-  <link rel="icon" href="favicon.ico" type="image/x-icon">
-  <!-- Alternative for modern browsers (better quality) -->
-  <link rel="icon" href="favicon.png" type="image/png">
+        <!-- Standard favicon -->
+        <link rel="icon" href="favicon.ico" type="image/x-icon">
+        <!-- Alternative for modern browsers (better quality) -->
+        <link rel="icon" href="favicon.png" type="image/png">
         <!-- Add these for faster loading -->
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -554,7 +554,7 @@
             <div class="header-inner">
                 <a href="#" class="logo" onclick="resetView();return false">
                     <div class="logo-icon">
-                        <img src="logo.png" width="50px" alt="">
+                        <img src="logo.png" width="50px" alt>
                     </div>
                     <div>
                         <div class="logo-text">کافی‌نت آنلاین</div>
@@ -1851,10 +1851,20 @@ function setupScrollObserver() {
                 'svc_1784058536819', // Resalat
                 'svc_1784058536820' // Mehr
             ];
+                        const LOAN_SERVICE_IDS_Without_dastadas = [
+                'svc_1784058536819', // Resalat
+                'svc_1784058536820' // Mehr
+            ];
             if (LOAN_SERVICE_IDS.includes(serviceId)) {
                 const MIN_FEE = 485000;
                 if (fee < MIN_FEE) {
                     return MIN_FEE;
+                }
+            }
+                        if (LOAN_SERVICE_IDS_Without_dastadas.includes(serviceId)) {
+                const Max_FEE = 1850000;
+                if (fee > Max_FEE) {
+                    return Max_FEE;
                 }
             }
             return fee;
@@ -1878,6 +1888,7 @@ function setupScrollObserver() {
 
     const mobile = values['شماره موبایل'] || '0';
     const nationalCode = values['کد ملی '] || '0';
+    let installmentAmount=0;
     console.log('nationalCode',nationalCode,values);
     // Add loan calculation rows if it's the specific service
     if (isDastadasLoanService) {
@@ -1899,6 +1910,8 @@ function setupScrollObserver() {
         let fee = score * 1.8/10;
                // ── apply minimum fee ──
                 fee = applyLoanFeeMinimum(Math.round(fee), service.id);
+              const  installmentCount = refundDuration - ((refundDuration/11));
+                installmentAmount= ((loanAmountInRials / installmentCount)); 
         // Update service price with fee
         if (service) {
             // service.price = Math.round(fee);
@@ -1929,6 +1942,10 @@ function setupScrollObserver() {
             <div class="summary-item">
                 <div class="summary-key">مدت وام (ماه)</div>
                 <div class="summary-val">${refundDuration}</div>
+            </div>
+                        <div class="summary-item">
+                <div class="summary-key">قسط ماهیانه  </div>
+                <div class="summary-val">${formatNumber(installmentAmount)}</div>
             </div>
             <div class="summary-item">
                 <div class="summary-key"> مقدار امتیاز مورد نیاز</div>
@@ -1974,6 +1991,7 @@ function setupScrollObserver() {
         const score = loanAmount * refundDuration / 10;
         const scorePrice = score * 135000;
         let fee = score * 3000;
+        installmentAmount= ((loanAmountInRials / refundDuration));
                // ── apply minimum fee ──
                 fee = applyLoanFeeMinimum(Math.round(fee), service.id);
         // Update service price with fee
@@ -2006,6 +2024,10 @@ function setupScrollObserver() {
             <div class="summary-item">
                 <div class="summary-key">مدت وام (ماه)</div>
                 <div class="summary-val">${refundDuration}</div>
+            </div>
+                                    <div class="summary-item">
+                <div class="summary-key">قسط ماهیانه  </div>
+                <div class="summary-val">${formatNumber(installmentAmount)}</div>
             </div>
             <div class="summary-item">
                 <div class="summary-key"> مقدار امتیاز 10 ماهه مورد نیاز</div>
@@ -2053,6 +2075,8 @@ function setupScrollObserver() {
         let fee = score * 10000;
                // ── apply minimum fee ──
                 fee = applyLoanFeeMinimum(Math.round(fee), service.id);
+                     soudAmount=loanAmountInRials * 4 *(refundDuration +1) / 2400;
+                installmentAmount=  (loanAmountInRials + soudAmount)  /refundDuration
         // Update service price with fee
         if (service) {
             // service.price = Math.round(fee);
@@ -2083,6 +2107,10 @@ function setupScrollObserver() {
             <div class="summary-item">
                 <div class="summary-key">مدت وام (ماه)</div>
                 <div class="summary-val">${refundDuration}</div>
+            </div>
+                                    <div class="summary-item">
+                <div class="summary-key">قسط ماهیانه  </div>
+                <div class="summary-val">${formatNumber(installmentAmount)}</div>
             </div>
             <div class="summary-item">
                 <div class="summary-key"> مقدار امتیاز مورد نیاز</div>

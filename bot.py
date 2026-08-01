@@ -1696,7 +1696,7 @@ async def show_document_summary_and_payment(query, context: ContextTypes.DEFAULT
                 instruction = f"شما می‌بایستی مبلغ {fmt(score_price)} در زمان انتقال امتیاز به حساب فروشنده واریز نمایید"
                 soudAmount=loan_amount_rials * 4 *(refund_duration +1) / 2400;
                 installmentCountAmount=  (loan_amount_rials + soudAmount)  /refund_duration
-                print
+                
             # Add random fee to total price
             total_price = int(round(fee)) + random_fee
             context.user_data['final_price'] = total_price
