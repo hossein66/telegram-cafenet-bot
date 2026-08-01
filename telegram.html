@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Login with Telegram</title>
+    <title>Login with Telegram (OAuth 2.0)</title>
 
     <!-- Font Awesome for icons -->
     <link
@@ -80,12 +80,44 @@
             line-height: 1.5;
         }
 
-        /* ── Telegram button wrapper ── */
+        /* ── Telegram button (OAuth 2.0) ── */
+        .tg-auth-button {
+            background: #0088cc;
+            border: none;
+            color: #fff;
+            font-size: 18px;
+            font-weight: 600;
+            padding: 14px 32px;
+            border-radius: 60px;
+            cursor: pointer;
+            box-shadow: 0 8px 24px rgba(0, 136, 204, 0.25);
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 14px;
+            letter-spacing: 0.3px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        .tg-auth-button i {
+            font-size: 22px;
+        }
+
+        .tg-auth-button:hover {
+            background: #0077b3;
+            transform: translateY(-2px);
+            box-shadow: 0 12px 32px rgba(0, 136, 204, 0.35);
+        }
+
+        .tg-auth-button:active {
+            transform: translateY(0);
+        }
+
         .telegram-btn-wrapper {
             display: flex;
             justify-content: center;
             margin-bottom: 28px;
-            min-height: 60px;
+            min-height: 70px;
             align-items: center;
         }
 
@@ -234,8 +266,9 @@
                 height: 68px;
             }
 
-            .telegram-btn-wrapper {
-                min-height: 50px;
+            .tg-auth-button {
+                font-size: 16px;
+                padding: 12px 24px;
             }
         }
     </style>
@@ -254,10 +287,12 @@
             Sign in securely with your Telegram account
         </p>
 
-        <!-- ─── Telegram Login Widget ─── -->
+        <!-- ─── Telegram OAuth 2.0 Button ─── -->
         <div class="telegram-btn-wrapper" id="loginWrapper">
-            <!-- The widget script will inject the button here -->
-            <div id="telegramLoginContainer"></div>
+            <button class="tg-auth-button" id="tgLoginBtn">
+                <i class="fab fa-telegram-plane"></i>
+                Sign In with Telegram
+            </button>
         </div>
 
         <hr class="divider" />
@@ -277,36 +312,31 @@
         <div class="hint">
             <i class="fas fa-shield-alt"></i>
             <span>Your data is kept private</span>
-            <span class="badge">secure</span>
+            <span class="badge">OAuth 2.0</span>
         </div>
 
     </div>
 
-    <!-- ═══════════════════════════════════════════════ -->
-    <!--  Telegram Login Widget  –  v2.0 (cleaned)     -->
-    <!--  Docs: https://core.telegram.org/widgets/login -->
-    <!-- ═══════════════════════════════════════════════ -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!--  Telegram OAuth 2.0 Login Script                            -->
+    <!--  ✅ FIXED: Added data-redirect-uri to prevent the error    -->
+    <!--  ⚠️  REMOVED: data-request-access (deprecated)             -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+
+    <script async src="https://oauth.telegram.org/js/telegram-login.js?5" 
+            data-client-id="8059221192" 
+            data-redirect-uri="https://cofenet-online.ir/telegram.html"
+            data-onauth="onTelegramAuth(data)">
+            <!-- ❌ data-request-access is COMPLETELY REMOVED -->
+    </script>
 
     <script>
         // ──────────────────────────────────────────────
-        //  1.  CONFIGURATION
-        //     Replace 'YOUR_BOT_USERNAME' with the
-        //     username of your Telegram Bot.
-        //     (Create one via @BotFather on Telegram.)
-        // ──────────────────────────────────────────────
-
-        const BOT_USERNAME = 'cofenetonlinebot'; // <-- CHANGE THIS
-
-        // ──────────────────────────────────────────────
-        //  2.  CALLBACK –  called after successful login
+        //  CALLBACK – triggered after successful login
         // ──────────────────────────────────────────────
 
         function onTelegramAuth(user) {
-            // user object contains:
-            //   id, first_name, last_name, username,
-            //   photo_url, auth_date, hash
-
-            console.log('✅ Telegram auth successful:', user);
+            console.log('✅ Telegram OAuth successful:', user);
 
             // Hide login button, show profile
             document.getElementById('loginWrapper').style.display = 'none';
@@ -323,85 +353,23 @@
                 user.username ? '@' + user.username : '(no username)';
             document.getElementById('userId').textContent = 'ID: ' + user.id;
 
-            // You can send 'user' to your backend here
-            // e.g. fetch('/auth/telegram', { method: 'POST', body: JSON.stringify(user) })
+            // Send user data to your backend (optional)
+            // fetch('/auth/telegram', { method: 'POST', body: JSON.stringify(user) })
         }
 
         // ──────────────────────────────────────────────
-        //  3.  INJECT THE WIDGET (CLEANED VERSION)
-        //      - Removed deprecated 'data-request-access'
-        //      - Removed '?22' and added '?v=2' to bust cache
-        // ──────────────────────────────────────────────
-
-        function loadTelegramWidget() {
-            const container = document.getElementById('telegramLoginContainer');
-
-            // Clear previous content (if any)
-            container.innerHTML = '';
-
-            // Create the <script> tag for the widget
-            const script = document.createElement('script');
-            
-            // Use '?v=2' to force browsers to load the absolute latest version
-            script.src = 'https://telegram.org/js/telegram-widget.js?v=2';
-            
-            // Required attributes (NO 'data-request-access' – it's deprecated!)
-            script.setAttribute('data-telegram-login', BOT_USERNAME);
-            script.setAttribute('data-size', 'large');
-            script.setAttribute('data-onauth', 'onTelegramAuth(user)');
-            script.setAttribute('data-radius', '12');
-            
-            script.async = true;
-
-            // Append the script to the container
-            container.appendChild(script);
-
-            // If the bot username is still the placeholder, show a friendly warning
-            if (BOT_USERNAME === 'YOUR_BOT_USERNAME') {
-                console.warn(
-                    '⚠️  Telegram Login: Please set BOT_USERNAME to your actual bot username.'
-                );
-                const hint = document.createElement('p');
-                hint.style.cssText =
-                    'font-size:13px;color:#b44;background:#fff0f0;padding:12px 16px;border-radius:12px;margin-top:6px;border:1px solid #ffd0d0;';
-                hint.textContent =
-                    '⚠️  Replace "YOUR_BOT_USERNAME" with your Telegram bot username.';
-                container.appendChild(hint);
-            }
-        }
-
-        // ──────────────────────────────────────────────
-        //  4.  LOGOUT
+        //  LOGOUT
         // ──────────────────────────────────────────────
 
         document.getElementById('logoutBtn').addEventListener('click', function() {
-            // Hide profile, show login button
             document.getElementById('userProfile').classList.remove('visible');
             document.getElementById('loginWrapper').style.display = 'flex';
 
-            // Clear user data from the DOM (optional)
             document.getElementById('userAvatar').src = '';
             document.getElementById('userName').textContent = '—';
             document.getElementById('userUsername').textContent = '@ —';
             document.getElementById('userId').textContent = 'ID: —';
-
-            // Re-inject the widget to get a fresh login button
-            loadTelegramWidget();
         });
-
-        // ──────────────────────────────────────────────
-        //  5.  BOOT
-        // ──────────────────────────────────────────────
-
-        document.addEventListener('DOMContentLoaded', loadTelegramWidget);
-
-        // Safety net: if DOM is already loaded, load it now
-        if (document.readyState === 'complete' || document.readyState === 'interactive') {
-            // Avoid double-injection
-            if (!document.querySelector('#telegramLoginContainer script')) {
-                loadTelegramWidget();
-            }
-        }
     </script>
 
 </body>
