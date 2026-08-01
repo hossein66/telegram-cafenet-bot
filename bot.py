@@ -80,11 +80,11 @@ DISCOUNT_CODE = "discount_code"
 REFERRAL_APPLIED = "referral_applied"
 DISCOUNT_APPLIED = "discount_applied"
 SPECIAL_SERVICE_ID_Dastadas = "svc_1784058536818"
-SPECIAL_SERVICE_LABEL_Dastadas = "خرید امتیاز دستادس"
+SPECIAL_SERVICE_LABEL_Dastadas = " وام دستادس"
 SPECIAL_SERVICE_ID_Resalat = "svc_1784058536819"
-SPECIAL_SERVICE_LABEL_Resalat = "خرید امتیاز رسالت"
+SPECIAL_SERVICE_LABEL_Resalat = " وام رسالت"
 SPECIAL_SERVICE_ID_Mehr = "svc_1784058536820"
-SPECIAL_SERVICE_LABEL_Mehr = "خرید امتیاز مهر"
+SPECIAL_SERVICE_LABEL_Mehr = "وام مهر"
 ADMIN_CHAT_ID = 6054109606  # Replace with your admin's Telegram user ID
 
 # Helper functions
