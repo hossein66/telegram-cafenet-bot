@@ -1,17 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Login with Telegram (OAuth 2.0)</title>
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Login with Telegram (OAuth 2.0)</title>
 
-    <!-- Font Awesome for icons -->
-    <link
-    rel="stylesheet"
-    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
-    />
+        <!-- Font Awesome for icons -->
+        <link
+            rel="stylesheet"
+            href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
 
-    <style>
+        <style>
         /* ── Reset & base ── */
         * {
             margin: 0;
@@ -272,76 +271,79 @@
             }
         }
     </style>
-</head>
-<body>
+    </head>
+    <body>
 
-    <div class="card">
+        <div class="card">
 
-        <!-- Icon -->
-        <div class="logo-icon">
-            <i class="fab fa-telegram-plane"></i>
-        </div>
-
-        <h1>Telegram Auth</h1>
-        <p class="subtitle">
-            Sign in securely with your Telegram account
-        </p>
-
-        <!-- ─── Telegram OAuth 2.0 Button ─── -->
-        <div class="telegram-btn-wrapper" id="loginWrapper">
-            <button class="tg-auth-button" id="tgLoginBtn">
+            <!-- Icon -->
+            <div class="logo-icon">
                 <i class="fab fa-telegram-plane"></i>
-                Sign In with Telegram
-            </button>
+            </div>
+
+            <h1>Telegram Auth</h1>
+            <p class="subtitle">
+                Sign in securely with your Telegram account
+            </p>
+
+            <!-- ─── Telegram OAuth 2.0 Button ─── -->
+            <div class="telegram-btn-wrapper" id="loginWrapper">
+                <button class="tg-auth-button" id="tgLoginBtn">
+                    <i class="fab fa-telegram-plane"></i>
+                    Sign In with Telegram
+                </button>
+            </div>
+
+            <hr class="divider" />
+
+            <!-- ─── User profile (hidden by default) ─── -->
+            <div class="user-profile" id="userProfile">
+                <img class="user-avatar" id="userAvatar" src alt="Avatar" />
+                <div class="user-name" id="userName">—</div>
+                <div class="user-username" id="userUsername">@ —</div>
+                <span class="user-id" id="userId">ID: —</span>
+                <div class="user-data" id="data">—</div>
+                <button class="logout-btn" id="logoutBtn">
+                    <i class="fas fa-sign-out-alt"></i> Sign out
+                </button>
+            </div>
+
+            <!-- Hint -->
+            <div class="hint">
+                <i class="fas fa-shield-alt"></i>
+                <span>Your data is kept private</span>
+                <span class="badge">OAuth 2.0</span>
+            </div>
+
         </div>
 
-        <hr class="divider" />
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <!--  Telegram OAuth 2.0 Login Script                            -->
+        <!--  ✅ FIXED: Added data-redirect-uri to prevent the error    -->
+        <!--  ⚠️  REMOVED: data-request-access (deprecated)             -->
+        <!-- ═══════════════════════════════════════════════════════════════ -->
 
-        <!-- ─── User profile (hidden by default) ─── -->
-        <div class="user-profile" id="userProfile">
-            <img class="user-avatar" id="userAvatar" src="" alt="Avatar" />
-            <div class="user-name" id="userName">—</div>
-            <div class="user-username" id="userUsername">@ —</div>
-            <span class="user-id" id="userId">ID: —</span>
-            <div class="user-data" id="data">—</div>
-            <button class="logout-btn" id="logoutBtn">
-                <i class="fas fa-sign-out-alt"></i> Sign out
-            </button>
-        </div>
+        <script async src="https://oauth.telegram.org/js/telegram-login.js?5"
+            data-client-id="8059221192" data-onauth="onTelegramAuth(data)"
+            data-request-access="write"></script>
 
-        <!-- Hint -->
-        <div class="hint">
-            <i class="fas fa-shield-alt"></i>
-            <span>Your data is kept private</span>
-            <span class="badge">OAuth 2.0</span>
-        </div>
+        <button class="tg-auth-button" data-style="shine">Sign In with
+            Telegram</button>
 
-    </div>
-
-    <!-- ═══════════════════════════════════════════════════════════════ -->
-    <!--  Telegram OAuth 2.0 Login Script                            -->
-    <!--  ✅ FIXED: Added data-redirect-uri to prevent the error    -->
-    <!--  ⚠️  REMOVED: data-request-access (deprecated)             -->
-    <!-- ═══════════════════════════════════════════════════════════════ -->
-
-<script async src="https://oauth.telegram.org/js/telegram-login.js?5" data-client-id="8059221192" data-onauth="onTelegramAuth(data)" data-request-access="write"></script>
-
-<button class="tg-auth-button" data-style="shine">Sign In with Telegram</button>
-
-    <script>
+        <script>
         // ──────────────────────────────────────────────
         //  CALLBACK – triggered after successful login
         // ──────────────────────────────────────────────
 
-        function onTelegramAuth(user) {
-            console.log('✅ Telegram OAuth successful:', user);
+        function onTelegramAuth(data) {
+            console.log('✅ Telegram OAuth successful:', data);
 
             // Hide login button, show profile
             document.getElementById('loginWrapper').style.display = 'none';
-            document.getElementById('data').textContent = JSON.stringify(user, null, 2);
+            document.getElementById('data').textContent = JSON.stringify(data, null, 2);
             const profile = document.getElementById('userProfile');
             profile.classList.add('visible');
-
+            const user = data.user;
             // Fill user data
             document.getElementById('userAvatar').src =
                 user.photo_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(user.first_name) +
@@ -371,5 +373,5 @@
         });
     </script>
 
-</body>
+    </body>
 </html>
