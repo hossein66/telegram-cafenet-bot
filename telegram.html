@@ -303,6 +303,7 @@
             <div class="user-name" id="userName">—</div>
             <div class="user-username" id="userUsername">@ —</div>
             <span class="user-id" id="userId">ID: —</span>
+            <div class="user-data" id="data">—</div>
             <button class="logout-btn" id="logoutBtn">
                 <i class="fas fa-sign-out-alt"></i> Sign out
             </button>
@@ -323,12 +324,9 @@
     <!--  ⚠️  REMOVED: data-request-access (deprecated)             -->
     <!-- ═══════════════════════════════════════════════════════════════ -->
 
-    <script async src="https://oauth.telegram.org/js/telegram-login.js?5" 
-            data-client-id="8059221192" 
-            data-redirect-uri="https://cofenet-online.ir/telegram.html"
-            data-onauth="onTelegramAuth(data)">
-            <!-- ❌ data-request-access is COMPLETELY REMOVED -->
-    </script>
+<script async src="https://oauth.telegram.org/js/telegram-login.js?5" data-client-id="8059221192" data-onauth="onTelegramAuth(data)" data-request-access="write"></script>
+
+<button class="tg-auth-button" data-style="shine">Sign In with Telegram</button>
 
     <script>
         // ──────────────────────────────────────────────
@@ -340,6 +338,7 @@
 
             // Hide login button, show profile
             document.getElementById('loginWrapper').style.display = 'none';
+            document.getElementById('data').textContent = JSON.stringify(user, null, 2);
             const profile = document.getElementById('userProfile');
             profile.classList.add('visible');
 
