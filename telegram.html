@@ -293,7 +293,13 @@
                     Sign In with Telegram
                 </button>
             </div>
+<script async src="https://oauth.telegram.org/js/telegram-login.js?5"
+  data-client-id="8059221192"
+  data-onauth="console.log(data)"
+  data-request-access="write"
+  data-lang="fa"></script>
 
+<button class="tg-auth-button" data-style="shine">Sign In with Telegram</button>
             <hr class="divider" />
 
             <!-- ─── User profile (hidden by default) ─── -->
@@ -323,14 +329,7 @@
         <!--  ⚠️  REMOVED: data-request-access (deprecated)             -->
         <!-- ═══════════════════════════════════════════════════════════════ -->
 
-        <script async src="https://oauth.telegram.org/js/telegram-login.js?5"
-            data-client-id="8059221192" data-onauth="onTelegramAuth(data)"
-            data-request-access="write"></script>
-
-        <button class="tg-auth-button" data-style="shine">Sign In with
-            Telegram</button>
-
-        <script>
+     
         // ──────────────────────────────────────────────
         //  CALLBACK – triggered after successful login
         // ──────────────────────────────────────────────
