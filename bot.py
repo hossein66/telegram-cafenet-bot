@@ -1653,7 +1653,7 @@ async def show_document_summary_and_payment(query, context: ContextTypes.DEFAULT
             national_code = docs_collected.get('کد ملی ', '—')
             mobile = docs_collected.get('شماره موبایل', '—')
             loan_amount_rials = loan_amount * 1_000_000
-
+            installmentCountAmount=0
             if is_dastadas:
                 if refund_duration == 12:
                     ratio = 32
@@ -1665,7 +1665,9 @@ async def show_document_summary_and_payment(query, context: ContextTypes.DEFAULT
                     ratio = 8
                 else:
                     ratio = 320
-
+                  
+                installmentCount = refund_duration - ((refund_duration/11));
+                installmentCountAmount= ((loan_amount_rials / installmentCount)); 
                 score = loan_amount_rials / ratio
                 score_price = score * 31 / 10
                 fee = score * 1.8 / 10
@@ -1679,16 +1681,22 @@ async def show_document_summary_and_payment(query, context: ContextTypes.DEFAULT
                 fee = score * 3000
                 if fee <500000:
                    fee=485000
+                if fee >1850000:
+                   fee=1850000      
                 instruction = f"شما می‌بایستی مبلغ {fmt(score_price)} را در زمان انتقال امتیاز به حساب فروشنده واریز نمایید"
-
+                installmentCountAmount=  loan_amount_rials/refund_duration
             else:  # is_mehr
                 score = loan_amount
                 score_price = score * 360000
                 fee = score * 10000
                 if fee <500000:
                    fee=485000
+                if fee >1850000:
+                    fee=1850000   
                 instruction = f"شما می‌بایستی مبلغ {fmt(score_price)} در زمان انتقال امتیاز به حساب فروشنده واریز نمایید"
-
+                soudAmount=loan_amount_rials * 4 *(refund_duration +1) / 2400;
+                installmentCountAmount=  (loan_amount_rials + soudAmount)  /refund_duration
+                print
             # Add random fee to total price
             total_price = int(round(fee)) + random_fee
             context.user_data['final_price'] = total_price
@@ -1698,6 +1706,7 @@ async def show_document_summary_and_payment(query, context: ContextTypes.DEFAULT
                 "",
                 f"🔹 **مبلغ وام**: {fmt(loan_amount_rials)} تومان",
                 f"🔹 **مدت وام (ماه)**: {refund_duration}",
+                f"🔹 **قسط ماهیانه**: {fmt(installmentCountAmount)} تومان",
                 f"🔹 **مقدار امتیاز مورد نیاز**: {fmt(score)}",
                 f"🔹 **قیمت امتیاز**: {fmt(score_price)} تومان",
                 f"🔹 **کارمزد**: {fmt(fee)} تومان",
