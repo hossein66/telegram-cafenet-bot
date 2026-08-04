@@ -2603,12 +2603,12 @@ function renderAuthModal() {
                             onmouseover="this.style.transform='scale(1.02)'"
                             onmouseout="this.style.transform='scale(1)'">
                         <span style="font-size:24px;">✈️</span>
-                  ادامه ثبت در تلگرام (پیشنهادی)
+ورود  با تلگرام
                     </button>
                     <div style="font-size:11px;color:var(--text3);text-align:center;margin-top:4px;">
                         اگر تلگرام نصب دارید، با این گزینه وارد شوید
                     </div>
-                    <button class="tg-auth-button" style="width:100%;padding:14px;background:#0088cc;color:white;border:none;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:12px;font-family:inherit;transition:all 0.2s;"
+                    <button class="tg-auth-button" style="width:100%;padding:14px;background:#0088cc;color:white;border:none;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:12px;font-family:inherit;transition:all 0.2s;display:none;"
                             onmouseover="this.style.transform='scale(1.02)'"
                             onmouseout="this.style.transform='scale(1)'" data-style="shine">ورود به سایت با تلگرام</button>
 
@@ -2832,13 +2832,11 @@ async function validateTelegramUser(tgData) {
     
 function openTelegramMiniApp() {
     const botUsername = 'CofenetOnlineBot';
-    const hasRequest = requestState && requestState.service && requestState.service.id;
-
-    let startParam = 'login'; // default
-
-    if (hasRequest) {
-        // Prepare the data to send
-        const dataToSend = {
+    // Prepare request data if any
+    let requestData = null;
+    if (requestState && requestState.service && requestState.service.id) {
+        // Build a minimal snapshot of the current request state
+        requestData = {
             service: requestState.service,
             docs: requestState.docs.map(d => ({
                 title: d.title,
@@ -2849,30 +2847,82 @@ function openTelegramMiniApp() {
                 validationRules: d.validationRules
             })),
             values: requestState.values,
-            step: requestState.step,
-            totalSteps: requestState.totalSteps,
+            step: requestState.step || 0,
+            totalSteps: requestState.totalSteps || requestState.docs.length + 2,
+            originalPrice: requestState.originalPrice || 0,
+            finalPrice: requestState.finalPrice || 0,
+            receiptImage: requestState.receiptImage || null,
+            referralCode: requestState.referralCode || null,
+            discountCode: requestState.discountCode || null,
+            referralApplied: requestState.referralApplied || false,
+            discountApplied: requestState.discountApplied || false,
+            // ... add other fields as needed
         };
-
-        try {
-            const jsonStr = JSON.stringify(dataToSend);
-            const encoded = encodeURIComponent(jsonStr);
-            // Telegram startapp limit ~4KB
-            if (encoded.length > 3800) {
-                showToast('⚠️ داده‌های درخواست زیاد است، لطفاً از روش جایگزین استفاده کنید.', 'error');
-                startParam = 'login';
-            } else {
-                startParam = `request_${encoded}`;
-            }
-        } catch (e) {
-            showToast('⚠️ خطا در آماده‌سازی داده‌ها', 'error');
-            startParam = 'login';
-        }
     }
 
-    // Open the bot with the startapp parameter
-    const url = `https://t.me/${botUsername}?startapp=${startParam}`;
-    window.open(url, '_blank');
-    showToast('📱 در حال انتقال به تلگرام...', '');
+    try {
+        // Call server to get a unique key
+        apiFetch('/api/auth/telegram/start', {
+            method: 'POST',
+            body: JSON.stringify({ requestData })
+        }).then(result => {
+            const key = result.key;
+            if (!key) throw new Error('No key returned');
+
+            // Store the key in sessionStorage to identify the polling session
+            sessionStorage.setItem('telegram_login_key', key);
+
+            // Redirect to the bot with startapp parameter
+            const url = `https://t.me/${botUsername}?startapp=${key}`;
+            window.open(url, '_blank');
+
+            // Start polling for completion
+            startPollingForTelegramLogin(key);
+        }).catch(err => {
+            showToast('⚠️ خطا در شروع ورود با تلگرام: ' + err.message, 'error');
+        });
+    } catch (e) {
+        showToast('⚠️ خطا: ' + e.message, 'error');
+    }
+}
+function startPollingForTelegramLogin(key) {
+    let attempts = 0;
+    const maxAttempts = 120; // 10 minutes (120 * 5s)
+    const interval = setInterval(() => {
+        attempts++;
+        apiFetch(`/api/auth/telegram/status?key=${encodeURIComponent(key)}`)
+            .then(data => {
+                if (data.status === 'completed') {
+                    clearInterval(interval);
+                    sessionStorage.removeItem('telegram_login_key');
+                    // Login success: set token and user
+                    if (data.token && data.user) {
+                        loginSuccess(data.user, data.token);
+                        // If there was request data, restore it
+                        if (data.requestData) {
+                            restoreRequestFromData(data.requestData);
+                        }
+                        showToast('✅ ورود با تلگرام موفق بود!', 'success');
+                    }
+                } else if (data.status === 'not_found') {
+                    // Key expired or invalid
+                    clearInterval(interval);
+                    sessionStorage.removeItem('telegram_login_key');
+                    showToast('⚠️ لینک ورود منقضی شد. دوباره تلاش کنید.', 'error');
+                }
+                // else status 'pending' -> continue polling
+            })
+            .catch(err => {
+                // Ignore network errors, keep polling
+                console.warn('Polling error:', err);
+            });
+
+        if (attempts >= maxAttempts) {
+            clearInterval(interval);
+            sessionStorage.removeItem('telegram_login_key');
+            showToast('⚠️ زمان ورود با تلگرام به پایان رسید. دوباره تلاش کنید.', 'error');
+        }
+    }, 5000); // every 5 seconds
 }
 function startAppReturnListener() {
     const visibilityHandler = () => {
@@ -2919,48 +2969,57 @@ function startAppReturnListener() {
     };
     window.addEventListener('pageshow', pageShowHandler);
 }
+
 function handleTelegramStartParam() {
     // Only run if we are inside Telegram WebView
     if (!window.Telegram || !window.Telegram.WebApp) return;
 
     const startParam = window.Telegram.WebApp.initDataUnsafe?.start_param;
-    if (!startParam || !startParam.startsWith('request_')) return;
-
-    // Decode the request data
-    const encoded = startParam.substring('request_'.length);
-    let requestData;
-    try {
-        const jsonStr = decodeURIComponent(encoded);
-        requestData = JSON.parse(jsonStr);
-    } catch (e) {
-        console.error('Failed to parse start_param:', e);
-        showToast('⚠️ خطا در بازیابی داده‌های درخواست', 'error');
+    if (!startParam) {
+        // No start_param, fallback to normal Telegram auto-login (already done)
         return;
     }
 
-    // Auto-login using Telegram user data
+    const key = startParam; // start_param is the key
     const tgUser = window.Telegram.WebApp.initDataUnsafe?.user;
-    if (tgUser) {
-        // Attempt to login via Telegram
-        apiFetch('/api/auth/telegram-login', {
-            method: 'POST',
-            body: JSON.stringify({ initData: window.Telegram.WebApp.initData || '', user: tgUser })
-        }).then(result => {
-            if (result && result.user && result.token) {
-                loginSuccess(result.user, result.token);
-                // Now restore the request state
-                restoreRequestFromData(requestData);
-            }
-        }).catch(err => {
-            console.error('Telegram login failed:', err);
-            showToast('⚠️ ورود با تلگرام ناموفق بود', 'error');
-        });
-    } else {
-        // No Telegram user – fallback to phone login? For now, show error.
-        showToast('⚠️ اطلاعات کاربری دریافت نشد', 'error');
-    }
-}
+    const initData = window.Telegram.WebApp.initData;
 
+    if (!tgUser) {
+        showToast('⚠️ اطلاعات کاربری از تلگرام دریافت نشد', 'error');
+        return;
+    }
+
+    // Call the login endpoint with the key
+    apiFetch('/api/auth/telegram-login', {
+        method: 'POST',
+        body: JSON.stringify({
+            initData: initData || '',
+            user: tgUser,
+            key: key
+        })
+    }).then(result => {
+        if (result && result.token && result.user) {
+            loginSuccess(result.user, result.token);
+            // After login, fetch the request data from the key (or get it from the login response)
+            // The server might not return requestData in the login response, so fetch it separately
+            return apiFetch(`/api/auth/telegram/status?key=${encodeURIComponent(key)}`);
+        } else {
+            throw new Error('Login failed');
+        }
+    }).then(statusData => {
+        if (statusData && statusData.status === 'completed' && statusData.requestData) {
+            restoreRequestFromData(statusData.requestData);
+        }
+        // Expand the WebApp to full height
+        if (window.Telegram && window.Telegram.WebApp) {
+            window.Telegram.WebApp.expand();
+        }
+        showToast('✅ وارد شدید!', 'success');
+    }).catch(err => {
+        console.error('Telegram login error:', err);
+        showToast('⚠️ ورود با تلگرام ناموفق بود', 'error');
+    });
+}
 function restoreRequestFromData(data) {
     // Build the requestState from the received data
     requestState = {

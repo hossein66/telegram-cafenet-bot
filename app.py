@@ -63,9 +63,13 @@ class RedisCache:
         # Redis automatically removes expired keys
         # This method exists for compatibility
         pass    
-
+class TelegramLogin(BaseModel):
+    initData: str
+    user: Dict[str, Any]
+    key: Optional[str] = None
 # Then use:
 sms_cache = RedisCache(default_ttl=20)
+telegram_auth_cache = RedisCache(default_ttl=300)  # 5 minutes TTL
 
 try:
     from config import BOT_TOKEN
@@ -2063,6 +2067,16 @@ def telegram_login(req: TelegramLogin):
 
             # Update token (always)
             token = create_token(user_id, phone)
+                    # If a key was provided, update the cache
+            if req.key:
+                cache_key = f"telegram_login:{req.key}"
+                cached = telegram_auth_cache.get(cache_key)
+                if cached:
+                    data = json.loads(cached)
+                    data["user"] = user_data   # dictionary of user
+                    data["token"] = token
+                    telegram_auth_cache.set(cache_key, json.dumps(data), ttl=300)
+                    
             cur.execute("UPDATE users SET token = ? WHERE id = ?", (token, user_id))
             conn.commit()
 
@@ -2799,6 +2813,37 @@ def health_check():
         "database": db_status,
         "cache": "ok",
         "timestamp": datetime.utcnow().isoformat()
+    }
+
+@app.post("/api/auth/telegram/start")
+def telegram_start(payload: dict):
+    """Generate a unique key and store optional request data."""
+    key = str(uuid.uuid4())
+    request_data = payload.get("requestData")  # can be None
+    # Store as JSON string
+    telegram_auth_cache.set(
+        f"telegram_login:{key}",
+        json.dumps({"requestData": request_data, "user": None, "token": None}),
+        ttl=300
+    )
+    return {"key": key}
+
+@app.get("/api/auth/telegram/status")
+def telegram_status(key: str):
+    """Check the status of a login attempt."""
+    data = telegram_auth_cache.get(f"telegram_login:{key}")
+    if data is None:
+        return {"status": "not_found"}
+    data = json.loads(data)
+    if data["user"] is None:
+        return {"status": "pending"}
+    # Optionally delete the key after retrieval (one‑time use)
+    telegram_auth_cache.delete(f"telegram_login:{key}")
+    return {
+        "status": "completed",
+        "token": data["token"],
+        "user": data["user"],
+        "requestData": data.get("requestData")
     }
 
 # ─────────────────────────────────────────────────────────────
