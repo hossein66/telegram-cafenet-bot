@@ -2072,13 +2072,15 @@ def telegram_login(req: TelegramLogin):
                     # If a key was provided, update the cache
             if req.key:
                 cache_key = f"telegram_login:{req.key}"
+                cache_key_autorized = f"telegram_login_autorized:{req.key}"
                 cached = telegram_auth_cache.get(cache_key)
                 if cached:
                     data = json.loads(cached)
                     data["user"] = user_data   # dictionary of user
                     data["token"] = token
                     telegram_auth_cache.set(cache_key, json.dumps(data), ttl=300)
-                    
+                    telegram_auth_cache.set(cache_key_autorized, json.dumps({"user": user_data, "token": token}), ttl=300)
+
             cur.execute("UPDATE users SET token = ? WHERE id = ?", (token, user_id))
             conn.commit()
 
