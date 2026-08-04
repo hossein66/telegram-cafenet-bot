@@ -2969,16 +2969,19 @@ function startAppReturnListener() {
     };
     window.addEventListener('pageshow', pageShowHandler);
 }
-
+function getStartParamFromUrl() {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get('tgWebAppStartParam');
+}
 function handleTelegramStartParam() {
     // Only run if we are inside Telegram WebView
     if (!window.Telegram || !window.Telegram.WebApp) return;
 
-    const startParam = window.Telegram.WebApp.initDataUnsafe?.start_param;
-    if (!startParam) {
-        // No start_param, fallback to normal Telegram auto-login (already done)
-        return;
-    }
+    const startParam = getStartParamFromUrl();
+    // if (!startParam) {
+    //     // No start_param, fallback to normal Telegram auto-login (already done)
+    //     return;
+    // }
 
     const key = startParam; // start_param is the key
     const tgUser = window.Telegram.WebApp.initDataUnsafe?.user;
