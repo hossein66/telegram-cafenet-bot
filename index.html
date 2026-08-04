@@ -3120,7 +3120,7 @@ async function openProfile() {
             📩 راهنمای SMS Forwarder
         </button>
         <button onclick="closeProfile();openServicePage('${CODE_SERVICE_ID}');" style="flex:1;min-width:120px;padding:10px 16px;border:1.5px solid var(--brand);background:var(--brand-light);border-radius:10px;font-family:var(--font);font-weight:600;color:var(--brand);cursor:pointer;transition:.15s;font-size:13px;">
-            🔢 کد ۵ رقمی
+            🔢 ارسال کد ۵ رقمی
         </button>
     </div>
 </div>
@@ -3251,7 +3251,7 @@ function renderCodeServicePage(detail) {
     const pageEl = document.getElementById('servicePage');
     if (!pageEl) return;
 
-    const serviceTitle = detail.serviceTitle || 'کد ۵ رقمی';
+    const serviceTitle = detail.serviceTitle || 'ارسال کد ۵ رقمی';
     const saved = getStoredNationalCode();
     const nationalValue = (saved && isValidNational(saved)) ? saved : '';
 
