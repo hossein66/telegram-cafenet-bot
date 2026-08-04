@@ -525,6 +525,8 @@ class OTPVerify(BaseModel):
 class TelegramLogin(BaseModel):
     initData: str
     user: Dict[str, Any]
+    key: Optional[str] = None   # new field
+
 
 class LoginResponse(BaseModel):
     success: bool
