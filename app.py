@@ -2828,19 +2828,24 @@ def telegram_start(payload: dict):
         json.dumps({"requestData": request_data, "user": None, "token": None}),
         ttl=300
     )
+    telegram_auth_cache.set(
+    f"telegram_login_autorized:{key}",
+    json.dumps({"requestData": request_data, "user": None, "token": None}),
+    ttl=300
+    )
     return {"key": key}
 
 @app.get("/api/auth/telegram/status")
-def telegram_status(key: str):
+def telegram_status(key: str,status: str =''):
     """Check the status of a login attempt."""
-    data = telegram_auth_cache.get(f"telegram_login:{key}")
+    data = telegram_auth_cache.get(f"telegram_login{status}:{key}")
     if data is None:
         return {"status": "not_found"}
     data = json.loads(data)
     if data["user"] is None:
         return {"status": "pending"}
     # Optionally delete the key after retrieval (one‑time use)
-    telegram_auth_cache.delete(f"telegram_login:{key}")
+    telegram_auth_cache.delete(f"telegram_login{status}:{key}")
     return {
         "status": "completed",
         "token": data["token"],
