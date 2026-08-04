@@ -2842,7 +2842,7 @@ def telegram_status(key: str,status: str =''):
     if data is None:
         return {"status": "not_found"}
     data = json.loads(data)
-    if data["user"] is None:
+    if data["user"] is None and status != "_autorized":
         return {"status": "pending"}
     # Optionally delete the key after retrieval (one‑time use)
     telegram_auth_cache.delete(f"telegram_login{status}:{key}")
