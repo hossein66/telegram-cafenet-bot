@@ -2529,7 +2529,7 @@ async function checkPendingRequest() {
         const txt = document.getElementById('profileBtnText');
         if (!btn || !txt) return;
         if (currentUser) {
-            txt.textContent = currentUser.first_name || currentUser.username || 'حساب من';
+            txt.textContent = currentUser.firstName || currentUser.first_name || currentUser.username || 'حساب من';
             btn.onclick = openProfile;
         } else {
             txt.textContent = 'ورود / ثبت‌نام';
