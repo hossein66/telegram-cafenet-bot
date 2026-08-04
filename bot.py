@@ -1669,7 +1669,7 @@ async def show_document_summary_and_payment(query, context: ContextTypes.DEFAULT
                 installmentCount = refund_duration - ((refund_duration/11));
                 installmentCountAmount= ((loan_amount_rials / installmentCount)); 
                 score = loan_amount_rials / ratio
-                score_price = score * 31 / 10
+                score_price = score * 30 / 10
                 fee = score * 1.8 / 10
                 if fee <500000:
                     fee=485000
