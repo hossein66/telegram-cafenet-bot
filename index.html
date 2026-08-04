@@ -1948,6 +1948,12 @@ function setupScrollObserver() {
                 <div class="summary-key">قسط ماهیانه  </div>
                 <div class="summary-val">${formatNumber(installmentAmount)}</div>
             </div>
+                        <div class="summary-item">
+                <div class="summary-key"> میزان سفته </div>
+                <div class="summary-val">${formatNumber(loanAmountInRials + Math.round(loanAmountInRials * 0.2))}</div>
+            </div>
+                        <hr style="margin:8px 0;border:0;border-top:1px solid var(--border);">
+
             <div class="summary-item">
                 <div class="summary-key"> مقدار امتیاز مورد نیاز</div>
                 <div class="summary-val">${formatNumber(score)}</div>
@@ -2030,6 +2036,12 @@ function setupScrollObserver() {
                 <div class="summary-key">قسط ماهیانه  </div>
                 <div class="summary-val">${formatNumber(installmentAmount)}</div>
             </div>
+                                    <div class="summary-item">
+                <div class="summary-key"> میزان سفته </div>
+                <div class="summary-val">${formatNumber(loanAmountInRials + Math.round(loanAmountInRials * 0.2))}</div>
+            </div>
+                        <hr style="margin:8px 0;border:0;border-top:1px solid var(--border);">
+
             <div class="summary-item">
                 <div class="summary-key"> مقدار امتیاز 10 ماهه مورد نیاز</div>
                 <div class="summary-val">${formatNumber(score)}</div>
@@ -2113,6 +2125,11 @@ function setupScrollObserver() {
                 <div class="summary-key">قسط ماهیانه  </div>
                 <div class="summary-val">${formatNumber(installmentAmount)}</div>
             </div>
+                                    <div class="summary-item">
+                <div class="summary-key"> میزان سفته </div>
+                <div class="summary-val">${formatNumber(loanAmountInRials + Math.round(loanAmountInRials * 0.2))}</div>
+            </div>
+            <hr style="margin:8px 0;border:0;border-top:1px solid var(--border);">
             <div class="summary-item">
                 <div class="summary-key"> مقدار امتیاز مورد نیاز</div>
                 <div class="summary-val">${formatNumber(score)}</div>
@@ -2212,12 +2229,13 @@ if (requestState.referralApplied || requestState.discountApplied) {
                     <button onclick="applyCode()" style="padding:10px 20px;border:none;border-radius:8px;background:var(--brand);color:#fff;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;transition:.15s;">اعمال</button>
                 </div>
                 <div style="display:flex;gap:12px;margin-top:8px;font-size:12px;">
-                    <label style="display:flex;align-items:center;gap:4px;cursor:pointer;">
-                        <input type="radio" name="codeType" value="referral" checked> کد معرف
+                                        <label style="display:flex;align-items:center;gap:4px;cursor:pointer;">
+                        <input type="radio" name="codeType" value="discount" checked> کد تخفیف
                     </label>
                     <label style="display:flex;align-items:center;gap:4px;cursor:pointer;">
-                        <input type="radio" name="codeType" value="discount"> کد تخفیف
+                        <input type="radio" name="codeType" value="referral" > کد معرف
                     </label>
+
                 </div>
                 ${requestState.referralApplied || requestState.discountApplied ? 
                     `<div style="font-size:12px;color:var(--text3);margin-top:6px;">✅ کد اعمال شده است. برای تغییر، ابتدا صفحه را ببندید و دوباره شروع کنید.</div>` : ''}

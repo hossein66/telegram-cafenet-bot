@@ -1707,6 +1707,7 @@ async def show_document_summary_and_payment(query, context: ContextTypes.DEFAULT
                 f"🔹 **مبلغ وام**: {fmt(loan_amount_rials)} تومان",
                 f"🔹 **مدت وام (ماه)**: {refund_duration}",
                 f"🔹 **قسط ماهیانه**: {fmt(installmentCountAmount)} تومان",
+                f"🔹 **میزان سفته**: {fmt(loan_amount_rials + int(loan_amount_rials * 0.2))} تومان\n",
                 f"🔹 **مقدار امتیاز مورد نیاز**: {fmt(score)}",
                 f"🔹 **قیمت امتیاز**: {fmt(score_price)} تومان",
                 f"🔹 **کارمزد**: {fmt(fee)} تومان",
