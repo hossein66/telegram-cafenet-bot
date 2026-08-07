@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>Telegram Mini App — Dashboard</title>
+    <title>Telegram Mini App — Quick Info</title>
 
     <!-- Telegram WebApp SDK -->
     <script src="https://telegram.org/js/telegram-web-app.js?56">
     </script>
 
     <style>
-        /* ── Reset & Base ── */
+        /* ── Base ── */
         * {
             margin: 0;
             padding: 0;
@@ -18,31 +18,14 @@
         }
 
         :root {
-            --bg: #ffffff;
-            --bg-secondary: #f5f5f5;
-            --text: #1a1a1a;
-            --text-secondary: #555555;
-            --text-muted: #888888;
-            --border: #e0e0e0;
-            --card-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-            --radius: 16px;
-            --accent: #3390ec;
-            --accent-hover: #2678d6;
-            --success: #31b545;
-            --warning: #f5a623;
-            --danger: #e74c3c;
-            --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-        }
-
-        /* Telegram dark theme overrides */
-        body.tg-dark {
-            --bg: #1f1f1f;
-            --bg-secondary: #2b2b2b;
-            --text: #f0f0f0;
-            --text-secondary: #b0b0b0;
-            --text-muted: #777777;
-            --border: #3a3a3a;
-            --card-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+            --bg: #0f0f0f;
+            --bg-card: #1a1a1a;
+            --text: #eaeaea;
+            --text-dim: #888;
+            --border: #2a2a2a;
+            --accent: #2eaab0;
+            --radius: 10px;
+            --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         }
 
         body {
@@ -50,799 +33,537 @@
             background: var(--bg);
             color: var(--text);
             min-height: 100vh;
-            padding: 16px 16px 80px 16px;
-            transition: background 0.2s, color 0.2s;
-            -webkit-font-smoothing: antialiased;
+            padding: 14px 14px 30px;
+            transition: background 0.15s, color 0.15s;
         }
 
-        /* ── Container ── */
-        .app-container {
-            max-width: 480px;
+        /* Telegram dark mode support – just use the same dark palette */
+        body.tg-dark {
+            --bg: #0f0f0f;
+            --bg-card: #1a1a1a;
+            --text: #eaeaea;
+            --text-dim: #888;
+            --border: #2a2a2a;
+        }
+
+        /* ── Layout ── */
+        .app {
+            max-width: 460px;
             margin: 0 auto;
         }
 
         /* ── Header ── */
-        .app-header {
+        .header {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding-bottom: 16px;
+            padding-bottom: 12px;
             border-bottom: 1px solid var(--border);
-            margin-bottom: 20px;
+            margin-bottom: 16px;
         }
 
-        .app-header h1 {
-            font-size: 22px;
+        .header h1 {
+            font-size: 20px;
             font-weight: 700;
             letter-spacing: -0.3px;
-            background: linear-gradient(135deg, var(--accent), #6c5ce7);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
         }
 
-        .app-header .badge {
-            background: var(--accent);
-            color: #fff;
+        .header .version {
             font-size: 11px;
-            font-weight: 600;
-            padding: 4px 12px;
+            color: var(--text-dim);
+            background: var(--bg-card);
+            padding: 3px 12px;
             border-radius: 100px;
-            letter-spacing: 0.3px;
-            -webkit-text-fill-color: #fff;
-        }
-
-        /* ── User Card ── */
-        .user-card {
-            background: var(--bg-secondary);
-            border-radius: var(--radius);
-            padding: 18px 20px;
-            display: flex;
-            align-items: center;
-            gap: 14px;
-            margin-bottom: 20px;
             border: 1px solid var(--border);
-            transition: background 0.2s;
         }
 
-        .user-avatar {
-            width: 52px;
-            height: 52px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, var(--accent), #6c5ce7);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 22px;
-            font-weight: 600;
-            color: #fff;
-            flex-shrink: 0;
-            text-transform: uppercase;
-            -webkit-text-fill-color: #fff;
-        }
-
-        .user-info {
-            flex: 1;
-            min-width: 0;
-        }
-
-        .user-info .name {
-            font-size: 17px;
-            font-weight: 600;
-            line-height: 1.3;
-        }
-
-        .user-info .handle {
-            font-size: 14px;
-            color: var(--text-secondary);
-            margin-top: 2px;
-        }
-
-        .user-info .status {
-            display: inline-block;
-            margin-top: 4px;
-            font-size: 12px;
-            font-weight: 500;
-            color: var(--success);
-            background: rgba(49, 181, 69, 0.15);
-            padding: 2px 10px;
-            border-radius: 100px;
-        }
-
-        body.tg-dark .user-info .status {
-            background: rgba(49, 181, 69, 0.25);
-        }
-
-        /* ── Stats Grid ── */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
-            margin-bottom: 22px;
-        }
-
-        .stat-item {
-            background: var(--bg-secondary);
+        /* ── Cards ── */
+        .card {
+            background: var(--bg-card);
             border-radius: var(--radius);
-            padding: 14px 8px;
-            text-align: center;
+            padding: 14px 16px;
+            margin-bottom: 10px;
             border: 1px solid var(--border);
-            transition: background 0.2s, transform 0.15s;
+            transition: background 0.1s;
         }
 
-        .stat-item:active {
-            transform: scale(0.96);
-        }
-
-        .stat-item .number {
-            font-size: 22px;
-            font-weight: 700;
-            line-height: 1.2;
-            color: var(--accent);
-        }
-
-        .stat-item .label {
-            font-size: 12px;
-            color: var(--text-muted);
-            margin-top: 2px;
-            font-weight: 500;
-            text-transform: uppercase;
-            letter-spacing: 0.4px;
-        }
-
-        /* ── Section Title ── */
-        .section-title {
-            font-size: 16px;
+        .card-title {
+            font-size: 13px;
             font-weight: 600;
-            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-dim);
+            margin-bottom: 8px;
             display: flex;
             align-items: center;
             gap: 8px;
         }
 
-        .section-title .count {
+        .card-title .dot {
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--accent);
+        }
+
+        .card-title .dot.empty {
+            background: #f85149;
+        }
+
+        .row {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
             font-size: 13px;
-            font-weight: 400;
-            color: var(--text-muted);
-            background: var(--bg-secondary);
-            padding: 0 10px;
-            border-radius: 100px;
-            border: 1px solid var(--border);
+            line-height: 1.5;
+            border-bottom: 1px solid #ffffff08;
         }
 
-        /* ── Info Cards ── */
-        .info-list {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            margin-bottom: 24px;
+        .row:last-child {
+            border-bottom: none;
         }
 
-        .info-card {
-            background: var(--bg-secondary);
-            border-radius: var(--radius);
-            padding: 16px 18px;
-            border: 1px solid var(--border);
-            display: flex;
-            align-items: flex-start;
-            gap: 14px;
-            transition: background 0.15s, border-color 0.15s;
-            cursor: default;
-        }
-
-        .info-card:active {
-            transform: scale(0.99);
-        }
-
-        .info-card .icon {
-            width: 38px;
-            height: 38px;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 18px;
+        .row .key {
+            color: var(--text-dim);
+            font-weight: 500;
             flex-shrink: 0;
-            background: rgba(51, 144, 236, 0.12);
-            color: var(--accent);
+            margin-right: 12px;
         }
 
-        .info-card .icon.warning {
-            background: rgba(245, 166, 35, 0.15);
-            color: var(--warning);
-        }
-
-        .info-card .icon.danger {
-            background: rgba(231, 76, 60, 0.15);
-            color: var(--danger);
-        }
-
-        .info-card .icon.success {
-            background: rgba(49, 181, 69, 0.15);
-            color: var(--success);
-        }
-
-        .info-card .content {
-            flex: 1;
-            min-width: 0;
-        }
-
-        .info-card .content .title {
-            font-size: 15px;
-            font-weight: 600;
-            line-height: 1.3;
-        }
-
-        .info-card .content .desc {
-            font-size: 14px;
-            color: var(--text-secondary);
-            margin-top: 2px;
-            line-height: 1.4;
-        }
-
-        .info-card .content .meta {
+        .row .value {
+            text-align: right;
+            word-break: break-all;
+            font-family: "SF Mono", "Fira Code", monospace;
             font-size: 12px;
-            color: var(--text-muted);
+            max-width: 65%;
+        }
+
+        .row .value.muted {
+            color: var(--text-dim);
+            font-style: italic;
+        }
+
+        /* ── Theme swatches (compact) ── */
+        .theme-strip {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
             margin-top: 4px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
         }
 
-        .info-card .content .meta span {
+        .theme-strip .swatch {
             display: flex;
             align-items: center;
-            gap: 4px;
-        }
-
-        .info-card .tag {
+            gap: 5px;
+            background: #00000030;
+            padding: 3px 8px 3px 5px;
+            border-radius: 6px;
             font-size: 10px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            padding: 2px 10px;
-            border-radius: 100px;
+            font-family: monospace;
+            border: 1px solid #ffffff15;
+        }
+
+        .theme-strip .swatch .color-box {
+            width: 16px;
+            height: 16px;
+            border-radius: 4px;
+            border: 1px solid #ffffff20;
             flex-shrink: 0;
-            margin-top: 2px;
         }
 
-        .tag.urgent {
-            background: rgba(231, 76, 60, 0.15);
-            color: var(--danger);
-        }
-
-        .tag.new {
-            background: rgba(51, 144, 236, 0.15);
-            color: var(--accent);
-        }
-
-        .tag.updated {
-            background: rgba(245, 166, 35, 0.15);
-            color: var(--warning);
-        }
-
-        /* ── Action Button ── */
-        .action-row {
+        /* ── Copy / actions ── */
+        .action-bar {
             display: flex;
-            gap: 10px;
-            margin-top: 4px;
+            gap: 8px;
+            margin-top: 12px;
+            flex-wrap: wrap;
         }
 
         .btn {
-            flex: 1;
-            padding: 14px 18px;
+            padding: 8px 16px;
             border: none;
-            border-radius: var(--radius);
-            font-size: 15px;
+            border-radius: 8px;
+            font-size: 13px;
             font-weight: 600;
             cursor: pointer;
-            transition: background 0.15s, transform 0.1s;
-            text-align: center;
             background: var(--accent);
             color: #fff;
-            -webkit-text-fill-color: #fff;
+            transition: opacity 0.15s, transform 0.1s;
             touch-action: manipulation;
+            flex: 1;
+            min-width: 80px;
+            text-align: center;
         }
 
         .btn:active {
             transform: scale(0.96);
+            opacity: 0.8;
         }
 
         .btn-secondary {
-            background: var(--bg-secondary);
+            background: var(--bg-card);
             color: var(--text);
-            -webkit-text-fill-color: var(--text);
             border: 1px solid var(--border);
         }
 
-        .btn-secondary:active {
-            background: var(--border);
-        }
-
-        .btn-success {
-            background: var(--success);
-        }
-
-        /* ── Footer ── */
-        .app-footer {
-            margin-top: 24px;
-            padding-top: 16px;
-            border-top: 1px solid var(--border);
-            text-align: center;
-            font-size: 13px;
-            color: var(--text-muted);
-        }
-
-        .app-footer .tg-version {
-            display: inline-block;
-            background: var(--bg-secondary);
-            padding: 2px 12px;
-            border-radius: 100px;
-            font-size: 11px;
-            border: 1px solid var(--border);
+        /* ── Raw data ── */
+        .raw-box {
             margin-top: 6px;
         }
 
-        /* ── Toast / Alert ── */
+        .raw-box textarea {
+            width: 100%;
+            min-height: 70px;
+            background: #00000040;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text);
+            font-family: "SF Mono", "Fira Code", monospace;
+            font-size: 11px;
+            padding: 10px;
+            resize: vertical;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        /* ── Toast ── */
         .toast {
             position: fixed;
-            bottom: 20px;
+            bottom: 24px;
             left: 50%;
             transform: translateX(-50%) translateY(80px);
-            background: var(--bg-secondary);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            padding: 12px 20px;
-            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+            background: var(--accent);
+            color: #fff;
+            padding: 8px 22px;
+            border-radius: 10px;
             font-size: 14px;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            gap: 10px;
+            font-weight: 600;
             opacity: 0;
-            transition: opacity 0.3s, transform 0.3s;
+            transition: opacity 0.25s, transform 0.25s;
             pointer-events: none;
             z-index: 999;
-            max-width: 90%;
         }
 
         .toast.show {
             opacity: 1;
             transform: translateX(-50%) translateY(0);
-            pointer-events: auto;
         }
 
-        .toast .toast-icon {
-            font-size: 18px;
-        }
-
-        /* ── Responsive tweaks ── */
+        /* ── Responsive ── */
         @media (max-width: 400px) {
-            .stats-grid {
-                grid-template-columns: repeat(3, 1fr);
-                gap: 6px;
+            .row {
+                font-size: 12px;
+                flex-wrap: wrap;
             }
-            .stat-item .number {
-                font-size: 18px;
+            .row .value {
+                max-width: 100%;
+                text-align: left;
+                margin-top: 1px;
             }
-            .info-card {
-                padding: 14px 14px;
+            .theme-strip .swatch {
+                font-size: 9px;
+                padding: 2px 6px 2px 4px;
             }
-            .user-card {
-                padding: 14px 16px;
+            .btn {
+                font-size: 12px;
+                padding: 8px 12px;
             }
-        }
-
-        /* ── Scrollbar ── */
-        ::-webkit-scrollbar {
-            width: 4px;
-        }
-        ::-webkit-scrollbar-track {
-            background: transparent;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: var(--border);
-            border-radius: 4px;
         }
     </style>
 </head>
 <body>
 
     <!-- ─── APP ─── -->
-    <div class="app-container">
+    <div class="app" id="app">
 
         <!-- Header -->
-        <header class="app-header">
-            <h1>✦ Dashboard</h1>
-            <span class="badge" id="liveBadge">● Live</span>
+        <header class="header">
+            <h1>📊 Mini App</h1>
+            <span class="version" id="tgVersion">v6.0</span>
         </header>
 
-        <!-- User Card -->
-        <div class="user-card" id="userCard">
-            <div class="user-avatar" id="userAvatar">U</div>
-            <div class="user-info">
-                <div class="name" id="userName">User</div>
-                <div class="handle" id="userHandle">@username</div>
-                <span class="status" id="userStatus">● Online</span>
+        <!-- ── User ── -->
+        <div class="card" id="userCard">
+            <div class="card-title"><span class="dot" id="userDot"></span> User</div>
+            <div id="userRows"></div>
+        </div>
+
+        <!-- ── Chat ── -->
+        <div class="card" id="chatCard">
+            <div class="card-title"><span class="dot" id="chatDot"></span> Chat</div>
+            <div id="chatRows"></div>
+        </div>
+
+        <!-- ── Chat Type & Instance ── -->
+        <div class="card" id="metaCard">
+            <div class="card-title"><span class="dot" id="metaDot"></span> Context</div>
+            <div id="metaRows"></div>
+        </div>
+
+        <!-- ── Start Param ── -->
+        <div class="card" id="startCard">
+            <div class="card-title"><span class="dot" id="startDot"></span> Start Param</div>
+            <div id="startRows"></div>
+        </div>
+
+        <!-- ── Auth / Query ── -->
+        <div class="card" id="authCard">
+            <div class="card-title"><span class="dot" id="authDot"></span> Auth &amp; Query</div>
+            <div id="authRows"></div>
+        </div>
+
+        <!-- ── Theme ── -->
+        <div class="card" id="themeCard">
+            <div class="card-title"><span class="dot"></span> Theme Colors</div>
+            <div id="themeStrip" class="theme-strip"></div>
+        </div>
+
+        <!-- ── Device & Platform ── -->
+        <div class="card" id="deviceCard">
+            <div class="card-title"><span class="dot"></span> Device &amp; Platform</div>
+            <div id="deviceRows"></div>
+        </div>
+
+        <!-- ── Raw initData ── -->
+        <div class="card">
+            <div class="card-title"><span class="dot"></span> Raw initData</div>
+            <div class="raw-box">
+                <textarea id="rawInitData" readonly></textarea>
+            </div>
+            <div class="action-bar">
+                <button class="btn" id="copyInitBtn">📋 Copy</button>
+                <button class="btn btn-secondary" id="refreshBtn">⟳ Refresh</button>
             </div>
         </div>
 
-        <!-- Stats -->
-        <div class="stats-grid">
-            <div class="stat-item">
-                <div class="number" id="statMessages">0</div>
-                <div class="label">Messages</div>
+        <!-- ── JSON dump ── -->
+        <div class="card">
+            <div class="card-title"><span class="dot"></span> initDataUnsafe (JSON)</div>
+            <div class="raw-box">
+                <textarea id="jsonDump" readonly></textarea>
             </div>
-            <div class="stat-item">
-                <div class="number" id="statGroups">0</div>
-                <div class="label">Groups</div>
+            <div class="action-bar">
+                <button class="btn" id="copyJsonBtn">📋 Copy JSON</button>
             </div>
-            <div class="stat-item">
-                <div class="number" id="statAlerts">0</div>
-                <div class="label">Alerts</div>
-            </div>
-        </div>
-
-        <!-- Important Info Section -->
-        <div class="section-title">
-            📌 Important Info
-            <span class="count" id="infoCount">3</span>
-        </div>
-
-        <div class="info-list" id="infoList">
-            <!-- Cards will be rendered by JS -->
-        </div>
-
-        <!-- Actions -->
-        <div class="action-row">
-            <button class="btn" id="refreshBtn">⟳ Refresh</button>
-            <button class="btn btn-secondary" id="shareBtn">📤 Share</button>
         </div>
 
         <!-- Footer -->
-        <footer class="app-footer">
-            <div>Telegram Mini App · v1.0</div>
-            <div class="tg-version" id="tgVersion">WebApp v6.0</div>
-        </footer>
+        <div style="text-align:center;margin-top:16px;font-size:11px;color:var(--text-dim);">
+            Telegram Mini App · fast &amp; lightweight
+        </div>
     </div>
 
     <!-- ─── TOAST ─── -->
-    <div class="toast" id="toast">
-        <span class="toast-icon">✓</span>
-        <span id="toastMessage">Done</span>
-    </div>
+    <div class="toast" id="toast">✓ Copied</div>
 
     <!-- ─── SCRIPT ─── -->
     <script>
         (function() {
             'use strict';
 
-            // ── Telegram WebApp Init ──
             const tg = window.Telegram?.WebApp;
 
+            // ── Expand ──
             if (tg) {
                 tg.ready();
                 tg.expand();
 
-                // Apply dark theme if Telegram is in dark mode
+                // Dark mode
                 if (tg.colorScheme === 'dark') {
                     document.body.classList.add('tg-dark');
                 }
-
-                // Listen for theme changes
                 tg.onEvent('themeChanged', function() {
                     const isDark = tg.colorScheme === 'dark';
                     document.body.classList.toggle('tg-dark', isDark);
                 });
 
-                // Show version
-                document.getElementById('tgVersion').textContent =
-                    `WebApp v${tg.version || '6.0'}`;
+                // Version
+                document.getElementById('tgVersion').textContent = 'v' + (tg.version || '6.0');
             } else {
-                // Fallback: simulate dark mode based on system preference
-                if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-                    document.body.classList.add('tg-dark');
+                document.getElementById('tgVersion').textContent = 'standalone';
+            }
+
+            // ── Helpers ──
+            function escapeHtml(s) {
+                if (s === undefined || s === null) return '—';
+                const d = document.createElement('div');
+                d.textContent = String(s);
+                return d.innerHTML;
+            }
+
+            function valOrDash(v) {
+                return v !== undefined && v !== null && v !== '' ? escapeHtml(v) :
+                    '<span class="muted">—</span>';
+            }
+
+            function renderRows(containerId, obj, fields) {
+                const container = document.getElementById(containerId);
+                let html = '';
+                for (const [label, key] of fields) {
+                    const raw = typeof key === 'function' ? key() : obj?.[key];
+                    const display = raw !== undefined && raw !== null && raw !== '' ? raw : null;
+                    const cls = display === null ? ' muted' : '';
+                    html += `<div class="row">
+                                <span class="key">${label}</span>
+                                <span class="value${cls}">${display !== null ? escapeHtml(display) : '—'}</span>
+                            </div>`;
                 }
-                document.getElementById('tgVersion').textContent = 'WebApp (standalone)';
+                container.innerHTML = html;
             }
 
-            // ── Data Store ──
-            let infoData = [];
-            let stats = {
-                messages: 0,
-                groups: 0,
-                alerts: 0,
-            };
-
-            // ── DOM refs ──
-            const infoListEl = document.getElementById('infoList');
-            const infoCountEl = document.getElementById('infoCount');
-            const statMessages = document.getElementById('statMessages');
-            const statGroups = document.getElementById('statGroups');
-            const statAlerts = document.getElementById('statAlerts');
-            const userAvatar = document.getElementById('userAvatar');
-            const userName = document.getElementById('userName');
-            const userHandle = document.getElementById('userHandle');
-            const userStatus = document.getElementById('userStatus');
-            const toast = document.getElementById('toast');
-            const toastMessage = document.getElementById('toastMessage');
-            const refreshBtn = document.getElementById('refreshBtn');
-            const shareBtn = document.getElementById('shareBtn');
-            const liveBadge = document.getElementById('liveBadge');
-
-            // ── Helper: show toast ──
-            let toastTimeout = null;
-
-            function showToast(message, icon = '✓', duration = 2600) {
-                toastMessage.textContent = message;
-                document.querySelector('.toast .toast-icon').textContent = icon;
-                toast.classList.add('show');
-                clearTimeout(toastTimeout);
-                toastTimeout = setTimeout(() => {
-                    toast.classList.remove('show');
-                }, duration);
-            }
-
-            // ── Helper: format time ──
-            function timeAgo(date) {
-                const diff = Date.now() - date.getTime();
-                const mins = Math.floor(diff / 60000);
-                if (mins < 1) return 'Just now';
-                if (mins < 60) return `${mins}m ago`;
-                const hrs = Math.floor(mins / 60);
-                if (hrs < 24) return `${hrs}h ago`;
-                const days = Math.floor(hrs / 24);
-                return `${days}d ago`;
-            }
-
-            // ── Generate random data ──
-            function generateData() {
-                const now = new Date();
-
-                const titles = [
-                    '📢 System Update',
-                    '🔔 Security Alert',
-                    '📊 Daily Report',
-                    '💬 New Message',
-                    '📎 File Uploaded',
-                    '🔄 Sync Complete',
-                    '⚠️ High CPU Usage',
-                    '✅ Task Completed',
-                    '📅 Meeting Reminder',
-                    '🔑 API Key Rotated',
-                ];
-
-                const descs = [
-                    'v2.4.1 deployed successfully to production.',
-                    'Unusual login attempt detected from IP 192.168.1.45.',
-                    'Total revenue up 12% compared to yesterday.',
-                    'You have 3 unread messages in the #general channel.',
-                    'Project_report_Q3.pdf has been uploaded.',
-                    'All data synchronized across 5 regions.',
-                    'CPU usage spiked to 92% for 3 minutes.',
-                    'Sprint #12 retrospective completed.',
-                    'Team sync call scheduled for 3:00 PM UTC.',
-                    'Old API key revoked; new key issued.',
-                ];
-
-                const tags = ['urgent', 'new', 'updated', ''];
-                const tagLabels = {
-                    urgent: 'Urgent',
-                    new: 'New',
-                    updated: 'Updated',
-                    '': ''
-                };
-                const tagClasses = {
-                    urgent: 'urgent',
-                    new: 'new',
-                    updated: 'updated',
-                    '': ''
-                };
-                const icons = ['⚡', '🔔', '📊', '💬', '📎', '🔄', '⚠️', '✅', '📅', '🔑'];
-                const iconTypes = ['', 'warning', '', '', '', '', 'danger', 'success', '', ''];
-
-                // Pick 4–6 random items
-                const count = 4 + Math.floor(Math.random() * 3);
-                const shuffled = titles.map((_, i) => i);
-                for (let i = shuffled.length - 1; i > 0; i--) {
-                    const j = Math.floor(Math.random() * (i + 1));
-                    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            function setDot(id, hasData) {
+                const dot = document.getElementById(id);
+                if (dot) {
+                    dot.className = 'dot' + (hasData ? '' : ' empty');
                 }
-                const selected = shuffled.slice(0, count);
-
-                const items = selected.map((idx, i) => {
-                    const tag = tags[Math.floor(Math.random() * tags.length)];
-                    const date = new Date(now.getTime() - Math.random() * 3600000 * 24 * 3);
-                    return {
-                        id: Date.now() + i + Math.random() * 1000,
-                        title: titles[idx],
-                        desc: descs[idx],
-                        icon: icons[idx],
-                        iconType: iconTypes[idx],
-                        tag: tag,
-                        tagLabel: tagLabels[tag],
-                        tagClass: tagClasses[tag],
-                        time: date,
-                        timeAgo: timeAgo(date),
-                        read: Math.random() > 0.3,
-                    };
-                });
-
-                // Sort by time (newest first)
-                items.sort((a, b) => b.time.getTime() - a.time.getTime());
-
-                // Stats
-                stats.messages = 128 + Math.floor(Math.random() * 300);
-                stats.groups = 7 + Math.floor(Math.random() * 15);
-                stats.alerts = items.filter(item => item.tag === 'urgent').length;
-
-                return items;
             }
 
-            // ── Render ──
-            function render(data) {
-                infoData = data;
-                infoListEl.innerHTML = '';
+            // ── Data ──
+            const unsafe = tg?.initDataUnsafe || {};
+            const user = unsafe.user || null;
+            const chat = unsafe.chat || null;
 
-                data.forEach((item) => {
-                    const card = document.createElement('div');
-                    card.className = 'info-card';
-                    card.style.cursor = 'pointer';
+            // ── Render User ──
+            setDot('userDot', !!user);
+            renderRows('userRows', user, [
+                ['id', 'id'],
+                ['first_name', 'first_name'],
+                ['last_name', 'last_name'],
+                ['username', 'username'],
+                ['language_code', 'language_code'],
+                ['is_premium', 'is_premium'],
+                ['photo_url', 'photo_url'],
+            ]);
 
-                    const iconTypeClass = item.iconType ? ` ${item.iconType}` : '';
-                    card.innerHTML = `
-                            <div class="icon${iconTypeClass}">${item.icon}</div>
-                            <div class="content">
-                                <div class="title">${item.title}</div>
-                                <div class="desc">${item.desc}</div>
-                                <div class="meta">
-                                    <span>🕐 ${item.timeAgo}</span>
-                                    <span>${item.read ? '✓ Read' : '○ Unread'}</span>
-                                </div>
-                            </div>
-                            ${item.tag ? `<div class="tag ${item.tagClass}">${item.tagLabel}</div>` : ''}
-                        `;
+            // ── Render Chat ──
+            setDot('chatDot', !!chat);
+            renderRows('chatRows', chat, [
+                ['id', 'id'],
+                ['type', 'type'],
+                ['title', 'title'],
+                ['username', 'username'],
+            ]);
 
-                    // Click → show detail via toast
-                    card.addEventListener('click', function(e) {
-                        e.stopPropagation();
-                        if (tg) {
-                            tg.showAlert(`📌 ${item.title}\n\n${item.desc}\n\n🕐 ${item.timeAgo}`);
-                        } else {
-                            showToast(`${item.title} — ${item.desc}`, '📌', 3000);
-                        }
-                    });
+            // ── Context (chat_type + chat_instance) ──
+            const hasMeta = !!(unsafe.chat_type || unsafe.chat_instance);
+            setDot('metaDot', hasMeta);
+            renderRows('metaRows', unsafe, [
+                ['chat_type', 'chat_type'],
+                ['chat_instance', 'chat_instance'],
+            ]);
 
-                    infoListEl.appendChild(card);
-                });
+            // ── Start Param ──
+            const hasStart = !!unsafe.start_param;
+            setDot('startDot', hasStart);
+            renderRows('startRows', unsafe, [
+                ['start_param', 'start_param'],
+            ]);
 
-                // Update count
-                infoCountEl.textContent = data.length;
+            // ── Auth / Query ──
+            const hasAuth = !!(unsafe.query_id || unsafe.auth_date || unsafe.hash);
+            setDot('authDot', hasAuth);
+            renderRows('authRows', unsafe, [
+                ['query_id', 'query_id'],
+                ['auth_date', function() {
+                    const d = unsafe.auth_date;
+                    if (!d) return null;
+                    return new Date(d * 1000).toLocaleString();
+                }],
+                ['can_send_after', 'can_send_after'],
+                ['hash', function() {
+                    const h = unsafe.hash;
+                    return h ? h.substring(0, 16) + '…' : null;
+                }],
+            ]);
 
-                // Update stats
-                statMessages.textContent = stats.messages;
-                statGroups.textContent = stats.groups;
-                statAlerts.textContent = stats.alerts;
-
-                // Update user info (simulate)
-                const firstNames = ['Alice', 'Bob', 'Charlie', 'Diana', 'Eve', 'Frank', 'Grace', 'Henry'];
-                const lastNames = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis'];
-                const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
-                const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
-                const fullName = `${firstName} ${lastName}`;
-                const handle = `@${firstName.toLowerCase()}${lastName.toLowerCase()}_${Math.floor(Math.random() * 100)}`;
-
-                userName.textContent = fullName;
-                userHandle.textContent = handle;
-                userAvatar.textContent = firstName.charAt(0) + lastName.charAt(0);
-
-                // Status
-                const statuses = ['● Online', '● Away', '○ Offline'];
-                const statusColors = ['var(--success)', 'var(--warning)', 'var(--text-muted)'];
-                const idx = Math.floor(Math.random() * 3);
-                userStatus.textContent = statuses[idx];
-                userStatus.style.color = statusColors[idx];
-
-                // Badge pulse
-                liveBadge.style.animation = 'none';
-                setTimeout(() => {
-                    liveBadge.style.animation = 'pulse 2s ease-in-out infinite';
-                }, 10);
+            // ── Theme Colors (compact strip) ──
+            const theme = tg?.themeParams || {};
+            const themeKeys = [
+                ['bg_color', 'BG'],
+                ['text_color', 'Text'],
+                ['hint_color', 'Hint'],
+                ['link_color', 'Link'],
+                ['button_color', 'Btn'],
+                ['button_text_color', 'BtnTxt'],
+                ['secondary_bg_color', 'SecBG'],
+                ['header_bg_color', 'Header'],
+                ['accent_text_color', 'Accent'],
+                ['section_bg_color', 'SecBG2'],
+                ['destructive_text_color', 'Destr'],
+                ['bottom_bar_bg_color', 'Bottom'],
+            ];
+            const strip = document.getElementById('themeStrip');
+            let stripHtml = '';
+            for (const [key, label] of themeKeys) {
+                const val = theme[key];
+                if (val) {
+                    const hex = '#' + val;
+                    stripHtml += `<div class="swatch">
+                                    <span class="color-box" style="background:${hex};"></span>
+                                    ${label} ${hex}
+                                </div>`;
+                }
             }
+            strip.innerHTML = stripHtml || '<span style="color:var(--text-dim);font-size:12px;">No theme data</span>';
+
+            // ── Device & Platform ──
+            renderRows('deviceRows', null, [
+                ['platform', function() { return tg?.platform || '—'; }],
+                ['version', function() { return tg?.version || '—'; }],
+                ['colorScheme', function() { return tg?.colorScheme || '—'; }],
+                ['viewport', function() { return `${window.innerWidth}×${window.innerHeight}`; }],
+                ['screen', function() { return `${screen.width}×${screen.height}`; }],
+                ['dpr', function() { return window.devicePixelRatio; }],
+                ['touch', function() { return 'ontouchstart' in window ? 'yes' : 'no'; }],
+                ['online', function() { return navigator.onLine ? 'yes' : 'no'; }],
+            ]);
+
+            // ── Raw initData ──
+            const rawEl = document.getElementById('rawInitData');
+            rawEl.value = tg?.initData || '(empty — not launched from Telegram)';
+
+            // ── JSON dump ──
+            const jsonEl = document.getElementById('jsonDump');
+            jsonEl.value = JSON.stringify(unsafe, null, 2);
+
+            // ── Copy buttons ──
+            function showToast(msg) {
+                const t = document.getElementById('toast');
+                t.textContent = msg || '✓ Copied';
+                t.classList.add('show');
+                clearTimeout(t._hide);
+                t._hide = setTimeout(function() { t.classList.remove('show'); }, 1600);
+            }
+
+            document.getElementById('copyInitBtn').addEventListener('click', function() {
+                rawEl.select();
+                document.execCommand('copy');
+                showToast('📋 initData copied');
+                if (tg?.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
+            });
+
+            document.getElementById('copyJsonBtn').addEventListener('click', function() {
+                jsonEl.select();
+                document.execCommand('copy');
+                showToast('📋 JSON copied');
+                if (tg?.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
+            });
 
             // ── Refresh ──
-            function refreshData() {
-                const data = generateData();
-                render(data);
-                showToast('Dashboard updated', '⟳', 1800);
+            document.getElementById('refreshBtn').addEventListener('click', function() {
+                location.reload();
+            });
 
-                // Haptic feedback if available
-                if (tg && tg.HapticFeedback) {
-                    tg.HapticFeedback.impactOccurred('light');
-                }
-            }
-
-            // ── Share ──
-            function shareInfo() {
-                const text = `📊 My Telegram Mini App Dashboard\n\n` +
-                    `📩 Messages: ${stats.messages}\n` +
-                    `👥 Groups: ${stats.groups}\n` +
-                    `⚠️ Alerts: ${stats.alerts}\n` +
-                    `📌 Latest: ${infoData[0]?.title || '—'}\n\n` +
-                    `🕐 ${new Date().toLocaleString()}`;
-
-                if (tg) {
-                    tg.showPopup({
-                        title: 'Share Dashboard',
-                        message: text,
-                        buttons: [{ text: 'Copy', type: 'default' }]
-                    }, function(btnIndex) {
-                        if (btnIndex === 0) {
-                            // Copy to clipboard via Telegram
-                            tg.showAlert('Copied to clipboard! (simulated)');
-                        }
-                    });
-                    // Also try native share
-                    if (navigator.share) {
-                        navigator.share({ title: 'My Dashboard', text: text })
-                            .catch(() => {});
-                    } else {
-                        // Fallback: copy to clipboard
-                        navigator.clipboard?.writeText(text).then(() => {
-                            showToast('Copied to clipboard', '📋', 2000);
-                        }).catch(() => {
-                            showToast('Share not available', '⚠️', 2000);
-                        });
-                    }
-                } else {
-                    // Fallback for standalone
-                    navigator.clipboard?.writeText(text).then(() => {
-                        showToast('Copied to clipboard', '📋', 2000);
-                    }).catch(() => {
-                        showToast('Share not available', '⚠️', 2000);
-                    });
-                }
-            }
-
-            // ── Inject pulse keyframes ──
-            const styleSheet = document.createElement('style');
-            styleSheet.textContent = `
-                    @keyframes pulse {
-                        0%, 100% { opacity: 1; }
-                        50% { opacity: 0.4; }
-                    }
-                `;
-            document.head.appendChild(styleSheet);
-
-            // ── Init ──
-            const initialData = generateData();
-            render(initialData);
-
-            // ── Event listeners ──
-            refreshBtn.addEventListener('click', refreshData);
-            shareBtn.addEventListener('click', shareInfo);
-
-            // ── Telegram MainButton (if available) ──
-            if (tg && tg.MainButton) {
-                tg.MainButton.setText('📊 Refresh');
-                tg.MainButton.onClick(refreshData);
-                tg.MainButton.show();
-            }
-
-            // ── Auto-refresh every 60s ──
-            let autoRefreshInterval = setInterval(refreshData, 60000);
-
-            // ── Cleanup on page hide (optional) ──
-            document.addEventListener('visibilitychange', function() {
-                if (document.hidden) {
-                    clearInterval(autoRefreshInterval);
-                } else {
-                    autoRefreshInterval = setInterval(refreshData, 60000);
+            // ── Keyboard shortcut: Cmd+R / Ctrl+R to refresh ──
+            document.addEventListener('keydown', function(e) {
+                if ((e.metaKey || e.ctrlKey) && e.key === 'r') {
+                    e.preventDefault();
+                    location.reload();
                 }
             });
 
-            console.log('✅ Telegram Mini App Dashboard ready');
-
+            console.log('✅ Telegram Mini App — Quick Info ready');
         })();
     </script>
 
