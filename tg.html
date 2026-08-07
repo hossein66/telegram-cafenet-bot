@@ -1,537 +1,850 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Telegram Mini App — Full Info</title>
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Telegram Mini App — Dashboard</title>
 
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-      background: var(--tg-theme-bg-color, #0f0f0f);
-      color: var(--tg-theme-text-color, #eaeaea);
-      min-height: 100vh;
-      padding: 16px;
-      padding-bottom: 40px;
-    }
+    <!-- Telegram WebApp SDK -->
+    <script src="https://telegram.org/js/telegram-web-app.js?56">
+    </script>
 
-    h1 {
-      font-size: 20px;
-      font-weight: 700;
-      margin-bottom: 4px;
-      color: var(--tg-theme-text-color, #eaeaea);
-    }
+    <style>
+        /* ── Reset & Base ── */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-    .subtitle {
-      font-size: 13px;
-      opacity: 0.6;
-      margin-bottom: 24px;
-    }
+        :root {
+            --bg: #ffffff;
+            --bg-secondary: #f5f5f5;
+            --text: #1a1a1a;
+            --text-secondary: #555555;
+            --text-muted: #888888;
+            --border: #e0e0e0;
+            --card-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+            --radius: 16px;
+            --accent: #3390ec;
+            --accent-hover: #2678d6;
+            --success: #31b545;
+            --warning: #f5a623;
+            --danger: #e74c3c;
+            --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
 
-    .section {
-      background: var(--tg-theme-secondary-bg-color, #1a1a1a);
-      border-radius: 12px;
-      padding: 16px;
-      margin-bottom: 16px;
-    }
+        /* Telegram dark theme overrides */
+        body.tg-dark {
+            --bg: #1f1f1f;
+            --bg-secondary: #2b2b2b;
+            --text: #f0f0f0;
+            --text-secondary: #b0b0b0;
+            --text-muted: #777777;
+            --border: #3a3a3a;
+            --card-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+        }
 
-    .section-header {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 12px;
-      cursor: pointer;
-    }
+        body {
+            font-family: var(--font);
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            padding: 16px 16px 80px 16px;
+            transition: background 0.2s, color 0.2s;
+            -webkit-font-smoothing: antialiased;
+        }
 
-    .section-header h2 {
-      font-size: 15px;
-      font-weight: 600;
-      flex: 1;
-    }
+        /* ── Container ── */
+        .app-container {
+            max-width: 480px;
+            margin: 0 auto;
+        }
 
-    .section-header .badge {
-      font-size: 10px;
-      font-weight: 700;
-      text-transform: uppercase;
-      padding: 2px 8px;
-      border-radius: 10px;
-      letter-spacing: 0.5px;
-    }
+        /* ── Header ── */
+        .app-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 20px;
+        }
 
-    .badge.ok    { background: #2ea04330; color: #3fb950; border: 1px solid #2ea04350; }
-    .badge.empty { background: #f8514915; color: #f85149; border: 1px solid #f8514930; }
+        .app-header h1 {
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: -0.3px;
+            background: linear-gradient(135deg, var(--accent), #6c5ce7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
 
-    .row {
-      display: flex;
-      gap: 12px;
-      padding: 8px 0;
-      border-bottom: 1px solid #ffffff10;
-      font-size: 13px;
-      line-height: 1.5;
-    }
+        .app-header .badge {
+            background: var(--accent);
+            color: #fff;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 4px 12px;
+            border-radius: 100px;
+            letter-spacing: 0.3px;
+            -webkit-text-fill-color: #fff;
+        }
 
-    .row:last-child { border-bottom: none; }
+        /* ── User Card ── */
+        .user-card {
+            background: var(--bg-secondary);
+            border-radius: var(--radius);
+            padding: 18px 20px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border);
+            transition: background 0.2s;
+        }
 
-    .row .key {
-      min-width: 130px;
-      font-weight: 600;
-      opacity: 0.7;
-      flex-shrink: 0;
-    }
+        .user-avatar {
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent), #6c5ce7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            font-weight: 600;
+            color: #fff;
+            flex-shrink: 0;
+            text-transform: uppercase;
+            -webkit-text-fill-color: #fff;
+        }
 
-    .row .value {
-      word-break: break-all;
-      font-family: "SF Mono", "Fira Code", monospace;
-      font-size: 12px;
-    }
+        .user-info {
+            flex: 1;
+            min-width: 0;
+        }
 
-    .row .value.muted { opacity: 0.35; }
+        .user-info .name {
+            font-size: 17px;
+            font-weight: 600;
+            line-height: 1.3;
+        }
 
-    .raw-block {
-      margin-top: 16px;
-    }
+        .user-info .handle {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
 
-    .raw-block textarea {
-      width: 100%;
-      min-height: 120px;
-      background: #00000040;
-      border: 1px solid #ffffff15;
-      border-radius: 8px;
-      color: #c9d1d9;
-      font-family: "SF Mono", "Fira Code", monospace;
-      font-size: 11px;
-      padding: 12px;
-      resize: vertical;
-      word-break: break-all;
-      white-space: pre-wrap;
-    }
+        .user-info .status {
+            display: inline-block;
+            margin-top: 4px;
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--success);
+            background: rgba(49, 181, 69, 0.15);
+            padding: 2px 10px;
+            border-radius: 100px;
+        }
 
-    .copy-btn {
-      display: inline-block;
-      margin-top: 8px;
-      padding: 6px 16px;
-      background: var(--tg-theme-button-color, #2eaab0);
-      color: var(--tg-theme-button-text-color, #fff);
-      border: none;
-      border-radius: 8px;
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-    }
+        body.tg-dark .user-info .status {
+            background: rgba(49, 181, 69, 0.25);
+        }
 
-    .copy-btn:active { opacity: 0.8; }
+        /* ── Stats Grid ── */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 22px;
+        }
 
-    .theme-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 8px;
-    }
+        .stat-item {
+            background: var(--bg-secondary);
+            border-radius: var(--radius);
+            padding: 14px 8px;
+            text-align: center;
+            border: 1px solid var(--border);
+            transition: background 0.2s, transform 0.15s;
+        }
 
-    .theme-swatch {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px;
-      border-radius: 8px;
-      background: #00000020;
-      font-size: 12px;
-    }
+        .stat-item:active {
+            transform: scale(0.96);
+        }
 
-    .swatch-color {
-      width: 24px;
-      height: 24px;
-      border-radius: 6px;
-      border: 1px solid #ffffff30;
-      flex-shrink: 0;
-    }
+        .stat-item .number {
+            font-size: 22px;
+            font-weight: 700;
+            line-height: 1.2;
+            color: var(--accent);
+        }
 
-    .toast {
-      position: fixed;
-      bottom: 24px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: #2ea043;
-      color: #fff;
-      padding: 10px 24px;
-      border-radius: 10px;
-      font-size: 14px;
-      font-weight: 600;
-      opacity: 0;
-      transition: opacity 0.3s;
-      pointer-events: none;
-      z-index: 999;
-    }
+        .stat-item .label {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 2px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+        }
 
-    .toast.show { opacity: 1; }
+        /* ── Section Title ── */
+        .section-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
 
-    .collapsible-body {
-      overflow: hidden;
-      transition: max-height 0.3s ease;
-      max-height: 2000px;
-    }
+        .section-title .count {
+            font-size: 13px;
+            font-weight: 400;
+            color: var(--text-muted);
+            background: var(--bg-secondary);
+            padding: 0 10px;
+            border-radius: 100px;
+            border: 1px solid var(--border);
+        }
 
-    .collapsible-body.collapsed {
-      max-height: 0;
-      margin-top: 0;
-    }
+        /* ── Info Cards ── */
+        .info-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 24px;
+        }
 
-    .chevron {
-      transition: transform 0.2s;
-      font-size: 12px;
-      opacity: 0.5;
-    }
+        .info-card {
+            background: var(--bg-secondary);
+            border-radius: var(--radius);
+            padding: 16px 18px;
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+            transition: background 0.15s, border-color 0.15s;
+            cursor: default;
+        }
 
-    .chevron.collapsed { transform: rotate(-90deg); }
-  </style>
+        .info-card:active {
+            transform: scale(0.99);
+        }
+
+        .info-card .icon {
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+            background: rgba(51, 144, 236, 0.12);
+            color: var(--accent);
+        }
+
+        .info-card .icon.warning {
+            background: rgba(245, 166, 35, 0.15);
+            color: var(--warning);
+        }
+
+        .info-card .icon.danger {
+            background: rgba(231, 76, 60, 0.15);
+            color: var(--danger);
+        }
+
+        .info-card .icon.success {
+            background: rgba(49, 181, 69, 0.15);
+            color: var(--success);
+        }
+
+        .info-card .content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .info-card .content .title {
+            font-size: 15px;
+            font-weight: 600;
+            line-height: 1.3;
+        }
+
+        .info-card .content .desc {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-top: 2px;
+            line-height: 1.4;
+        }
+
+        .info-card .content .meta {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 4px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .info-card .content .meta span {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .info-card .tag {
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 2px 10px;
+            border-radius: 100px;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .tag.urgent {
+            background: rgba(231, 76, 60, 0.15);
+            color: var(--danger);
+        }
+
+        .tag.new {
+            background: rgba(51, 144, 236, 0.15);
+            color: var(--accent);
+        }
+
+        .tag.updated {
+            background: rgba(245, 166, 35, 0.15);
+            color: var(--warning);
+        }
+
+        /* ── Action Button ── */
+        .action-row {
+            display: flex;
+            gap: 10px;
+            margin-top: 4px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 14px 18px;
+            border: none;
+            border-radius: var(--radius);
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.15s, transform 0.1s;
+            text-align: center;
+            background: var(--accent);
+            color: #fff;
+            -webkit-text-fill-color: #fff;
+            touch-action: manipulation;
+        }
+
+        .btn:active {
+            transform: scale(0.96);
+        }
+
+        .btn-secondary {
+            background: var(--bg-secondary);
+            color: var(--text);
+            -webkit-text-fill-color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:active {
+            background: var(--border);
+        }
+
+        .btn-success {
+            background: var(--success);
+        }
+
+        /* ── Footer ── */
+        .app-footer {
+            margin-top: 24px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border);
+            text-align: center;
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        .app-footer .tg-version {
+            display: inline-block;
+            background: var(--bg-secondary);
+            padding: 2px 12px;
+            border-radius: 100px;
+            font-size: 11px;
+            border: 1px solid var(--border);
+            margin-top: 6px;
+        }
+
+        /* ── Toast / Alert ── */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(80px);
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 12px 20px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+            font-size: 14px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            opacity: 0;
+            transition: opacity 0.3s, transform 0.3s;
+            pointer-events: none;
+            z-index: 999;
+            max-width: 90%;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+            pointer-events: auto;
+        }
+
+        .toast .toast-icon {
+            font-size: 18px;
+        }
+
+        /* ── Responsive tweaks ── */
+        @media (max-width: 400px) {
+            .stats-grid {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 6px;
+            }
+            .stat-item .number {
+                font-size: 18px;
+            }
+            .info-card {
+                padding: 14px 14px;
+            }
+            .user-card {
+                padding: 14px 16px;
+            }
+        }
+
+        /* ── Scrollbar ── */
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 4px;
+        }
+    </style>
 </head>
 <body>
 
-  <h1>📱 Telegram Mini App Info</h1>
-  <p class="subtitle" id="platformInfo">Loading…</p>
+    <!-- ─── APP ─── -->
+    <div class="app-container">
 
-  <!-- User -->
-  <div class="section" id="sec-user">
-    <div class="section-header" onclick="toggleSection('user')">
-      <h2>👤 User</h2>
-      <span class="badge" id="badge-user"></span>
-      <span class="chevron" id="chevron-user">▾</span>
+        <!-- Header -->
+        <header class="app-header">
+            <h1>✦ Dashboard</h1>
+            <span class="badge" id="liveBadge">● Live</span>
+        </header>
+
+        <!-- User Card -->
+        <div class="user-card" id="userCard">
+            <div class="user-avatar" id="userAvatar">U</div>
+            <div class="user-info">
+                <div class="name" id="userName">User</div>
+                <div class="handle" id="userHandle">@username</div>
+                <span class="status" id="userStatus">● Online</span>
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats-grid">
+            <div class="stat-item">
+                <div class="number" id="statMessages">0</div>
+                <div class="label">Messages</div>
+            </div>
+            <div class="stat-item">
+                <div class="number" id="statGroups">0</div>
+                <div class="label">Groups</div>
+            </div>
+            <div class="stat-item">
+                <div class="number" id="statAlerts">0</div>
+                <div class="label">Alerts</div>
+            </div>
+        </div>
+
+        <!-- Important Info Section -->
+        <div class="section-title">
+            📌 Important Info
+            <span class="count" id="infoCount">3</span>
+        </div>
+
+        <div class="info-list" id="infoList">
+            <!-- Cards will be rendered by JS -->
+        </div>
+
+        <!-- Actions -->
+        <div class="action-row">
+            <button class="btn" id="refreshBtn">⟳ Refresh</button>
+            <button class="btn btn-secondary" id="shareBtn">📤 Share</button>
+        </div>
+
+        <!-- Footer -->
+        <footer class="app-footer">
+            <div>Telegram Mini App · v1.0</div>
+            <div class="tg-version" id="tgVersion">WebApp v6.0</div>
+        </footer>
     </div>
-    <div class="collapsible-body" id="body-user"></div>
-  </div>
 
-  <!-- Chat -->
-  <div class="section" id="sec-chat">
-    <div class="section-header" onclick="toggleSection('chat')">
-      <h2>💬 Chat</h2>
-      <span class="badge" id="badge-chat"></span>
-      <span class="chevron" id="chevron-chat">▾</span>
+    <!-- ─── TOAST ─── -->
+    <div class="toast" id="toast">
+        <span class="toast-icon">✓</span>
+        <span id="toastMessage">Done</span>
     </div>
-    <div class="collapsible-body" id="body-chat"></div>
-  </div>
 
-  <!-- Chat Type & Instance -->
-  <div class="section" id="sec-chatinfo">
-    <div class="section-header" onclick="toggleSection('chatinfo')">
-      <h2>🏷️ Chat Type & Instance</h2>
-      <span class="badge" id="badge-chatinfo"></span>
-      <span class="chevron" id="chevron-chatinfo">▾</span>
-    </div>
-    <div class="collapsible-body" id="body-chatinfo"></div>
-  </div>
+    <!-- ─── SCRIPT ─── -->
+    <script>
+        (function() {
+            'use strict';
 
-  <!-- Start Param -->
-  <div class="section" id="sec-startparam">
-    <div class="section-header" onclick="toggleSection('startparam')">
-      <h2>🚀 Start Param</h2>
-      <span class="badge" id="badge-startparam"></span>
-      <span class="chevron" id="chevron-startparam">▾</span>
-    </div>
-    <div class="collapsible-body" id="body-startparam"></div>
-  </div>
+            // ── Telegram WebApp Init ──
+            const tg = window.Telegram?.WebApp;
 
-  <!-- Query ID & Auth -->
-  <div class="section" id="sec-auth">
-    <div class="section-header" onclick="toggleSection('auth')">
-      <h2>🔐 Auth & Query</h2>
-      <span class="badge" id="badge-auth"></span>
-      <span class="chevron" id="chevron-auth">▾</span>
-    </div>
-    <div class="collapsible-body" id="body-auth"></div>
-  </div>
+            if (tg) {
+                tg.ready();
+                tg.expand();
 
-  <!-- WebApp Settings -->
-  <div class="section" id="sec-webapp">
-    <div class="section-header" onclick="toggleSection('webapp')">
-      <h2>⚙️ WebApp Settings</h2>
-      <span class="badge" id="badge-webapp"></span>
-      <span class="chevron" id="chevron-webapp">▾</span>
-    </div>
-    <div class="collapsible-body" id="body-webapp"></div>
-  </div>
+                // Apply dark theme if Telegram is in dark mode
+                if (tg.colorScheme === 'dark') {
+                    document.body.classList.add('tg-dark');
+                }
 
-  <!-- Device & Platform -->
-  <div class="section" id="sec-device">
-    <div class="section-header" onclick="toggleSection('device')">
-      <h2>📲 Device & Platform</h2>
-      <span class="badge ok">Always</span>
-      <span class="chevron" id="chevron-device">▾</span>
-    </div>
-    <div class="collapsible-body" id="body-device"></div>
-  </div>
+                // Listen for theme changes
+                tg.onEvent('themeChanged', function() {
+                    const isDark = tg.colorScheme === 'dark';
+                    document.body.classList.toggle('tg-dark', isDark);
+                });
 
-  <!-- Theme Params -->
-  <div class="section" id="sec-theme">
-    <div class="section-header" onclick="toggleSection('theme')">
-      <h2>🎨 Theme Params</h2>
-      <span class="badge ok">Always</span>
-      <span class="chevron" id="chevron-theme">▾</span>
-    </div>
-    <div class="collapsible-body" id="body-theme"></div>
-  </div>
+                // Show version
+                document.getElementById('tgVersion').textContent =
+                    `WebApp v${tg.version || '6.0'}`;
+            } else {
+                // Fallback: simulate dark mode based on system preference
+                if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                    document.body.classList.add('tg-dark');
+                }
+                document.getElementById('tgVersion').textContent = 'WebApp (standalone)';
+            }
 
-  <!-- Raw initData -->
-  <div class="section">
-    <div class="section-header" onclick="toggleSection('raw')">
-      <h2>📄 Raw initData (validated string)</h2>
-      <span class="badge ok">Always</span>
-      <span class="chevron" id="chevron-raw">▾</span>
-    </div>
-    <div class="collapsible-body" id="body-raw">
-      <textarea id="rawInitData" readonly></textarea>
-      <button class="copy-btn" onclick="copyText('rawInitData')">Copy initData</button>
-    </div>
-  </div>
+            // ── Data Store ──
+            let infoData = [];
+            let stats = {
+                messages: 0,
+                groups: 0,
+                alerts: 0,
+            };
 
-  <!-- Parsed initDataUnsafe (full JSON) -->
-  <div class="section">
-    <div class="section-header" onclick="toggleSection('json')">
-      <h2>📦 Full initDataUnsafe JSON</h2>
-      <span class="badge ok">Always</span>
-      <span class="chevron" id="chevron-json">▾</span>
-    </div>
-    <div class="collapsible-body" id="body-json">
-      <textarea id="jsonDump" readonly></textarea>
-      <button class="copy-btn" onclick="copyText('jsonDump')">Copy JSON</button>
-    </div>
-  </div>
+            // ── DOM refs ──
+            const infoListEl = document.getElementById('infoList');
+            const infoCountEl = document.getElementById('infoCount');
+            const statMessages = document.getElementById('statMessages');
+            const statGroups = document.getElementById('statGroups');
+            const statAlerts = document.getElementById('statAlerts');
+            const userAvatar = document.getElementById('userAvatar');
+            const userName = document.getElementById('userName');
+            const userHandle = document.getElementById('userHandle');
+            const userStatus = document.getElementById('userStatus');
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toastMessage');
+            const refreshBtn = document.getElementById('refreshBtn');
+            const shareBtn = document.getElementById('shareBtn');
+            const liveBadge = document.getElementById('liveBadge');
 
-  <!-- URL Parameters -->
-  <div class="section">
-    <div class="section-header" onclick="toggleSection('urlparams')">
-      <h2>🔗 URL / Launch Parameters</h2>
-      <span class="badge ok">Always</span>
-      <span class="chevron" id="chevron-urlparams">▾</span>
-    </div>
-    <div class="collapsible-body" id="body-urlparams">
-      <textarea id="urlParams" readonly></textarea>
-    </div>
-  </div>
+            // ── Helper: show toast ──
+            let toastTimeout = null;
 
-  <div class="toast" id="toast">Copied!</div>
+            function showToast(message, icon = '✓', duration = 2600) {
+                toastMessage.textContent = message;
+                document.querySelector('.toast .toast-icon').textContent = icon;
+                toast.classList.add('show');
+                clearTimeout(toastTimeout);
+                toastTimeout = setTimeout(() => {
+                    toast.classList.remove('show');
+                }, duration);
+            }
 
-  <script>
-    const tg = window.Telegram.WebApp;
+            // ── Helper: format time ──
+            function timeAgo(date) {
+                const diff = Date.now() - date.getTime();
+                const mins = Math.floor(diff / 60000);
+                if (mins < 1) return 'Just now';
+                if (mins < 60) return `${mins}m ago`;
+                const hrs = Math.floor(mins / 60);
+                if (hrs < 24) return `${hrs}h ago`;
+                const days = Math.floor(hrs / 24);
+                return `${days}d ago`;
+            }
 
-    // Expand the mini app to full height
-    tg.expand();
+            // ── Generate random data ──
+            function generateData() {
+                const now = new Date();
 
-    // Platform info
-    document.getElementById('platformInfo').textContent =
-      `${tg.platform || 'unknown'} · v${tg.version || 'unknown'}`;
+                const titles = [
+                    '📢 System Update',
+                    '🔔 Security Alert',
+                    '📊 Daily Report',
+                    '💬 New Message',
+                    '📎 File Uploaded',
+                    '🔄 Sync Complete',
+                    '⚠️ High CPU Usage',
+                    '✅ Task Completed',
+                    '📅 Meeting Reminder',
+                    '🔑 API Key Rotated',
+                ];
 
-    // ── Helper ──
-    function setBadge(id, data) {
-      const badge = document.getElementById('badge-' + id);
-      if (data) {
-        badge.textContent = 'Available';
-        badge.className = 'badge ok';
-      } else {
-        badge.textContent = 'Empty';
-        badge.className = 'badge empty';
-      }
-    }
+                const descs = [
+                    'v2.4.1 deployed successfully to production.',
+                    'Unusual login attempt detected from IP 192.168.1.45.',
+                    'Total revenue up 12% compared to yesterday.',
+                    'You have 3 unread messages in the #general channel.',
+                    'Project_report_Q3.pdf has been uploaded.',
+                    'All data synchronized across 5 regions.',
+                    'CPU usage spiked to 92% for 3 minutes.',
+                    'Sprint #12 retrospective completed.',
+                    'Team sync call scheduled for 3:00 PM UTC.',
+                    'Old API key revoked; new key issued.',
+                ];
 
-    function renderRows(containerId, obj, fields) {
-      const container = document.getElementById('body-' + containerId);
-      let html = '';
-      for (const [label, key] of fields) {
-        const val = typeof key === 'function' ? key() : obj?.[key];
-        const display = val === undefined || val === null || val === ''
-          ? '(not set)'
-          : typeof val === 'object' ? JSON.stringify(val) : String(val);
-        const muted = val === undefined || val === null || val === '' ? ' muted' : '';
-        html += `<div class="row"><div class="key">${label}</div><div class="value${muted}">${escapeHtml(display)}</div></div>`;
-      }
-      container.innerHTML = html;
-    }
+                const tags = ['urgent', 'new', 'updated', ''];
+                const tagLabels = {
+                    urgent: 'Urgent',
+                    new: 'New',
+                    updated: 'Updated',
+                    '': ''
+                };
+                const tagClasses = {
+                    urgent: 'urgent',
+                    new: 'new',
+                    updated: 'updated',
+                    '': ''
+                };
+                const icons = ['⚡', '🔔', '📊', '💬', '📎', '🔄', '⚠️', '✅', '📅', '🔑'];
+                const iconTypes = ['', 'warning', '', '', '', '', 'danger', 'success', '', ''];
 
-    function escapeHtml(s) {
-      const d = document.createElement('div');
-      d.textContent = s;
-      return d.innerHTML;
-    }
+                // Pick 4–6 random items
+                const count = 4 + Math.floor(Math.random() * 3);
+                const shuffled = titles.map((_, i) => i);
+                for (let i = shuffled.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+                }
+                const selected = shuffled.slice(0, count);
 
-    // ── USER ──
-    const user = tg.initDataUnsafe?.user;
-    setBadge('user', user);
-    renderRows('user', user, [
-      ['id', 'id'],
-      ['first_name', 'first_name'],
-      ['last_name', 'last_name'],
-      ['username', 'username'],
-      ['language_code', 'language_code'],
-      ['is_bot', 'is_bot'],
-      ['is_premium', 'is_premium'],
-      ['photo_url', 'photo_url'],
-      ['allows_write_to_pm', 'allows_write_to_pm'],
-      ['added_to_attachment_menu', 'added_to_attachment_menu'],
-    ]);
+                const items = selected.map((idx, i) => {
+                    const tag = tags[Math.floor(Math.random() * tags.length)];
+                    const date = new Date(now.getTime() - Math.random() * 3600000 * 24 * 3);
+                    return {
+                        id: Date.now() + i + Math.random() * 1000,
+                        title: titles[idx],
+                        desc: descs[idx],
+                        icon: icons[idx],
+                        iconType: iconTypes[idx],
+                        tag: tag,
+                        tagLabel: tagLabels[tag],
+                        tagClass: tagClasses[tag],
+                        time: date,
+                        timeAgo: timeAgo(date),
+                        read: Math.random() > 0.3,
+                    };
+                });
 
-    // ── CHAT ──
-    const chat = tg.initDataUnsafe?.chat;
-    setBadge('chat', chat);
-    renderRows('chat', chat, [
-      ['id', 'id'],
-      ['type', 'type'],
-      ['title', 'title'],
-      ['username', 'username'],
-      ['photo_url', 'photo_url'],
-    ]);
+                // Sort by time (newest first)
+                items.sort((a, b) => b.time.getTime() - a.time.getTime());
 
-    // ── CHAT TYPE & INSTANCE ──
-    const chatType = tg.initDataUnsafe?.chat_type;
-    const chatInstance = tg.initDataUnsafe?.chat_instance;
-    setBadge('chatinfo', chatType || chatInstance);
-    renderRows('chatinfo', tg.initDataUnsafe, [
-      ['chat_type', 'chat_type'],
-      ['chat_instance', 'chat_instance'],
-    ]);
+                // Stats
+                stats.messages = 128 + Math.floor(Math.random() * 300);
+                stats.groups = 7 + Math.floor(Math.random() * 15);
+                stats.alerts = items.filter(item => item.tag === 'urgent').length;
 
-    // ── START PARAM ──
-    const startParam = tg.initDataUnsafe?.start_param;
-    setBadge('startparam', startParam);
-    renderRows('startparam', tg.initDataUnsafe, [
-      ['start_param', 'start_param'],
-    ]);
+                return items;
+            }
 
-    // ── AUTH & QUERY ──
-    const queryId = tg.initDataUnsafe?.query_id;
-    const authDate = tg.initDataUnsafe?.auth_date;
-    const canSendAfter = tg.initDataUnsafe?.can_send_after;
-    setBadge('auth', queryId || authDate);
-    renderRows('auth', tg.initDataUnsafe, [
-      ['query_id', 'query_id'],
-      ['auth_date (unix)', () => authDate !== undefined ? authDate : null],
-      ['auth_date (readable)', () => authDate ? new Date(authDate * 1000).toLocaleString() : null],
-      ['can_send_after', 'can_send_after'],
-      ['hash', 'hash'],
-    ]);
+            // ── Render ──
+            function render(data) {
+                infoData = data;
+                infoListEl.innerHTML = '';
 
-    // ── WEBAPP SETTINGS ──
-    setBadge('webapp', 'always');
-    renderRows('webapp', tg, [
-      ['version', 'version'],
-      ['platform', 'platform'],
-      ['colorScheme', 'colorScheme'],
-      ['themeParams', () => JSON.stringify(tg.colorScheme)],
-      ['isExpanded', () => tg.isExpanded],
-      ['viewportStableHeight', () => tg.viewportStableHeight],
-      ['viewportHeight', () => tg.viewportHeight],
-      ['isClosingConfirmationEnabled', () => tg.isClosingConfirmationEnabled],
-      ['headerColor', () => tg.headerColor],
-      ['backgroundColor', () => tg.backgroundColor],
-      ['isActive', () => tg.isActive],
-      ['isVerticalSwipesEnabled', () => tg.isVerticalSwipesEnabled],
-      ['MainButton.text', () => tg.MainButton?.text],
-      ['MainButton.isVisible', () => tg.MainButton?.isVisible],
-      ['BackButton.isVisible', () => tg.BackButton?.isVisible],
-      ['SettingsButton.isVisible', () => tg.SettingsButton?.isVisible],
-      ['HapticFeedback', () => tg.HapticFeedback ? 'available' : 'n/a'],
-      ['CloudStorage', () => tg.CloudStorage ? 'available' : 'n/a'],
-      ['BiometricManager', () => tg.BiometricManager ? 'available' : 'n/a'],
-      ['PopupParams', () => tg.showPopup ? 'available' : 'n/a'],
-      ['enableClosingConfirmation', () => typeof tg.enableClosingConfirmation],
-      ['openLink', () => typeof tg.openLink],
-      ['shareMessage', () => typeof tg.shareMessage],
-      ['shareToStory', () => typeof tg.shareToStory],
-      ['setEmojiStatus', () => typeof tg.setEmojiStatus],
-      ['requestWriteAccess', () => typeof tg.requestWriteAccess],
-      ['requestContact', () => typeof tg.requestContact],
-      ['invokeCustomMethod', () => typeof tg.invokeCustomMethod],
-      ['sendData', () => typeof tg.sendData],
-      ['switchInlineQuery', () => typeof tg.switchInlineQuery],
-      ['openInvoice', () => typeof tg.openInvoice],
-      ['scanQrPopup', () => typeof tg.showScanQrPopup],
-    ]);
+                data.forEach((item) => {
+                    const card = document.createElement('div');
+                    card.className = 'info-card';
+                    card.style.cursor = 'pointer';
 
-    // ── DEVICE & PLATFORM ──
-    renderRows('device', null, [
-      ['tg.platform', () => tg.platform || '(unknown)'],
-      ['tg.version', () => tg.version || '(unknown)'],
-      ['colorScheme', () => tg.colorScheme || '(unknown)'],
-      ['User Agent', () => navigator.userAgent],
-      ['Screen', () => `${screen.width}x${screen.height}`],
-      ['Window', () => `${window.innerWidth}x${window.innerHeight}`],
-      ['Pixel Ratio', () => window.devicePixelRatio],
-      ['Languages', () => navigator.languages?.join(', ')],
-      ['Online', () => navigator.onLine],
-      ['Touch', () => 'ontouchstart' in window],
-    ]);
+                    const iconTypeClass = item.iconType ? ` ${item.iconType}` : '';
+                    card.innerHTML = `
+                            <div class="icon${iconTypeClass}">${item.icon}</div>
+                            <div class="content">
+                                <div class="title">${item.title}</div>
+                                <div class="desc">${item.desc}</div>
+                                <div class="meta">
+                                    <span>🕐 ${item.timeAgo}</span>
+                                    <span>${item.read ? '✓ Read' : '○ Unread'}</span>
+                                </div>
+                            </div>
+                            ${item.tag ? `<div class="tag ${item.tagClass}">${item.tagLabel}</div>` : ''}
+                        `;
 
-    // ── THEME PARAMS ──
-    const theme = tg.themeParams || {};
-    const themeContainer = document.getElementById('body-theme');
-    const themeKeys = [
-      ['bg_color', 'Background'],
-      ['text_color', 'Text'],
-      ['hint_color', 'Hint'],
-      ['link_color', 'Link'],
-      ['button_color', 'Button'],
-      ['button_text_color', 'Button Text'],
-      ['secondary_bg_color', 'Secondary BG'],
-      ['header_bg_color', 'Header BG'],
-      ['accent_text_color', 'Accent Text'],
-      ['section_bg_color', 'Section BG'],
-      ['section_header_text_color', 'Section Header'],
-      ['subtitle_text_color', 'Subtitle'],
-      ['destructive_text_color', 'Destructive'],
-      ['block_bg_color', 'Block BG'],
-      ['section_separator_color', 'Separator'],
-      ['bottom_bar_bg_color', 'Bottom Bar BG'],
-    ];
-    let themeHtml = '<div class="theme-grid">';
-    for (const [key, label] of themeKeys) {
-      const val = theme[key];
-      const hex = val ? '#' + val : '#000000';
-      themeHtml += `<div class="theme-swatch"><div class="swatch-color" style="background:${val ? '#' + val : 'transparent'}; border:1px solid ${val ? '#' + val : '#ffffff30'}"></div><div><div style="font-weight:600">${label}</div><div style="opacity:0.5; font-family:monospace; font-size:10px">${val ? '#' + val : '—'}</div></div></div>`;
-    }
-    themeHtml += '</div>';
-    // Raw theme params as rows too
-    themeHtml += '<div style="margin-top:12px;">';
-    themeHtml += '<div class="row"><div class="key">Raw JSON</div><div class="value">${JSON.stringify(theme)}</div></div>'.replace('${', '{');
-    themeHtml += '</div>';
-    themeContainer.innerHTML = themeHtml;
+                    // Click → show detail via toast
+                    card.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        if (tg) {
+                            tg.showAlert(`📌 ${item.title}\n\n${item.desc}\n\n🕐 ${item.timeAgo}`);
+                        } else {
+                            showToast(`${item.title} — ${item.desc}`, '📌', 3000);
+                        }
+                    });
 
-    // ── RAW initData ──
-    document.getElementById('rawInitData').value = tg.initData || '(empty — not launched from Telegram)';
+                    infoListEl.appendChild(card);
+                });
 
-    // ── Full initDataUnsafe JSON ──
-    document.getElementById('jsonDump').value = JSON.stringify(tg.initDataUnsafe, null, 2);
+                // Update count
+                infoCountEl.textContent = data.length;
 
-    // ── URL / Launch params ──
-    const params = new URLSearchParams(window.location.search);
-    const paramsObj = {};
-    for (const [k, v] of params) { paramsObj[k] = v; }
-    const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
-    const hashObj = {};
-    for (const [k, v] of hashParams) { hashObj[k] = v; }
-    document.getElementById('urlParams').value =
-      '— query string —\n' + JSON.stringify(paramsObj, null, 2) + '\n\n— hash / fragment —\n' + JSON.stringify(hashObj, null, 2);
+                // Update stats
+                statMessages.textContent = stats.messages;
+                statGroups.textContent = stats.groups;
+                statAlerts.textContent = stats.alerts;
 
-    // ── Collapsible sections ──
-    function toggleSection(name) {
-      const body = document.getElementById('body-' + name);
-      const chevron = document.getElementById('chevron-' + name);
-      body.classList.toggle('collapsed');
-      chevron.classList.toggle('collapsed');
-    }
+                // Update user info (simulate)
+                const firstNames = ['Alice', 'Bob', 'Charlie', 'Diana', 'Eve', 'Frank', 'Grace', 'Henry'];
+                const lastNames = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis'];
+                const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
+                const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
+                const fullName = `${firstName} ${lastName}`;
+                const handle = `@${firstName.toLowerCase()}${lastName.toLowerCase()}_${Math.floor(Math.random() * 100)}`;
 
-    // ── Copy helper ──
-    function copyText(elementId) {
-      const el = document.getElementById(elementId);
-      el.select();
-      document.execCommand('copy');
-      const toast = document.getElementById('toast');
-      toast.classList.add('show');
-    }
+                userName.textContent = fullName;
+                userHandle.textContent = handle;
+                userAvatar.textContent = firstName.charAt(0) + lastName.charAt(0);
 
-    // Listen for theme changes
-    tg.onEvent('themeChanged', () => {
-      location.reload();
-    });
-  </script>
+                // Status
+                const statuses = ['● Online', '● Away', '○ Offline'];
+                const statusColors = ['var(--success)', 'var(--warning)', 'var(--text-muted)'];
+                const idx = Math.floor(Math.random() * 3);
+                userStatus.textContent = statuses[idx];
+                userStatus.style.color = statusColors[idx];
+
+                // Badge pulse
+                liveBadge.style.animation = 'none';
+                setTimeout(() => {
+                    liveBadge.style.animation = 'pulse 2s ease-in-out infinite';
+                }, 10);
+            }
+
+            // ── Refresh ──
+            function refreshData() {
+                const data = generateData();
+                render(data);
+                showToast('Dashboard updated', '⟳', 1800);
+
+                // Haptic feedback if available
+                if (tg && tg.HapticFeedback) {
+                    tg.HapticFeedback.impactOccurred('light');
+                }
+            }
+
+            // ── Share ──
+            function shareInfo() {
+                const text = `📊 My Telegram Mini App Dashboard\n\n` +
+                    `📩 Messages: ${stats.messages}\n` +
+                    `👥 Groups: ${stats.groups}\n` +
+                    `⚠️ Alerts: ${stats.alerts}\n` +
+                    `📌 Latest: ${infoData[0]?.title || '—'}\n\n` +
+                    `🕐 ${new Date().toLocaleString()}`;
+
+                if (tg) {
+                    tg.showPopup({
+                        title: 'Share Dashboard',
+                        message: text,
+                        buttons: [{ text: 'Copy', type: 'default' }]
+                    }, function(btnIndex) {
+                        if (btnIndex === 0) {
+                            // Copy to clipboard via Telegram
+                            tg.showAlert('Copied to clipboard! (simulated)');
+                        }
+                    });
+                    // Also try native share
+                    if (navigator.share) {
+                        navigator.share({ title: 'My Dashboard', text: text })
+                            .catch(() => {});
+                    } else {
+                        // Fallback: copy to clipboard
+                        navigator.clipboard?.writeText(text).then(() => {
+                            showToast('Copied to clipboard', '📋', 2000);
+                        }).catch(() => {
+                            showToast('Share not available', '⚠️', 2000);
+                        });
+                    }
+                } else {
+                    // Fallback for standalone
+                    navigator.clipboard?.writeText(text).then(() => {
+                        showToast('Copied to clipboard', '📋', 2000);
+                    }).catch(() => {
+                        showToast('Share not available', '⚠️', 2000);
+                    });
+                }
+            }
+
+            // ── Inject pulse keyframes ──
+            const styleSheet = document.createElement('style');
+            styleSheet.textContent = `
+                    @keyframes pulse {
+                        0%, 100% { opacity: 1; }
+                        50% { opacity: 0.4; }
+                    }
+                `;
+            document.head.appendChild(styleSheet);
+
+            // ── Init ──
+            const initialData = generateData();
+            render(initialData);
+
+            // ── Event listeners ──
+            refreshBtn.addEventListener('click', refreshData);
+            shareBtn.addEventListener('click', shareInfo);
+
+            // ── Telegram MainButton (if available) ──
+            if (tg && tg.MainButton) {
+                tg.MainButton.setText('📊 Refresh');
+                tg.MainButton.onClick(refreshData);
+                tg.MainButton.show();
+            }
+
+            // ── Auto-refresh every 60s ──
+            let autoRefreshInterval = setInterval(refreshData, 60000);
+
+            // ── Cleanup on page hide (optional) ──
+            document.addEventListener('visibilitychange', function() {
+                if (document.hidden) {
+                    clearInterval(autoRefreshInterval);
+                } else {
+                    autoRefreshInterval = setInterval(refreshData, 60000);
+                }
+            });
+
+            console.log('✅ Telegram Mini App Dashboard ready');
+
+        })();
+    </script>
 
 </body>
 </html>
