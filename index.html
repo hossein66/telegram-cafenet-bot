@@ -1087,11 +1087,7 @@ handleTelegramStartParam();
     // 1. Initial UI update (shows login button)
     updateProfileBtn();
     fetchPaymentInfo();
- const urlParams = new URLSearchParams(window.location.search);
-    const serviceParam = urlParams.get('service');
-    if (serviceParam && serviceParam.trim() !== '') {
-        openServicePage(serviceParam.trim());
-    }
+
     // 2. Load static data
     try {
         const [cats, provinces, docTypes] = await Promise.all([
@@ -1109,7 +1105,7 @@ handleTelegramStartParam();
     }
 
     buildSidebar();
-    await resetView();
+   await resetView();
 
     // 3. Authentication – restore session if token exists
     const token = localStorage.getItem('cafenet_token');
@@ -1164,7 +1160,11 @@ handleTelegramStartParam();
 
     // 6. Infinite scroll
     setupScrollObserver();
-
+ const urlParams = new URLSearchParams(window.location.search);
+    const serviceParam = urlParams.get('service');
+    if (serviceParam && serviceParam.trim() !== '') {
+        openServicePage(serviceParam.trim());
+    }
     console.log('🏁 init() finished');
 }
     document.addEventListener('DOMContentLoaded', init);
