@@ -1422,19 +1422,11 @@ async function loadFeatured() {
                 openGuidePage();
                 return;
             }
-                if (id === CODE_SERVICE_ID) {
-        // We need a detail object; you can either fetch or build a minimal one.
-        try {
-            // Option 1: fetch the actual detail (recommended)
-            // const detail = await apiFetch(`/api/services/${encodeURIComponent(id)}`);
-            renderCodeServicePage(detail);
-        } catch (e) {
-            // Option 2: fallback to a minimal object (if you don't want to fetch)
-            // but fetching is safer to get the title.
+             if (id === CODE_SERVICE_ID) {
             renderCodeServicePage({ serviceTitle: 'ارسال کد ۵ رقمی' });
-        }
-        return;
-    }
+                return;
+            }
+
             const detail = await apiFetch(`/api/services/${encodeURIComponent(id)}`);
             currentServiceDetail = detail;
             serviceCache[id] = detail;
