@@ -67,6 +67,26 @@ class TelegramLogin(BaseModel):
     initData: str
     user: Dict[str, Any]
     key: Optional[str] = None
+
+class PointRequestCreate(BaseModel):
+    national_code: str
+    system_password: str
+    points_amount: int
+    price_type: str  # '31', '30', 'under30'
+    fee: float
+    time_hours: float
+
+class PointRequestResponse(BaseModel):
+    id: str
+    user_id: str
+    national_code: str
+    points_amount: int
+    price_type: str
+    fee: float
+    time_hours: float
+    status: str
+    created_at: str
+
 # Then use:
 sms_cache = RedisCache(default_ttl=20)
 telegram_auth_cache = RedisCache(default_ttl=300)  # 5 minutes TTL
@@ -356,6 +376,24 @@ def init_db():
         FOREIGN KEY (user_id) REFERENCES users(id)
     )
 """)
+            
+            # جدول درخواست‌های خرید امتیاز
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS point_requests (
+                    id TEXT PRIMARY KEY,
+                    user_id TEXT NOT NULL,
+                    national_code TEXT NOT NULL,
+                    system_password TEXT NOT NULL,
+                    points_amount INTEGER NOT NULL,
+                    price_type TEXT NOT NULL,
+                    fee REAL NOT NULL,
+                    time_hours REAL NOT NULL,
+                    status TEXT DEFAULT 'submitted',
+                    created_at TEXT,
+                    updated_at TEXT,
+                    FOREIGN KEY (user_id) REFERENCES users(id)
+                )
+            """) 
             # Add columns to requests if not exist
 
             try:
@@ -413,7 +451,8 @@ def init_db():
             # Composite indexes for common queries
             cur.execute("CREATE INDEX IF NOT EXISTS idx_services_category_enabled ON services(category_id, is_enabled)")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_services_sort_enabled ON services(sort, is_enabled)")
-            
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_point_requests_user ON point_requests(user_id)")
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_point_requests_status ON point_requests(status)")
             conn.commit()
             print("✅ Database initialized with indexes")
     except Exception as e:
@@ -2872,6 +2911,119 @@ def on_startup():
     print("✅ Server started with optimized database and caching")
     print(f"📊 Database: {DB_PATH}")
 
+
+@app.post("/api/point-requests", response_model=dict)
+def create_point_request(req: PointRequestCreate, user: dict = Depends(get_current_user)):
+    try:
+        req_id = f"preq_{uuid.uuid4().hex[:16]}"
+        now = datetime.utcnow().isoformat()
+        with get_db() as conn:
+            cur = conn.cursor()
+            cur.execute("""
+                INSERT INTO point_requests
+                    (id, user_id, national_code, system_password, points_amount,
+                     price_type, fee, time_hours, status, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                req_id,
+                user["id"],
+                req.national_code,
+                req.system_password,
+                req.points_amount,
+                req.price_type,
+                req.fee,
+                req.time_hours,
+                "submitted",
+                now,
+                now
+            ))
+            conn.commit()
+        return {"success": True, "requestId": req_id}
+    except Exception as e:
+        print(f"❌ Error in create_point_request: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+@app.get("/api/point-requests", response_model=List[PointRequestResponse])
+def get_point_requests(user: dict = Depends(get_current_user)):
+    try:
+        with get_db() as conn:
+            cur = conn.cursor()
+            cur.execute("""
+                SELECT * FROM point_requests
+                WHERE user_id = ?
+                ORDER BY created_at DESC
+            """, (user["id"],))
+            rows = cur.fetchall()
+            result = []
+            for row in rows:
+                r = dict(row)
+                result.append({
+                    "id": r["id"],
+                    "user_id": r["user_id"],
+                    "national_code": r["national_code"],
+                    "points_amount": r["points_amount"],
+                    "price_type": r["price_type"],
+                    "fee": r["fee"],
+                    "time_hours": r["time_hours"],
+                    "status": r["status"],
+                    "created_at": r["created_at"]
+                })
+            return result
+    except Exception as e:
+        print(f"❌ Error in get_point_requests: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    
+@app.delete("/api/point-requests/{request_id}")
+def delete_point_request(request_id: str, user: dict = Depends(get_current_user)):
+    try:
+        with get_db() as conn:
+            cur = conn.cursor()
+            # ابتدا بررسی وجود و وضعیت
+            cur.execute("""
+                SELECT user_id, status FROM point_requests
+                WHERE id = ?
+            """, (request_id,))
+            row = cur.fetchone()
+            if not row:
+                raise HTTPException(status_code=404, detail="درخواست یافت نشد")
+            if row["user_id"] != user["id"]:
+                raise HTTPException(status_code=403, detail="شما اجازه حذف این درخواست را ندارید")
+            if row["status"] != "submitted":
+                raise HTTPException(status_code=400, detail="فقط درخواست‌های با وضعیت ثبت‌شده قابل حذف هستند")
+
+            cur.execute("DELETE FROM point_requests WHERE id = ?", (request_id,))
+            conn.commit()
+            return {"success": True}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Error in delete_point_request: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    
+@app.put("/api/point-requests/{request_id}/status")
+def update_point_request_status(
+    request_id: str,
+    status: Literal["submitted", "processing", "done", "cancelled"],
+    admin: dict = Depends(admin_required)  # از تابع admin_required که قبلاً تعریف شده
+):
+    try:
+        with get_db() as conn:
+            cur = conn.cursor()
+            cur.execute("""
+                UPDATE point_requests
+                SET status = ?, updated_at = ?
+                WHERE id = ?
+            """, (status, datetime.utcnow().isoformat(), request_id))
+            if cur.rowcount == 0:
+                raise HTTPException(status_code=404, detail="درخواست یافت نشد")
+            conn.commit()
+            return {"success": True, "status": status}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Error in update_point_request_status: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    
+                
 # ─────────────────────────────────────────────────────────────
 #  RUN
 # ─────────────────────────────────────────────────────────────
