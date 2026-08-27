@@ -10,21 +10,1032 @@
     <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 
     <style>
-        /* ... همان استایل‌های قبلی ... */
-        /* (برای اختصار، استایل‌ها را از نسخه قبلی کپی کنید) */
-        /* در اینجا فقط بخش‌های اضافی برای پیغام خطای احراز هویت اضافه شده */
-        .auth-error {
-            background: #fee2e2;
-            color: #991b1b;
-            padding: 8px 12px;
+        /* ---------- Reset & Base ---------- */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Vazirmatn', 'Segoe UI', Tahoma, sans-serif;
+            background: #f0f2f6;
+            color: #1e293b;
+            padding: 6px;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            direction: rtl;
+            font-size: 14px;
+        }
+
+        .app {
+            max-width: 480px;
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        /* ---------- Scrollbar ---------- */
+        ::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+
+        /* ---------- Header ---------- */
+        .header {
+            background: linear-gradient(135deg, #0f2b5e, #1e4a8a);
+            color: #fff;
+            border-radius: 14px;
+            padding: 10px 14px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 4px 16px rgba(15, 43, 94, 0.25);
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            min-width: 0;
+        }
+
+        .header-left .logo {
+            font-size: 20px;
+            line-height: 1;
+            flex-shrink: 0;
+        }
+
+        .header-left h1 {
+            font-size: 14px;
+            font-weight: 700;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .header-left .sub {
+            font-size: 9px;
+            font-weight: 400;
+            opacity: 0.7;
+            display: block;
+            margin-top: -1px;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            flex-shrink: 0;
+        }
+
+        .user-badge {
+            background: rgba(255, 255, 255, 0.10);
+            backdrop-filter: blur(4px);
+            padding: 2px 8px 2px 10px;
+            border-radius: 30px;
+            font-size: 11px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            max-width: 100px;
+        }
+
+        .user-badge .avatar {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.12);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 700;
+            color: #fff;
+            flex-shrink: 0;
+            overflow: hidden;
+        }
+
+        .user-badge .avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .user-badge .name {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 50px;
+            font-size: 10px;
+        }
+
+        .status-dot {
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            background: #4ade80;
+            display: inline-block;
+            flex-shrink: 0;
+            animation: pulse-dot 2s infinite;
+        }
+
+        @keyframes pulse-dot {
+            0%,
+            100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.3;
+            }
+        }
+
+        .badge-count {
+            background: rgba(255, 255, 255, 0.08);
+            padding: 2px 8px;
+            border-radius: 30px;
+            font-size: 10px;
+            font-weight: 500;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            white-space: nowrap;
+        }
+
+        /* ---------- Cards ---------- */
+        .card {
+            background: #ffffff;
+            border-radius: 14px;
+            padding: 10px 12px;
+            margin-bottom: 8px;
+            box-shadow: 0 1px 6px rgba(0, 0, 0, 0.04);
+            border: 1px solid #eef2f6;
+        }
+
+        .card-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .card-title .icon {
+            font-size: 15px;
+        }
+
+        .card-title .counter-badge {
+            background: #eef2f6;
+            color: #1e293b;
+            padding: 0 10px;
+            border-radius: 30px;
+            font-size: 10px;
+            font-weight: 600;
+            margin-right: auto;
+        }
+
+        .card-title .counter-badge span {
+            color: #1e4a8a;
+        }
+
+        .card-title .view-toggle {
+            display: flex;
+            gap: 2px;
+            background: #eef2f6;
+            border-radius: 8px;
+            padding: 2px;
+            margin-right: 4px;
+        }
+
+        .card-title .view-toggle button {
+            background: transparent;
+            border: none;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            font-family: 'Vazirmatn', sans-serif;
+            font-weight: 500;
+            color: #64748b;
+            transition: all 0.15s;
+            height: 26px;
+            display: flex;
+            align-items: center;
+            gap: 3px;
+        }
+
+        .card-title .view-toggle button.active {
+            background: #fff;
+            color: #1e4a8a;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+        }
+
+        .card-title .view-toggle button:hover:not(.active) {
+            color: #1e293b;
+        }
+
+        /* ---------- Form ---------- */
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px 10px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .form-group.full-width {
+            grid-column: 1 / -1;
+        }
+
+        .form-group label {
+            font-weight: 600;
+            font-size: 10px;
+            color: #475569;
+            display: flex;
+            align-items: center;
+            gap: 3px;
+        }
+
+        .form-group label .required {
+            color: #ef4444;
+            font-size: 12px;
+        }
+
+        .form-group input,
+        .form-group select {
+            padding: 6px 10px;
+            border: 1.5px solid #dce2ec;
             border-radius: 10px;
             font-size: 12px;
-            margin-bottom: 8px;
-            display: none;
-            text-align: center;
+            background: #fafbfc;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            font-family: 'Vazirmatn', 'Segoe UI', Tahoma, sans-serif;
+            color: #1e293b;
+            width: 100%;
+            height: 34px;
+            appearance: auto;
         }
-        .auth-error.show {
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
+            background: #fff;
+        }
+
+        .form-group input::placeholder {
+            font-size: 11px;
+            color: #aab4c4;
+        }
+
+        .form-group .hint {
+            font-size: 9px;
+            color: #94a3b8;
+            margin-top: 1px;
+        }
+
+        .form-group .calc-value {
+            font-size: 14px;
+            font-weight: 700;
+            color: #0f172a;
+            background: #f1f5f9;
+            padding: 5px 10px;
+            border-radius: 10px;
+            border: 1.5px solid #e2e8f0;
+            min-height: 34px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            height: 34px;
+        }
+
+        .form-group .calc-value .unit {
+            font-weight: 400;
+            font-size: 11px;
+            color: #64748b;
+            margin-right: 3px;
+        }
+
+        .calc-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+        }
+
+        /* ---------- Buttons ---------- */
+        .btn {
+            padding: 6px 14px;
+            border: none;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            font-family: 'Vazirmatn', 'Segoe UI', Tahoma, sans-serif;
+            user-select: none;
+            height: 34px;
+        }
+
+        .btn-primary {
+            background: #1e4a8a;
+            color: #fff;
+            box-shadow: 0 3px 12px rgba(30, 74, 138, 0.25);
+            flex: 1;
+        }
+        .btn-primary:hover:not(:disabled) {
+            background: #163d73;
+            transform: translateY(-1px);
+        }
+        .btn-primary:active:not(:disabled) {
+            transform: translateY(0);
+        }
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1.5px solid #dce2ec;
+            color: #475569;
+            padding: 6px 12px;
+        }
+        .btn-outline:hover:not(:disabled) {
+            background: #f1f5f9;
+        }
+
+        .btn-danger-sm {
+            background: #dc2626;
+            color: #fff;
+            border: none;
+            padding: 2px 8px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+            font-family: 'Vazirmatn', 'Segoe UI', Tahoma, sans-serif;
+            display: inline-flex;
+            align-items: center;
+            gap: 2px;
+            height: 24px;
+        }
+        .btn-danger-sm:hover:not(:disabled) {
+            background: #b91c1c;
+        }
+        .btn-danger-sm:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 6px;
+            margin-top: 2px;
+        }
+
+        /* ---------- Table (List View) ---------- */
+        .table-wrap {
+            overflow-x: auto;
+            margin: 0 -4px;
+            padding: 0 4px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11px;
+            min-width: 480px;
+        }
+
+        thead {
+            background: #f8fafc;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        thead th {
+            padding: 5px 6px;
+            text-align: right;
+            font-weight: 700;
+            color: #475569;
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: 0.2px;
+            white-space: nowrap;
+        }
+
+        tbody tr {
+            border-bottom: 1px solid #f1f4f9;
+            transition: background 0.1s;
+        }
+
+        tbody tr:last-child {
+            border-bottom: none;
+        }
+
+        tbody td {
+            padding: 5px 6px;
+            vertical-align: middle;
+            color: #1e293b;
+            font-size: 11px;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            padding: 1px 8px;
+            border-radius: 30px;
+            font-size: 9px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .status-badge.submitted {
+            background: #dbeafe;
+            color: #1d4ed8;
+        }
+        .status-badge.submitted::before {
+            content: "●";
+            font-size: 5px;
+            color: #1d4ed8;
+        }
+
+        .status-badge.processing {
+            background: #fef3c7;
+            color: #b45309;
+        }
+        .status-badge.processing::before {
+            content: "●";
+            font-size: 5px;
+            color: #b45309;
+            animation: pulse-dot 1.5s infinite;
+        }
+
+        .status-badge.done {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        .status-badge.done::before {
+            content: "✓";
+            font-size: 9px;
+            font-weight: 700;
+        }
+
+        .status-badge.cancelled {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        .status-badge.cancelled::before {
+            content: "✕";
+            font-size: 9px;
+        }
+
+        .empty-row td {
+            padding: 24px 12px;
+            text-align: center;
+            color: #94a3b8;
+            font-size: 12px;
+        }
+
+        .empty-row .empty-icon {
+            font-size: 24px;
             display: block;
+            margin-bottom: 4px;
+        }
+
+        .delete-btn {
+            background: none;
+            border: none;
+            color: #94a3b8;
+            cursor: pointer;
+            font-size: 13px;
+            padding: 2px 4px;
+            border-radius: 6px;
+            transition: all 0.15s;
+            display: inline-flex;
+            align-items: center;
+            gap: 2px;
+            font-family: 'Vazirmatn', sans-serif;
+            font-weight: 500;
+        }
+
+        .delete-btn:hover:not(:disabled) {
+            color: #dc2626;
+            background: #fef2f2;
+        }
+
+        .delete-btn:disabled {
+            opacity: 0.25;
+            cursor: not-allowed;
+        }
+
+        /* ---------- Grid View ---------- */
+        .grid-view {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            padding: 2px 0;
+        }
+
+        .grid-view .request-card {
+            background: #f8fafc;
+            border: 1px solid #eef2f6;
+            border-radius: 12px;
+            padding: 10px 12px;
+            transition: all 0.15s;
+            position: relative;
+        }
+
+        .grid-view .request-card:hover {
+            border-color: #dce2ec;
+        }
+
+        .grid-view .request-card .rc-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 4px;
+            gap: 4px;
+        }
+
+        .grid-view .request-card .rc-id {
+            font-size: 10px;
+            font-weight: 700;
+            color: #94a3b8;
+        }
+
+        .grid-view .request-card .rc-status {
+            flex-shrink: 0;
+        }
+
+        .grid-view .request-card .rc-body {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .grid-view .request-card .rc-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            color: #475569;
+            padding: 1px 0;
+            border-bottom: 1px dashed #eef2f6;
+        }
+
+        .grid-view .request-card .rc-row:last-child {
+            border-bottom: none;
+        }
+
+        .grid-view .request-card .rc-row .rc-label {
+            color: #94a3b8;
+            font-weight: 400;
+            font-size: 10px;
+        }
+
+        .grid-view .request-card .rc-row .rc-value {
+            font-weight: 600;
+            color: #0f172a;
+            font-size: 11px;
+        }
+
+        .grid-view .request-card .rc-actions {
+            margin-top: 6px;
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .grid-view .request-card .rc-actions .delete-btn {
+            font-size: 12px;
+            padding: 2px 6px;
+        }
+
+        .grid-view.hidden {
+            display: none;
+        }
+
+        .table-view.hidden {
+            display: none;
+        }
+
+        /* ---------- Toast ---------- */
+        .toast-container {
+            position: fixed;
+            top: 8px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            align-items: center;
+            width: 94%;
+            max-width: 400px;
+            pointer-events: none;
+        }
+
+        .toast {
+            padding: 8px 16px;
+            border-radius: 12px;
+            color: #fff;
+            font-weight: 500;
+            font-size: 12px;
+            box-shadow: 0 8px 28px rgba(0, 0, 0, 0.12);
+            animation: slideDown 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+            width: 100%;
+            text-align: center;
+            pointer-events: auto;
+            backdrop-filter: blur(8px);
+            font-family: 'Vazirmatn', 'Segoe UI', Tahoma, sans-serif;
+        }
+
+        .toast-success {
+            background: #059669;
+        }
+        .toast-error {
+            background: #dc2626;
+        }
+        .toast-info {
+            background: #2563eb;
+        }
+        .toast-warning {
+            background: #d97706;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-14px) scale(0.96);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        /* ---------- Modal ---------- */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.45);
+            backdrop-filter: blur(4px);
+            z-index: 9998;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            animation: fadeIn 0.2s ease;
+            padding: 16px;
+        }
+
+        .modal-overlay.hidden {
+            display: none;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        .modal-box {
+            background: #fff;
+            border-radius: 20px;
+            padding: 20px 24px;
+            max-width: 340px;
+            width: 100%;
+            box-shadow: 0 20px 56px rgba(0, 0, 0, 0.12);
+            animation: scaleIn 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        @keyframes scaleIn {
+            from {
+                opacity: 0;
+                transform: scale(0.94);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .modal-box h3 {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 4px;
+            color: #0f172a;
+        }
+
+        .modal-box p {
+            color: #475569;
+            margin-bottom: 14px;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .modal-box .modal-actions {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+        }
+
+        .modal-box .modal-actions .btn {
+            height: 32px;
+            padding: 4px 14px;
+            font-size: 12px;
+        }
+
+        /* ---------- Spinner ---------- */
+        .spinner {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid rgba(255, 255, 255, 0.25);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .btn .spinner {
+            width: 12px;
+            height: 12px;
+            border-width: 2px;
+        }
+
+        /* ---------- Loading overlay ---------- */
+        .loading-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(255, 255, 255, 0.70);
+            backdrop-filter: blur(4px);
+            z-index: 9997;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            gap: 10px;
+            transition: opacity 0.35s;
+        }
+
+        .loading-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .loading-overlay .loader {
+            width: 32px;
+            height: 32px;
+            border: 3px solid #e2e8f0;
+            border-top-color: #1e4a8a;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        .loading-overlay p {
+            color: #475569;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        /* ---------- Dark mode ---------- */
+        @media (prefers-color-scheme: dark) {
+            body {
+                background: #0f172a;
+            }
+            .card {
+                background: #1e293b;
+                border-color: #334155;
+            }
+            .card-title {
+                color: #f1f5f9;
+            }
+            .card-title .counter-badge {
+                background: #334155;
+                color: #e2e8f0;
+            }
+            .card-title .view-toggle {
+                background: #0f172a;
+            }
+            .card-title .view-toggle button {
+                color: #94a3b8;
+            }
+            .card-title .view-toggle button.active {
+                background: #1e293b;
+                color: #60a5fa;
+                box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+            }
+            .form-group label {
+                color: #cbd5e1;
+            }
+            .form-group input,
+            .form-group select {
+                background: #0f172a;
+                border-color: #334155;
+                color: #f1f5f9;
+            }
+            .form-group input:focus,
+            .form-group select:focus {
+                background: #1e293b;
+                border-color: #3b82f6;
+                box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.10);
+            }
+            .form-group input::placeholder {
+                color: #64748b;
+            }
+            .form-group .calc-value {
+                background: #0f172a;
+                border-color: #334155;
+                color: #f1f5f9;
+            }
+            .form-group .calc-value .unit {
+                color: #94a3b8;
+            }
+            .form-group .hint {
+                color: #64748b;
+            }
+            thead {
+                background: #0f172a;
+                border-bottom-color: #334155;
+            }
+            thead th {
+                color: #94a3b8;
+            }
+            tbody tr {
+                border-bottom-color: #1e293b;
+            }
+            tbody tr:hover {
+                background: #1a2332;
+            }
+            tbody td {
+                color: #e2e8f0;
+            }
+            .table-wrap {
+                border-color: #334155;
+            }
+            .btn-outline {
+                border-color: #334155;
+                color: #94a3b8;
+            }
+            .btn-outline:hover:not(:disabled) {
+                background: #1e293b;
+            }
+            .modal-box {
+                background: #1e293b;
+            }
+            .modal-box h3 {
+                color: #f1f5f9;
+            }
+            .modal-box p {
+                color: #cbd5e1;
+            }
+            .delete-btn:hover:not(:disabled) {
+                background: #2a1a1a;
+            }
+            .loading-overlay {
+                background: rgba(15, 23, 42, 0.80);
+            }
+            .loading-overlay p {
+                color: #cbd5e1;
+            }
+            .header {
+                background: linear-gradient(135deg, #0a1e3d, #163d73);
+            }
+            .empty-row td {
+                color: #64748b;
+            }
+            .status-badge.submitted {
+                background: #1a2a4a;
+                color: #60a5fa;
+            }
+            .status-badge.processing {
+                background: #3d2e1a;
+                color: #fbbf24;
+            }
+            .status-badge.done {
+                background: #1a3a2a;
+                color: #34d399;
+            }
+            .status-badge.cancelled {
+                background: #3a1a1a;
+                color: #f87171;
+            }
+            .badge-count {
+                background: rgba(255, 255, 255, 0.05);
+            }
+            .user-badge {
+                background: rgba(255, 255, 255, 0.05);
+            }
+            .grid-view .request-card {
+                background: #0f172a;
+                border-color: #334155;
+            }
+            .grid-view .request-card .rc-row {
+                border-bottom-color: #1e293b;
+            }
+            .grid-view .request-card .rc-row .rc-value {
+                color: #f1f5f9;
+            }
+            .grid-view .request-card .rc-row .rc-label {
+                color: #64748b;
+            }
+            .grid-view .request-card .rc-id {
+                color: #64748b;
+            }
+        }
+
+        /* ---------- Telegram safe area ---------- */
+        .tg-safe {
+            padding-top: env(safe-area-inset-top);
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        /* ---------- Extra small tweaks ---------- */
+        .mt-1 {
+            margin-top: 3px;
+        }
+        .gap-1 {
+            gap: 3px;
+        }
+        .text-xs {
+            font-size: 10px;
+        }
+        .flex {
+            display: flex;
+        }
+        .items-center {
+            align-items: center;
+        }
+        .w-full {
+            width: 100%;
+        }
+
+        /* ---------- Responsive grid ---------- */
+        @media (max-width: 400px) {
+            .grid-view {
+                grid-template-columns: 1fr;
+            }
+            .form-grid {
+                grid-template-columns: 1fr 1fr;
+                gap: 4px 8px;
+            }
+            table {
+                min-width: 400px;
+                font-size: 10px;
+            }
+            thead th {
+                font-size: 8px;
+                padding: 4px 4px;
+            }
+            tbody td {
+                font-size: 10px;
+                padding: 4px 4px;
+            }
+            .grid-view .request-card {
+                padding: 8px 10px;
+            }
+            .grid-view .request-card .rc-row {
+                font-size: 10px;
+            }
+            .grid-view .request-card .rc-row .rc-value {
+                font-size: 10px;
+            }
+        }
+
+        @media (min-width: 401px) and (max-width: 480px) {
+            .grid-view {
+                grid-template-columns: 1fr 1fr;
+            }
         }
     </style>
 </head>
@@ -65,7 +1076,9 @@
                 ثبت درخواست
             </div>
 
-            <div class="auth-error" id="authError">⚠️ خطا در احراز هویت. لطفاً دوباره تلاش کنید.</div>
+            <div class="auth-error" id="authError" style="background:#fee2e2;color:#991b1b;padding:8px 12px;border-radius:10px;font-size:12px;margin-bottom:8px;display:none;text-align:center;">
+                ⚠️ لطفاً ابتدا وارد شوید.
+            </div>
 
             <form id="requestForm" novalidate>
                 <div class="form-grid">
@@ -220,7 +1233,7 @@
             let pendingDeleteId = null;
             let currentUser = null;
             let currentView = 'list';
-            let authToken = null; // JWT token
+            let authToken = null;
 
             // ---------- Token management ----------
             function setToken(token) {
@@ -255,15 +1268,7 @@
                 const tgData = getTelegramUser();
                 if (tgData) {
                     currentUser = tgData.user;
-                    const fullName = [currentUser.first_name || '', currentUser.last_name || ''].filter(Boolean).join(
-                        ' ') || 'کاربر';
-                    userName.textContent = fullName.length > 12 ? fullName.slice(0, 10) + '…' : fullName;
-                    if (currentUser.photo_url) {
-                        userAvatar.innerHTML =
-                            `<img src="${currentUser.photo_url}" alt="" />`;
-                    } else {
-                        userAvatar.textContent = (currentUser.first_name || '👤').charAt(0);
-                    }
+                    updateUserUI();
                     if (window.Telegram && window.Telegram.WebApp) {
                         window.Telegram.WebApp.expand();
                         window.Telegram.WebApp.ready();
@@ -275,54 +1280,106 @@
                 if (saved) {
                     try {
                         currentUser = JSON.parse(saved);
-                        userName.textContent = currentUser.first_name || 'کاربر';
-                        userAvatar.textContent = (currentUser.first_name || 'T').charAt(0);
+                        updateUserUI();
                         return true;
                     } catch (_) {}
                 }
-                // No Telegram data – show error and disable form
-                authError.textContent = '⚠️ لطفاً از طریق تلگرام وارد شوید.';
-                authError.classList.add('show');
                 return false;
             }
 
-            // ---------- Authentication ----------
-            async function validateTelegramUser(tgData) {
+            function updateUserUI() {
+                if (currentUser) {
+                    const fullName = [currentUser.first_name || '', currentUser.last_name || ''].filter(Boolean).join(
+                        ' ') || 'کاربر';
+                    userName.textContent = fullName.length > 12 ? fullName.slice(0, 10) + '…' : fullName;
+                    if (currentUser.photo_url) {
+                        userAvatar.innerHTML = `<img src="${currentUser.photo_url}" alt="" />`;
+                    } else {
+                        userAvatar.textContent = (currentUser.first_name || '👤').charAt(0);
+                    }
+                } else {
+                    userName.textContent = 'کاربر';
+                    userAvatar.textContent = '👤';
+                }
+            }
+
+            // ---------- Handle startapp parameter (bot flow) ----------
+            function getStartParamFromUrl() {
+                const urlParams = new URLSearchParams(window.location.search);
+                return urlParams.get('tgWebAppStartParam');
+            }
+
+            async function handleTelegramStartParam() {
+                if (!window.Telegram || !window.Telegram.WebApp) return;
+                const startParam = getStartParamFromUrl();
+                if (!startParam) return;
+
+                const tgUser = window.Telegram.WebApp.initDataUnsafe?.user;
+                const initData = window.Telegram.WebApp.initData;
+                if (!tgUser) {
+                    showToast('⚠️ اطلاعات کاربری از تلگرام دریافت نشد', 'error');
+                    return;
+                }
+
                 try {
+                    // Direct fetch (no Authorization header needed)
                     const response = await fetch(`${API_BASE}/api/auth/telegram-login`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
-                            initData: tgData.initData || '',
-                            user: tgData.user
+                            initData: initData || '',
+                            user: tgUser,
+                            key: startParam
                         })
                     });
+
                     if (!response.ok) {
                         const err = await response.json();
                         throw new Error(err.detail || 'خطا در ورود با تلگرام');
                     }
-                    const data = await response.json();
-                    if (data.token) {
-                        setToken(data.token);
-                        // Update user info
-                        if (data.user) {
-                            currentUser = data.user;
-                            userName.textContent = data.user.firstName || data.user.username || 'کاربر';
-                            if (data.user.photoUrl) {
-                                userAvatar.innerHTML = `<img src="${data.user.photoUrl}" alt="" />`;
+
+                    const result = await response.json();
+                    if (result.token && result.user) {
+                        setToken(result.token);
+                        currentUser = result.user;
+                        localStorage.setItem('tg_user_fb', JSON.stringify(currentUser));
+                        updateUserUI();
+                        authError.style.display = 'none';
+
+                        // Fetch saved request data (if any)
+                        try {
+                            const statusResp = await fetch(
+                                `${API_BASE}/api/auth/telegram/status?key=${encodeURIComponent(startParam)}&status=_autorized`
+                            );
+                            const statusData = await statusResp.json();
+                            if (statusData.status === 'completed' && statusData.requestData) {
+                                restoreRequestFromData(statusData.requestData);
                             }
+                        } catch (e) {
+                            // No request data, ignore
                         }
-                        authError.classList.remove('show');
-                        return true;
+
+                        showToast('✅ ورود با تلگرام موفق بود!', 'success');
+                        if (window.Telegram && window.Telegram.WebApp) {
+                            window.Telegram.WebApp.expand();
+                        }
+                        // Reload requests after login
+                        await loadRequests();
                     } else {
                         throw new Error('توکن دریافت نشد');
                     }
                 } catch (err) {
                     console.error('Telegram login error:', err);
-                    authError.textContent = `⚠️ ${err.message || 'ورود خودکار ناموفق. لطفاً دوباره تلاش کنید.'}`;
-                    authError.classList.add('show');
-                    return false;
+                    showToast('⚠️ ورود با تلگرام ناموفق بود: ' + err.message, 'error');
                 }
+            }
+
+            // ---------- Restore request from saved data ----------
+            function restoreRequestFromData(data) {
+                if (!data || !data.service) return;
+                // For the point-request page, we don't have a complex request state,
+                // but we could pre-fill the form if needed. For now, just notify.
+                showToast('🔁 درخواست قبلی بازیابی شد', 'info');
             }
 
             // ---------- API ----------
@@ -339,9 +1396,8 @@
 
                 const resp = await fetch(url, { ...options, headers });
                 if (resp.status === 401) {
-                    // Token expired or invalid – try to re-authenticate
                     authError.textContent = '⚠️ نشست منقضی شده. لطفاً دوباره وارد شوید.';
-                    authError.classList.add('show');
+                    authError.style.display = 'block';
                     setToken(null);
                     throw new Error('Unauthorized');
                 }
@@ -700,9 +1756,12 @@
 
                 // Check token
                 if (!getToken()) {
+                    authError.textContent = '⚠️ لطفاً ابتدا وارد شوید.';
+                    authError.style.display = 'block';
                     showToast('⚠️ ابتدا وارد شوید.', 'warning');
                     return;
                 }
+                authError.style.display = 'none';
 
                 const national = nationalCode.value.trim();
                 const password = systemPassword.value.trim();
@@ -791,19 +1850,11 @@
 
             // ---------- Init ----------
             async function init() {
-                // 1. Get Telegram data
-                const hasTelegram = initTelegram();
-                if (hasTelegram) {
-                    const tgData = getTelegramUser();
-                    if (tgData) {
-                        // 2. Authenticate
-                        const loggedIn = await validateTelegramUser(tgData);
-                        if (!loggedIn) {
-                            // Show error, but allow user to retry? We'll still load requests if there's a token in storage
-                            // If no token, requests will fail with 401
-                        }
-                    }
-                }
+                // 1. Telegram basic info
+                initTelegram();
+
+                // 2. Handle the bot flow (startapp parameter)
+                await handleTelegramStartParam();
 
                 // 3. Load requests (will use token if available)
                 await loadRequests();
