@@ -1591,6 +1591,7 @@ async function deleteRequestApi(id) {
                     const feeVal = req.fee !== undefined ? req.fee : calcFee(req.points_amount, req.price_type);
                     const timeH = req.time_hours !== undefined ? req.time_hours : calcTimeHours(req.points_amount, req
                         .price_type);
+console.log('Rendering grid item:', req.id, 'isSubmitted:', isSubmitted, 'feeVal:', feeVal, 'timeH:', timeH);
 
                     html += `
                         <tr>
@@ -1605,9 +1606,8 @@ async function deleteRequestApi(id) {
                                     ${getStatusLabel(req.status)}
                                 </span>
                             </td>
-                            <td>
-    
-                                                <button
+            <td>
+                <button
                     class="delete-btn"
                     data-id="${req.id}"   <!-- ← اینجا req.id را بدون تغییر بگذارید -->
                     ${!isSubmitted ? 'disabled' : ''}
@@ -1615,7 +1615,7 @@ async function deleteRequestApi(id) {
                 >
                     🗑️
                 </button>
-                            </td>
+            </td>
                         </tr>
                     `;
                 });
@@ -1641,7 +1641,7 @@ async function deleteRequestApi(id) {
                     const feeVal = req.fee !== undefined ? req.fee : calcFee(req.points_amount, req.price_type);
                     const timeH = req.time_hours !== undefined ? req.time_hours : calcTimeHours(req.points_amount, req
                         .price_type);
-
+console.log('Rendering grid item:', req.id, 'isSubmitted:', isSubmitted, 'feeVal:', feeVal, 'timeH:', timeH);
                     html += `
                         <div class="request-card">
                             <div class="rc-header">
@@ -1678,8 +1678,8 @@ async function deleteRequestApi(id) {
                                     <span class="rc-value" style="font-weight:400;font-size:10px;color:#94a3b8;">${formatDate(req.created_at)}</span>
                                 </div>
                             </div>
-                            <div class="rc-actions">
-                   <button
+          <div class="rc-actions">
+                <button
                     class="delete-btn"
                     data-id="${req.id}"   <!-- ← به‌عنوان رشته -->
                     ${!isSubmitted ? 'disabled' : ''}
@@ -1687,7 +1687,7 @@ async function deleteRequestApi(id) {
                 >
                     🗑️ حذف
                 </button>
-                            </div>
+            </div>
                         </div>
                     `;
                 });
