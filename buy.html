@@ -1609,11 +1609,10 @@ console.log('Rendering grid item:', req.id, 'isSubmitted:', isSubmitted, 'feeVal
             <td>
                 <button
                     class="delete-btn"
-                    data-id="${req.id}"   <!-- ← اینجا req.id را بدون تغییر بگذارید -->
+                    data-id="${req.id}"  
                     ${!isSubmitted ? 'disabled' : ''}
-                    title="${isSubmitted ? 'حذف' : 'غیرقابل حذف'}"
-                >
-                    🗑️
+                    title="${isSubmitted ? 'حذف' : 'غیرقابل حذف'}">
+                                      🗑️
                 </button>
             </td>
                         </tr>
@@ -1681,10 +1680,9 @@ console.log('Rendering grid item:', req.id, 'isSubmitted:', isSubmitted, 'feeVal
           <div class="rc-actions">
                 <button
                     class="delete-btn"
-                    data-id="${req.id}"   <!-- ← به‌عنوان رشته -->
+                    data-id="${req.id}"  
                     ${!isSubmitted ? 'disabled' : ''}
-                    title="${isSubmitted ? 'حذف' : 'غیرقابل حذف'}"
-                >
+                    title="${isSubmitted ? 'حذف' : 'غیرقابل حذف'}"  >
                     🗑️ حذف
                 </button>
             </div>
