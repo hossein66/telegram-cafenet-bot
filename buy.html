@@ -1321,13 +1321,13 @@
 
             function updateUserUI() {
                 if (currentUser) {
-                    const fullName = [currentUser.first_name || '', currentUser.last_name || ''].filter(Boolean).join(
+                    const fullName = [currentUser.firstName || '', currentUser.lastName || ''].filter(Boolean).join(
                         ' ') || 'کاربر';
                     userName.textContent = fullName.length > 12 ? fullName.slice(0, 10) + '…' : fullName;
                     if (currentUser.photo_url) {
                         userAvatar.innerHTML = `<img src="${currentUser.photo_url}" alt="" />`;
                     } else {
-                        userAvatar.textContent = (currentUser.first_name || '👤').charAt(0);
+                        userAvatar.textContent = (currentUser.firstName || '👤').charAt(0);
                     }
                     userBadge.style.display = 'flex';
                     loginBtn.style.display = 'none';
