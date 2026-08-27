@@ -1037,6 +1037,19 @@
                 grid-template-columns: 1fr 1fr;
             }
         }
+        .auth-error {
+            background: #fee2e2;
+            color: #991b1b;
+            padding: 8px 12px;
+            border-radius: 10px;
+            font-size: 12px;
+            margin-bottom: 8px;
+            display: none;
+            text-align: center;
+        }
+        .auth-error.show {
+            display: block;
+        }
     </style>
 </head>
 <body>
@@ -1076,9 +1089,7 @@
                 ثبت درخواست
             </div>
 
-            <div class="auth-error" id="authError" style="background:#fee2e2;color:#991b1b;padding:8px 12px;border-radius:10px;font-size:12px;margin-bottom:8px;display:none;text-align:center;">
-                ⚠️ لطفاً ابتدا وارد شوید.
-            </div>
+            <div class="auth-error" id="authError">⚠️ خطا در احراز هویت. لطفاً دوباره تلاش کنید.</div>
 
             <form id="requestForm" novalidate>
                 <div class="form-grid">
@@ -1252,7 +1263,7 @@
                 return authToken;
             }
 
-            // ---------- Telegram ----------
+            // ---------- Telegram helpers ----------
             function getTelegramUser() {
                 try {
                     if (window.Telegram && window.Telegram.WebApp) {
@@ -1264,27 +1275,9 @@
                 return null;
             }
 
-            function initTelegram() {
-                const tgData = getTelegramUser();
-                if (tgData) {
-                    currentUser = tgData.user;
-                    updateUserUI();
-                    if (window.Telegram && window.Telegram.WebApp) {
-                        window.Telegram.WebApp.expand();
-                        window.Telegram.WebApp.ready();
-                    }
-                    return true;
-                }
-                // Fallback for testing
-                const saved = localStorage.getItem('tg_user_fb');
-                if (saved) {
-                    try {
-                        currentUser = JSON.parse(saved);
-                        updateUserUI();
-                        return true;
-                    } catch (_) {}
-                }
-                return false;
+            function getStartParamFromUrl() {
+                const urlParams = new URLSearchParams(window.location.search);
+                return urlParams.get('tgWebAppStartParam');
             }
 
             function updateUserUI() {
@@ -1303,83 +1296,101 @@
                 }
             }
 
-            // ---------- Handle startapp parameter (bot flow) ----------
-            function getStartParamFromUrl() {
-                const urlParams = new URLSearchParams(window.location.search);
-                return urlParams.get('tgWebAppStartParam');
-            }
-
-            async function handleTelegramStartParam() {
-                if (!window.Telegram || !window.Telegram.WebApp) return;
-                const startParam = getStartParamFromUrl();
-                if (!startParam) return;
-
-                const tgUser = window.Telegram.WebApp.initDataUnsafe?.user;
-                const initData = window.Telegram.WebApp.initData;
-                if (!tgUser) {
-                    showToast('⚠️ اطلاعات کاربری از تلگرام دریافت نشد', 'error');
-                    return;
-                }
-
+            // ---------- Authentication functions ----------
+            // 1. Normal Telegram auto-login (without startapp)
+            async function validateTelegramUser(tgData) {
                 try {
-                    // Direct fetch (no Authorization header needed)
                     const response = await fetch(`${API_BASE}/api/auth/telegram-login`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
-                            initData: initData || '',
-                            user: tgUser,
-                            key: startParam
+                            initData: tgData.initData || '',
+                            user: tgData.user
                         })
                     });
-
                     if (!response.ok) {
                         const err = await response.json();
                         throw new Error(err.detail || 'خطا در ورود با تلگرام');
                     }
-
                     const result = await response.json();
                     if (result.token && result.user) {
                         setToken(result.token);
                         currentUser = result.user;
                         localStorage.setItem('tg_user_fb', JSON.stringify(currentUser));
                         updateUserUI();
-                        authError.style.display = 'none';
+                        authError.classList.remove('show');
+                        if (window.Telegram && window.Telegram.WebApp) {
+                            window.Telegram.WebApp.expand();
+                        }
+                        return true;
+                    } else {
+                        throw new Error('توکن دریافت نشد');
+                    }
+                } catch (err) {
+                    console.error('Telegram auto-login error:', err);
+                    authError.textContent = `⚠️ ${err.message || 'ورود خودکار ناموفق. لطفاً دوباره تلاش کنید.'}`;
+                    authError.classList.add('show');
+                    return false;
+                }
+            }
 
-                        // Fetch saved request data (if any)
+            // 2. Login via bot (with startapp key)
+            async function handleTelegramStartParam() {
+                const startParam = getStartParamFromUrl();
+                if (!startParam) return false;
+                if (!window.Telegram || !window.Telegram.WebApp) return false;
+
+                const tgData = getTelegramUser();
+                if (!tgData) {
+                    authError.textContent = '⚠️ اطلاعات کاربری از تلگرام دریافت نشد';
+                    authError.classList.add('show');
+                    return false;
+                }
+
+                try {
+                    const response = await fetch(`${API_BASE}/api/auth/telegram-login`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            initData: tgData.initData || '',
+                            user: tgData.user,
+                            key: startParam
+                        })
+                    });
+                    if (!response.ok) {
+                        const err = await response.json();
+                        throw new Error(err.detail || 'خطا در ورود با تلگرام');
+                    }
+                    const result = await response.json();
+                    if (result.token && result.user) {
+                        setToken(result.token);
+                        currentUser = result.user;
+                        localStorage.setItem('tg_user_fb', JSON.stringify(currentUser));
+                        updateUserUI();
+                        authError.classList.remove('show');
+                        if (window.Telegram && window.Telegram.WebApp) {
+                            window.Telegram.WebApp.expand();
+                        }
+                        // Optionally restore request data from the key
                         try {
                             const statusResp = await fetch(
                                 `${API_BASE}/api/auth/telegram/status?key=${encodeURIComponent(startParam)}&status=_autorized`
                             );
                             const statusData = await statusResp.json();
                             if (statusData.status === 'completed' && statusData.requestData) {
-                                restoreRequestFromData(statusData.requestData);
+                                showToast('🔁 درخواست قبلی بازیابی شد', 'info');
                             }
-                        } catch (e) {
-                            // No request data, ignore
-                        }
-
-                        showToast('✅ ورود با تلگرام موفق بود!', 'success');
-                        if (window.Telegram && window.Telegram.WebApp) {
-                            window.Telegram.WebApp.expand();
-                        }
-                        // Reload requests after login
-                        await loadRequests();
+                        } catch (e) { /* ignore */ }
+                        return true;
                     } else {
                         throw new Error('توکن دریافت نشد');
                     }
                 } catch (err) {
-                    console.error('Telegram login error:', err);
-                    showToast('⚠️ ورود با تلگرام ناموفق بود: ' + err.message, 'error');
+                    console.error('Telegram bot-login error:', err);
+                    authError.textContent = `⚠️ ${err.message}`;
+                    authError.classList.add('show');
+                    return false;
                 }
-            }
-
-            // ---------- Restore request from saved data ----------
-            function restoreRequestFromData(data) {
-                if (!data || !data.service) return;
-                // For the point-request page, we don't have a complex request state,
-                // but we could pre-fill the form if needed. For now, just notify.
-                showToast('🔁 درخواست قبلی بازیابی شد', 'info');
             }
 
             // ---------- API ----------
@@ -1396,9 +1407,10 @@
 
                 const resp = await fetch(url, { ...options, headers });
                 if (resp.status === 401) {
-                    authError.textContent = '⚠️ نشست منقضی شده. لطفاً دوباره وارد شوید.';
-                    authError.style.display = 'block';
+                    // Token expired – clear and show error
                     setToken(null);
+                    authError.textContent = '⚠️ نشست منقضی شده. لطفاً دوباره وارد شوید.';
+                    authError.classList.add('show');
                     throw new Error('Unauthorized');
                 }
                 if (!resp.ok) {
@@ -1420,8 +1432,11 @@
                     loadingOverlay.classList.add('hidden');
                     return true;
                 } catch (err) {
-                    showToast(`❌ ${err.message}`, 'error');
+                    // If unauthorized, we already show error; just hide loader
                     loadingOverlay.classList.add('hidden');
+                    if (err.message !== 'Unauthorized') {
+                        showToast(`❌ ${err.message}`, 'error');
+                    }
                     return false;
                 }
             }
@@ -1757,11 +1772,11 @@
                 // Check token
                 if (!getToken()) {
                     authError.textContent = '⚠️ لطفاً ابتدا وارد شوید.';
-                    authError.style.display = 'block';
+                    authError.classList.add('show');
                     showToast('⚠️ ابتدا وارد شوید.', 'warning');
                     return;
                 }
-                authError.style.display = 'none';
+                authError.classList.remove('show');
 
                 const national = nationalCode.value.trim();
                 const password = systemPassword.value.trim();
@@ -1850,33 +1865,38 @@
 
             // ---------- Init ----------
             async function init() {
-                // 1. Telegram basic info
-                initTelegram();
+                // Step 1: Try to get Telegram data
+                const tgData = getTelegramUser();
 
-                // 2. Handle the bot flow (startapp parameter)
-                await handleTelegramStartParam();
+                // Step 2: Check for startapp parameter (bot flow)
+                const startParam = getStartParamFromUrl();
 
-                // 3. Load requests (will use token if available)
+                if (startParam) {
+                    // Bot flow: login with key
+                    await handleTelegramStartParam();
+                } else if (tgData) {
+                    // Normal flow: auto-login with initData
+                    await validateTelegramUser(tgData);
+                } else {
+                    // No Telegram data – show error but still allow (maybe testing)
+                    authError.textContent = '⚠️ لطفاً از طریق تلگرام وارد شوید.';
+                    authError.classList.add('show');
+                }
+
+                // Step 3: Load requests (will use token if available)
                 await loadRequests();
 
-                // 4. If no requests, render empty state
+                // Step 4: Render empty state if needed
                 if (!requests || requests.length === 0) {
                     renderAll();
                     updateCounter();
                 }
 
-                // 5. Focus on first field
+                // Step 5: Focus first field
                 nationalCode.focus();
 
                 console.log('🚀 App ready | view:', currentView);
-                console.log('📐 Time formula: division');
-                console.log('💰 Fee: divided by 10 (Rial → Toman)');
                 console.log('🔑 Token present:', !!getToken());
-            }
-
-            // Check for token on load
-            if (getToken()) {
-                // Token exists, proceed
             }
 
             init();
