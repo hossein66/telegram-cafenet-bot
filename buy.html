@@ -1606,15 +1606,15 @@ console.log('Rendering grid item:', req.id, 'isSubmitted:', isSubmitted, 'feeVal
                                     ${getStatusLabel(req.status)}
                                 </span>
                             </td>
-            <td>
-                <button
-                    class="delete-btn"
-                    data-id="${req.id}"  
-                    ${!isSubmitted ? 'disabled' : ''}
-                    title="${isSubmitted ? 'حذف' : 'غیرقابل حذف'}">
-                                      🗑️
-                </button>
-            </td>
+                            <td>
+                                <button
+                                    class="delete-btn"
+                                    data-id="${req.id}"  
+                                    ${!isSubmitted ? 'disabled' : ''}
+                                    title="${isSubmitted ? 'حذف' : 'غیرقابل حذف'}">
+                                                    🗑️
+                                </button>
+                            </td>
                         </tr>
                     `;
                 });
@@ -1677,15 +1677,15 @@ console.log('Rendering grid item:', req.id, 'isSubmitted:', isSubmitted, 'feeVal
                                     <span class="rc-value" style="font-weight:400;font-size:10px;color:#94a3b8;">${formatDate(req.created_at)}</span>
                                 </div>
                             </div>
-          <div class="rc-actions">
-                <button
-                    class="delete-btn"
-                    data-id="${req.id}"  
-                    ${!isSubmitted ? 'disabled' : ''}
-                    title="${isSubmitted ? 'حذف' : 'غیرقابل حذف'}"  >
-                    🗑️ حذف
-                </button>
-            </div>
+                        <div class="rc-actions">
+                                <button
+                                    class="delete-btn"
+                                    data-id="${req.id}"  
+                                    ${!isSubmitted ? 'disabled' : ''}
+                                    title="${isSubmitted ? 'حذف' : 'غیرقابل حذف'}">
+                                            🗑️ 
+                                </button>
+                            </div>
                         </div>
                     `;
                 });
