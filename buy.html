@@ -1514,9 +1514,9 @@
                 return await apiFetch('/point-requests', { method: 'POST', body: JSON.stringify(data) });
             }
 
-            async function deleteRequestApi(id) {
-                return await apiFetch(`/point-requests/${id}`, { method: 'DELETE' });
-            }
+async function deleteRequestApi(id) {
+    return await apiFetch(`/point-requests/${id}`, { method: 'DELETE' });
+}
 
             // ---------- Formulas ----------
             function calcFee(amt, price) {
@@ -1606,14 +1606,15 @@
                                 </span>
                             </td>
                             <td>
-                                <button
-                                    class="delete-btn"
-                                    data-id="${req.id}"
-                                    ${!isSubmitted ? 'disabled' : ''}
-                                    title="${isSubmitted ? 'حذف' : 'غیرقابل حذف'}"
-                                >
-                                    🗑️
-                                </button>
+    
+                                                <button
+                    class="delete-btn"
+                    data-id="${req.id}"   <!-- ← اینجا req.id را بدون تغییر بگذارید -->
+                    ${!isSubmitted ? 'disabled' : ''}
+                    title="${isSubmitted ? 'حذف' : 'غیرقابل حذف'}"
+                >
+                    🗑️
+                </button>
                             </td>
                         </tr>
                     `;
@@ -1678,14 +1679,14 @@
                                 </div>
                             </div>
                             <div class="rc-actions">
-                                <button
-                                    class="delete-btn"
-                                    data-id="${req.id}"
-                                    ${!isSubmitted ? 'disabled' : ''}
-                                    title="${isSubmitted ? 'حذف' : 'غیرقابل حذف'}"
-                                >
-                                    🗑️ حذف
-                                </button>
+                   <button
+                    class="delete-btn"
+                    data-id="${req.id}"   <!-- ← به‌عنوان رشته -->
+                    ${!isSubmitted ? 'disabled' : ''}
+                    title="${isSubmitted ? 'حذف' : 'غیرقابل حذف'}"
+                >
+                    🗑️ حذف
+                </button>
                             </div>
                         </div>
                     `;
@@ -1703,12 +1704,14 @@
                 updateViewVisibility();
             }
 
-            function attachDeleteEvents() {
-                document.querySelectorAll('#requestsBodyList .delete-btn:not([disabled])').forEach(btn => {
-                    btn.addEventListener('click', () => openDeleteModal(Number(btn.dataset.id)));
-                });
-            }
-
+function attachDeleteEvents() {
+    document.querySelectorAll('#requestsBodyList .delete-btn:not([disabled])').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const id = btn.dataset.id;   // ← رشته
+            openDeleteModal(id);
+        });
+    });
+}
             function updateViewVisibility() {
                 if (currentView === 'list') {
                     listView.classList.remove('hidden');
@@ -1752,8 +1755,10 @@
             }
 
             // ---------- Modal ----------
-            function openDeleteModal(id) { pendingDeleteId = id;
-                deleteModal.classList.remove('hidden'); }
+function openDeleteModal(id) {
+    pendingDeleteId = id;   // ← رشته
+    deleteModal.classList.remove('hidden');
+}
 
             function closeDeleteModal() { deleteModal.classList.add('hidden');
                 pendingDeleteId = null; }
@@ -1761,26 +1766,25 @@
             modalCancelBtn.addEventListener('click', closeDeleteModal);
             deleteModal.addEventListener('click', e => { if (e.target === deleteModal) closeDeleteModal(); });
 
-            modalConfirmBtn.addEventListener('click', async function() {
-                if (pendingDeleteId === null) return;
-                const id = pendingDeleteId;
-                try {
-                    modalConfirmBtn.disabled = true;
-                    modalConfirmBtn.innerHTML = `<span class="spinner"></span>`;
-                    await deleteRequestApi(id);
-                    requests = requests.filter(r => r.id !== id);
-                    renderAll();
-                    updateCounter();
-                    showToast('✅ حذف شد', 'success');
-                    closeDeleteModal();
-                } catch (err) {
-                    showToast(`❌ ${err.message}`, 'error');
-                } finally {
-                    modalConfirmBtn.disabled = false;
-                    modalConfirmBtn.innerHTML = `<span>🗑️</span> حذف`;
-                }
-            });
-
+modalConfirmBtn.addEventListener('click', async function() {
+    if (pendingDeleteId === null) return;
+    const id = pendingDeleteId;   // ← رشته
+    try {
+        modalConfirmBtn.disabled = true;
+        modalConfirmBtn.innerHTML = `<span class="spinner"></span>`;
+        await deleteRequestApi(id);  // ← این تابع باید رشته را بپذیرد
+        requests = requests.filter(r => r.id !== id);
+        renderAll();
+        updateCounter();
+        showToast('✅ حذف شد', 'success');
+        closeDeleteModal();
+    } catch (err) {
+        showToast(`❌ ${err.message}`, 'error');
+    } finally {
+        modalConfirmBtn.disabled = false;
+        modalConfirmBtn.innerHTML = `<span>🗑️</span> حذف`;
+    }
+});
             // ---------- Number formatting (pointsAmount) ----------
             function toEnglishDigits(str) {
                 const m = {
