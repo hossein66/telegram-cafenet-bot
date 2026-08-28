@@ -708,7 +708,7 @@ def get_next_point_request(
         cur.execute("""
             SELECT *
             FROM point_requests
-            WHERE user_id = ? AND status = 'submitted' AND created_at <= datetime('now', '-5 minutes')
+            WHERE user_id = ? AND status = 'submitted' 
             ORDER BY created_at ASC
             LIMIT 1
         """, (target_user_id,))
