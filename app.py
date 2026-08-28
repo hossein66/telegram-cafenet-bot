@@ -693,23 +693,22 @@ def admin_required(user: dict = Depends(get_current_user)):
 
 @app.get("/api/point-requests/next")
 def get_next_point_request(
-    user_id: Optional[str] = None,
-    user: dict = Depends(get_current_user)
+    user_id: Optional[str] = None
 ):
     # Determine which user_id to query
-    target_user_id = user_id if user_id else user["id"]
+    target_user_id = user_id 
     
     # If a user_id is specified and it's not the current user, check admin
-    if user_id and user_id != user["id"]:
-        if user["id"] != adminUserId:
-            raise HTTPException(status_code=403, detail="Admin access required")
+    # if user_id and user_id != user["id"]:
+    #     if user["id"] != adminUserId:
+    #         raise HTTPException(status_code=403, detail="Admin access required")
     
     with get_db() as conn:
         cur = conn.cursor()
         cur.execute("""
             SELECT *
             FROM point_requests
-            WHERE user_id = ? AND status = 'submitted'
+            WHERE user_id = ? AND status = 'submitted' AND created_at <= datetime('now', '-5 minutes')
             ORDER BY created_at ASC
             LIMIT 1
         """, (target_user_id,))
@@ -3055,8 +3054,7 @@ def delete_point_request(request_id: str, user: dict = Depends(get_current_user)
 @app.put("/api/point-requests/{request_id}/status")
 def update_point_request_status(
     request_id: str,
-    status: Literal["submitted", "processing", "done", "cancelled"],
-    admin: dict = Depends(admin_required)  # از تابع admin_required که قبلاً تعریف شده
+    status: Literal["submitted", "processing", "done", "cancelled"]
 ):
     try:
         with get_db() as conn:
@@ -3083,8 +3081,7 @@ class PurchaseStatusUpdate(BaseModel):
 @app.put("/api/point-requests/{request_id}/purchase-status")
 def update_purchase_status(
     request_id: str,
-    data: PurchaseStatusUpdate,
-    admin: dict = Depends(admin_required)
+    data: PurchaseStatusUpdate
 ):
     try:
         with get_db() as conn:
