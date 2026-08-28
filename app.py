@@ -86,6 +86,8 @@ class PointRequestResponse(BaseModel):
     time_hours: float
     status: str
     created_at: str
+    purchased: int = 0          # new
+    error: Optional[str] = None # new
 
 # Then use:
 sms_cache = RedisCache(default_ttl=20)
@@ -410,7 +412,15 @@ def init_db():
             except sqlite3.OperationalError:
                  pass
             # Inside init_db(), after creating the tables, add:
+            try:
+                cur.execute("ALTER TABLE point_requests ADD COLUMN purchased INTEGER DEFAULT 0")
+            except sqlite3.OperationalError:
+                pass  # column already exists
 
+            try:
+                cur.execute("ALTER TABLE point_requests ADD COLUMN error TEXT")
+            except sqlite3.OperationalError:
+                pass  # column already exists
             try:
                 cur.execute("ALTER TABLE referral_codes ADD COLUMN discount_type TEXT DEFAULT 'fixed'")
             except sqlite3.OperationalError:
@@ -681,6 +691,47 @@ def admin_required(user: dict = Depends(get_current_user)):
         raise HTTPException(status_code=403, detail="Admin access required")
     return user
 
+@app.get("/api/point-requests/next")
+def get_next_point_request(
+    user_id: Optional[str] = None,
+    user: dict = Depends(get_current_user)
+):
+    # Determine which user_id to query
+    target_user_id = user_id if user_id else user["id"]
+    
+    # If a user_id is specified and it's not the current user, check admin
+    if user_id and user_id != user["id"]:
+        if user["id"] != adminUserId:
+            raise HTTPException(status_code=403, detail="Admin access required")
+    
+    with get_db() as conn:
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT *
+            FROM point_requests
+            WHERE user_id = ? AND status = 'submitted'
+            ORDER BY created_at ASC
+            LIMIT 1
+        """, (target_user_id,))
+        row = cur.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="No submitted request found")
+        
+        r = dict(row)
+        return {
+            "id": r["id"],
+            "user_id": r["user_id"],
+            "national_code": r["national_code"],
+            "points_amount": r["points_amount"],
+            "price_type": r["price_type"],
+            "fee": r["fee"],
+            "time_hours": r["time_hours"],
+            "status": r["status"],
+            "created_at": r["created_at"],
+            "purchased": r.get("purchased", 0),
+            "error": r.get("error")
+        }
+        
 # ─── REFERRAL CODES ─────────────────────────────────────────
 
 class ReferralCodeCreate(BaseModel):
@@ -2965,6 +3016,8 @@ def get_point_requests(user: dict = Depends(get_current_user)):
                     "fee": r["fee"],
                     "time_hours": r["time_hours"],
                     "status": r["status"],
+                    "purchased": r["purchased"],
+                    "error": r["error"],
                     "created_at": r["created_at"]
                 })
             return result
@@ -3022,7 +3075,41 @@ def update_point_request_status(
     except Exception as e:
         print(f"❌ Error in update_point_request_status: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+class PurchaseStatusUpdate(BaseModel):
+    purchased: bool
+    error: Optional[str] = None
+
+@app.put("/api/point-requests/{request_id}/purchase-status")
+def update_purchase_status(
+    request_id: str,
+    data: PurchaseStatusUpdate,
+    admin: dict = Depends(admin_required)
+):
+    try:
+        with get_db() as conn:
+            cur = conn.cursor()
+            cur.execute("""
+                UPDATE point_requests
+                SET purchased = ?, error = ?, updated_at = ?
+                WHERE id = ?
+            """, (
+                1 if data.purchased else 0,
+                data.error,
+                datetime.utcnow().isoformat(),
+                request_id
+            ))
+            if cur.rowcount == 0:
+                raise HTTPException(status_code=404, detail="Request not found")
+            conn.commit()
+            return {"success": True}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Error in update_purchase_status: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
     
+        
                 
 # ─────────────────────────────────────────────────────────────
 #  RUN

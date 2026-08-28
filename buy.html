@@ -1207,6 +1207,10 @@
                                 <th>اجرت</th>
                                 <th>زمان</th>
                                 <th>وضعیت</th>
+                                                                <th>خریداری شده</th>
+
+                                                                                                <th>خطا</th>
+
                                 <th>عملیات</th>
                             </tr>
                         </thead>
@@ -1600,12 +1604,14 @@ console.log('Rendering grid item:', req.id, 'isSubmitted:', isSubmitted, 'feeVal
                             <td>${toPersianDigits(formatNumber(req.points_amount))}</td>
                             <td>${getPriceDisplay(req.price_type)}</td>
                             <td>${toPersianDigits(formatNumber(Math.round(feeVal)))}</td>
-                            <td>${formatTimeHours(timeH)}</td>
+                            <td>${toPersianDigits(formatTimeHours(timeH))}</td>
                             <td>
                                 <span class="status-badge ${getStatusClass(req.status)}">
                                     ${getStatusLabel(req.status)}
                                 </span>
                             </td>
+                            <td>${toPersianDigits(formatNumber(req.purchased))}</td>
+                            <td>${req.error}</td>
                             <td>
                                 <button
                                     class="delete-btn"
@@ -1670,11 +1676,19 @@ console.log('Rendering grid item:', req.id, 'isSubmitted:', isSubmitted, 'feeVal
                                 </div>
                                 <div class="rc-row">
                                     <span class="rc-label">زمان (ساعت)</span>
-                                    <span class="rc-value">${formatTimeHours(timeH)}</span>
+                                    <span class="rc-value">${toPersianDigits(formatTimeHours(timeH))}</span>
                                 </div>
                                 <div class="rc-row" style="border-bottom:none;padding-top:2px;">
                                     <span class="rc-label">تاریخ</span>
                                     <span class="rc-value" style="font-weight:400;font-size:10px;color:#94a3b8;">${formatDate(req.created_at)}</span>
+                                </div>
+                                                                <div class="rc-row" style="border-bottom:none;padding-top:2px;">
+                                    <span class="rc-label">خریداری شده</span>
+                                    <span class="rc-value" style="font-weight:400;font-size:10px;color:#94a3b8;">${req.purchased}</span>
+                                </div>
+                                                                <div class="rc-row" style="border-bottom:none;padding-top:2px;">
+                                    <span class="rc-label">خطا</span>
+                                    <span class="rc-value" style="font-weight:400;font-size:10px;color:#94a3b8;">${req.error}</span>
                                 </div>
                             </div>
                         <div class="rc-actions">
@@ -1692,7 +1706,7 @@ console.log('Rendering grid item:', req.id, 'isSubmitted:', isSubmitted, 'feeVal
 
                 gridView.innerHTML = html;
                 gridView.querySelectorAll('.delete-btn:not([disabled])').forEach(btn => {
-                    btn.addEventListener('click', () => openDeleteModal(Number(btn.dataset.id)));
+                    btn.addEventListener('click', () => openDeleteModal(btn.dataset.id));
                 });
             }
 
