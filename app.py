@@ -3075,7 +3075,7 @@ def update_point_request_status(
         raise HTTPException(status_code=500, detail=str(e))
 
 class PurchaseStatusUpdate(BaseModel):
-    purchased: bool
+    purchased: int=0
     error: Optional[str] = None
 
 @app.put("/api/point-requests/{request_id}/purchase-status")
@@ -3088,10 +3088,10 @@ def update_purchase_status(
             cur = conn.cursor()
             cur.execute("""
                 UPDATE point_requests
-                SET purchased = ?, error = ?, updated_at = ?
+                SET purchased = purchased + ?, error = ?, updated_at = ?
                 WHERE id = ?
             """, (
-                1 if data.purchased else 0,
+                data.purchased,
                 data.error,
                 datetime.utcnow().isoformat(),
                 request_id
