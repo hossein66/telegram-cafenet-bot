@@ -1899,7 +1899,7 @@ function setupScrollObserver() {
         // Calculate values
         const loanAmountInRials = loanAmount * 1000000;
         const score = loanAmountInRials / ratio;
-        const scorePrice = score * 30/10;
+        const scorePrice = score * 31/10;
         let fee = score * 1.8/10;
                // ── apply minimum fee ──
                 fee = applyLoanFeeMinimum(Math.round(fee), service.id);
